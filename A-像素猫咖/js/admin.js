@@ -1,4 +1,5 @@
 /* 1024 猫咖 · 组织者后台页面（admin.html）。接口见 docs/组织者后台.md。
+   名册里的数有一部分来自玩家自己交上来的存档：插进网页的每个值都过 esc()，不信任任何字段。
    口令只存在这个标签页里（sessionStorage）；页面本身不含任何秘密，数据都要带着口令去服务端取。
    猫的像素头像用店里同一套画法（dialog-ui.js 的 drawPortrait），暗号的九个图案用进店时同一套（entry-art.js 的 EA.icon）。 */
 (()=>{
@@ -29,8 +30,8 @@ const iconCv=i=>{const c=document.createElement('canvas');c.width=c.height=9;con
 /* ---------- 概况 ---------- */
 async function loadStats(){const s=await api('GET','/stats'),L=s.live||{};
   const T=[['登记的猫',s.cats],['此刻在线',L.online??0,'ok'],['今天来过',s.today],['有抽奖资格',s.eligible],['今天挂了几件',s.hungToday],['巨树一共挂过',s.hung]];
-  $('stats').innerHTML=T.map(([a,b,k])=>`<div class="stat ${k||''}"><b>${b??0}</b><span>${a}</span></div>`).join('');
-  $('live').innerHTML=`在线 <b>${L.online??0}</b> · 盖章：解球 ${s.stamps.ball} / 内源 ${s.stamps.inner} / 官网 ${s.stamps.site}`+(L.cpu!=null?` · 服务端 CPU ${L.cpu}% · 内存 ${L.rssMB}MB`:'')}
+  $('stats').innerHTML=T.map(([a,b,k])=>`<div class="stat ${k||''}"><b>${esc(b??0)}</b><span>${a}</span></div>`).join('');const st=s.stamps||{};
+  $('live').innerHTML=`在线 <b>${esc(L.online??0)}</b> · 盖章：解球 ${esc(st.ball)} / 内源 ${esc(st.inner)} / 官网 ${esc(st.site)}`+(L.cpu!=null?` · 服务端 CPU ${esc(L.cpu)}% · 内存 ${esc(L.rssMB)}MB`:'')}
 setInterval(()=>{if(key&&!$('app').hidden)loadStats().catch(()=>{})},10000);
 
 /* ---------- 名册 ---------- */
@@ -39,11 +40,11 @@ function drawRows(){const q=$('q').value.trim().toLowerCase(),el=$('onlyElig').c
   const L=cats.filter(c=>(!q||c.name.toLowerCase().includes(q))&&(!el||c.eligible)&&(!on||c.online));
   $('rcount').textContent=`${cats.length} 只${q||el||on?` · 符合的 ${L.length} 只`:''}`;
   const tb=$('rows');tb.innerHTML='';
-  for(const c of L.slice(0,SHOW)){const tr=document.createElement('tr'),s=c.stamps;
+  for(const c of L.slice(0,SHOW)){const tr=document.createElement('tr'),s=c.stamps||{};
     tr.innerHTML=`<td><div class="who"><span class="pc"></span><div><b>${esc(c.name)}</b>${c.online?'<i class="dot" title="在线"></i>':''}${c.banned?'<span class="tag ban">封禁</span>':''}${c.flag?'<span class="tag flag" title="盖了解球章，服务端却没记到它挂过">待核</span>':''}${c.eligible?'<span class="tag">有资格</span>':''}</div></div></td>
-      <td>${when(c.created)}</td><td>${when(c.last)}</td><td class="n">${c.visits||0}</td><td class="n">${c.balls||0}</td><td class="n">${c.hangs||0}</td>
+      <td>${esc(when(c.created))}</td><td>${esc(when(c.last))}</td><td class="n">${esc(c.visits||0)}</td><td class="n">${esc(c.balls||0)}</td><td class="n">${esc(c.hangs||0)}</td>
       <td><span class="st"><i class="${s.ball?'on':''}" title="解一颗球">球</i><i class="${s.inner?'on':''}" title="内源主页">源</i><i class="${s.site?'on':''}" title="官网 / GitHub">官</i></span></td>
-      <td>${c.won.length?c.won.map(n=>'第 '+n+' 轮').join('、'):'—'}</td>
+      <td>${(c.won||[]).length?esc(c.won.map(n=>'第 '+n+' 轮').join('、')):'—'}</td>
       <td><div class="acts"><button class="lbtn" data-a="reset">重置暗号</button><button class="lbtn" data-a="rename">改名</button><button class="lbtn warn" data-a="ban">${c.banned?'解封':'封禁'}</button></div></td>`;
     tr.querySelector('.pc').replaceWith(portrait(c.look||{}));tr.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a,c));tb.appendChild(tr)}
   $('more').textContent=L.length>SHOW?`只列出前 ${SHOW} 只（最近来过的在前），还有 ${L.length-SHOW} 只，按名字找。`:''}
@@ -66,7 +67,7 @@ function act(a,c){
 
 /* ---------- 抽奖 ---------- */
 async function loadDraws(){const r=await api('GET','/draws');draws=r.draws||[];drawDraws()}
-function drawDraws(){$('draws').innerHTML=draws.slice().reverse().map(d=>`<div class="draw"><h3>第 ${d.no} 轮<span>${when(d.t)} · 从 ${d.pool} 只里抽了 ${d.winners.length} 只${d.fresh?' · 排除了抽中过的':''}${d.how?' · '+esc(d.how):''}</span><button class="lbtn" data-ex="${d.no}">导出</button></h3>
+function drawDraws(){$('draws').innerHTML=draws.slice().reverse().map(d=>`<div class="draw"><h3>第 ${esc(d.no)} 轮<span>${esc(when(d.t))} · 从 ${esc(d.pool)} 只里抽了 ${esc(d.winners.length)} 只${d.fresh?' · 排除了抽中过的':''}${d.how?' · '+esc(d.how):''}</span><button class="lbtn" data-ex="${esc(d.no)}">导出</button></h3>
   <div class="wins">${d.winners.map(w=>`<span class="win ${d.no===lastDraw?'new':''}"><b>${esc(w.name)}</b><code>${esc(w.code)}</code></span>`).join('')}</div></div>`).join('')||'<p class="hint">还没抽过。</p>';
   $('draws').querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>download('/export?what=draw&no='+b.dataset.ex))}
 $('dgo').onclick=async()=>{const n=+$('dn').value,fresh=$('dfresh').checked,how=$('dhow').value.trim();$('drawerr').textContent='';

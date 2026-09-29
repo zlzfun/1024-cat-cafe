@@ -1,7 +1,8 @@
 /* 1024 猫咖 · 服务端参考实现：零依赖（Node 18+），一个进程同时发网页、接口和联机。
    node server/server.js            → http://127.0.0.1:1024
    PORT=8080 HOST=0.0.0.0 node server/server.js   → 局域网里别的电脑也能开
-   DATA_DIR=/tmp/x node server/server.js          → 换一个数据目录（压力测试时别写进正式名册）
+   DATA_DIR=/tmp/x node server/server.js          → 换一个数据目录（压力测试时别写进正式名册）；数据目录永远不对外发
+   TRUST_PROXY=1 node server/server.js            → 放在反向代理后面时：按代理加在 X-Forwarded-For 最后的那个地址计数（输错口令、暗号的次数）
    - 账号接口（docs/登录与进店.md）：名字全店唯一（和前端同一份规矩 + 组织者的屏蔽词）；暗号只存 scrypt 散列；输错有次数限制；令牌只存散列。
    - 联机（docs/联机.md）：/ws 上的 WebSocket，见 live.js。
    - 组织者后台（docs/组织者后台.md）：/admin.html 页面 + /api/admin/* 接口，见 admin.js。口令在 server/data/admin.key，启动时打印出来。
@@ -10,7 +11,9 @@
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const S=require('./store'),live=require('./live'),admin=require('./admin')(S,live);
 const PORT=+process.env.PORT||1024,HOST=process.env.HOST||'127.0.0.1',MAX_FAIL=5,LOCK_MS=10*60e3,IP_WIN=10*60e3,IP_MAX=30,BODY_MAX=64*1024,STATE_MAX=48*1024;
-const {db,key}=S;
+const {db,key}=S,TRUST_PROXY=process.env.TRUST_PROXY==='1';
+// 来访地址：直连用对面的地址；在可信代理后面，用代理追加在 X-Forwarded-For 末尾的那个（前面的可能是浏览器自己填的，不可信）
+const ipOf=req=>{if(TRUST_PROXY){const x=String(req.headers['x-forwarded-for']||'').split(',').map(s=>s.trim()).filter(Boolean);if(x.length)return x[x.length-1]}return req.socket.remoteAddress||''};
 
 /* ---------- 忘了暗号：组织者在服务器上重置 ----------
    node server/server.js reset 团子   → 给「团子」换一组随机暗号并打印出来，旧令牌全部作废（先停掉正在跑的服务） */
@@ -39,18 +42,18 @@ const API={
     me.c.state={...me.c.state,...s};me.c.last=Date.now();S.save();return[200,{ok:true}]},
   // 看过"你被抽中了"，下次不再弹
   'POST /me/prize-seen':({me,body})=>{if(!me)return[401,{err:'auth'}];for(const p of me.c.prizes||[])if(p.no===body.no)p.seen=true;S.save();return[200,{ok:true}]},
-  'POST /logout':({me})=>{if(me){delete db.tokens[me.h];S.save()}return[200,{ok:true}]}};
+  'POST /logout':({me})=>{if(me){delete db.tokens[me.h];live.dropToken(me.h);S.save()}return[200,{ok:true}]}};
 
 /* ---------- 静态文件 ---------- */
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown; charset=utf-8','.ico':'image/x-icon'};
 function serveFile(req,res,p){if(p==='/')p='/index.html';let f;try{f=path.join(S.ROOT,decodeURIComponent(p))}catch(e){res.writeHead(400);return res.end()}
-  if(!f.startsWith(S.ROOT+path.sep)||f.startsWith(__dirname)){res.writeHead(404);return res.end()}
+  if(!f.startsWith(S.ROOT+path.sep)||f.startsWith(__dirname)||f===S.DATA||f.startsWith(S.DATA+path.sep)){res.writeHead(404);return res.end()}
   if(p==='/config.js'&&!fs.existsSync(f)){res.writeHead(200,{'Content-Type':MIME['.js'],'Cache-Control':'no-cache'});return res.end("window.CAT1024_CONFIG={api:'/api'};")}
   fs.stat(f,(e,st)=>{if(e||!st.isFile()){res.writeHead(404);return res.end('not found')}res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'});fs.createReadStream(f).pipe(res)})}
 
 function reply(res,out){if(out&&out.csv!=null){res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(out.name),'Cache-Control':'no-store'});return res.end(out.csv)}
   res.writeHead(out[0],{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(out[1]))}
-const server=http.createServer((req,res)=>{const u=new URL(req.url,'http://x'),ip=req.socket.remoteAddress||'';
+const server=http.createServer((req,res)=>{const u=new URL(req.url,'http://x'),ip=ipOf(req);
   if(!u.pathname.startsWith('/api/'))return serveFile(req,res,u.pathname);
   const sub=u.pathname.slice(4),isAdmin=sub.startsWith('/admin/'),h=isAdmin?null:API[req.method+' '+sub];
   if(!isAdmin&&!h){res.writeHead(404,{'Content-Type':'application/json'});return res.end('{"err":"none"}')}

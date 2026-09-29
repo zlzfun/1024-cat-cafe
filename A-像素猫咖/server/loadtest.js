@@ -20,6 +20,7 @@ function bot(i,token,id){const c={i,id,ws:null,x:rr(100,1600),y:rr(100,500),tx:0
   c.send=o=>{if(c.ws&&c.ws.readyState===1){c.ws.send(JSON.stringify(o));cnt.sent++}};
   c.open=()=>new Promise(r=>{const ws=new WebSocket(BASE.replace(/^http/,'ws')+'/ws');c.ws=ws;ws.onopen=()=>ws.send(JSON.stringify({t:'hi',token}));
     ws.onmessage=e=>{cnt.in++;cnt.bytes+=e.data.length;const m=JSON.parse(e.data);if(m.t==='welcome'){r();c.send({t:'v',v:rnd([[480,287],[480,287],[640,360],[720,430]])})}
+      if(m.t==='pass')c.send(c.hold?{t:'back',to:m.id,p:m.p}:{t:'got',to:m.id,p:m.p});   // 和浏览器一样：一收到球就回话
       const add=o=>{idOf.set(o.n,o.id);c.seen.set(o.id,o.s)};if(m.t==='welcome')m.cats.forEach(add);if(m.t!=='b')return;(m.j||[]).forEach(add);
       for(const [n,s] of m.u||[]){const id=idOf.get(n),t=sentAt.get(id+':'+s[0]+','+s[1]);if(t){const d=Date.now()-t;if(d<2000)lat.push(d);else cnt.catch++}c.seen.set(id,s)}
       for(const [n,x,y] of m.p||[]){const id=idOf.get(n),o=c.seen.get(id);if(o)c.seen.set(id,[x,y,...o.slice(2)])}};ws.onclose=()=>{c.ws=null}});

@@ -409,7 +409,7 @@ tick(dt=>{if(!S.giant&&(nextGiant-=dt)<=0){giantArrive();nextGiant=rr(160,240)}c
   if(g.state==='roll'){const p=GIANT_PATH[g.seg+1];if(!p){g.state='wait';return}const dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy),st=Math.min(d,38*dt);g.x+=dx/d*st;g.y+=dy/d*st;g.spin=(g.spin||0)+st;if(d-st<.5)g.seg++}
   else if(g.state==='wait'){const n=g.help.filter(c=>c&&!c.gone&&!c.k.startsWith('walk')&&near(c,g,26)).length;g.n=n;if(n>=3){g.p+=dt*.035*n;if(g.p>=1)giantDone()}}});
 function giantDone(){const g=S.giant,helpers=g.help.filter(Boolean);S.giant=null;for(let i=0;i<5;i++)S.puffs.push({x:g.x+rr(-10,10),y:g.y-12+rr(-6,6),t0:now()+i*.08});
-  S.banner=60;S.count++;news(`大毛线团解开了！${helpers.length} 只猫一起织成一条横幅，挂在橱窗上`);sfx('fanfare');
+  S.banner=60;if(!A.shared)S.count++;news(`大毛线团解开了！${helpers.length} 只猫一起织成一条横幅，挂在橱窗上`);sfx('fanfare');
   helpers.forEach(c=>{c.helpGiant=null;S.hearts.push({x:Math.round(c.x),y:Math.round(c.y-18),t0:now()});run(c,[{k:'happy',dur:1.4}]);if(c.me)say('解开了！去橱窗长廊看看那条横幅')})}
 A.drawers.push((L,vis)=>{const g=S.giant;if(g&&vis(g.x-40,g.y-40,80,50))L.push([g.y,()=>{giantYarn(Math.round(g.x),Math.round(g.y),A.t,g.p,g.cols);if(g.state==='wait'){pbar(Math.round(g.x)-12,Math.round(g.y)-34,24,g.p,g.n>=3?'#7ee08a':'#ffd84a');if(g.n<3)txt(g.n+'/3',Math.round(g.x)-5,Math.round(g.y)-42,'#fff4dc')}}])});
 A.marks.push(()=>S.giant?{x:S.giant.x,y:S.giant.y,col:'#ffd84a'}:null);

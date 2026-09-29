@@ -32,7 +32,7 @@ const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s&&!dlg
   dialog:s=>{dlg.render(s);$('prompt').style.display=s?'none':$('prompt').style.display;if(s){closeMenu();$('tip').style.display='none'}},
   discover:d=>{sfx('disc');$('disc').innerHTML=`<h5>新发现 · ${esc(d.n)}</h5><p>${esc(d.what)}</p>${d.tie?`<p class="tie">${esc(d.tie)}</p>`:''}`;$('disc').classList.add('show');discT=6},
   reply:r=>{sfx('bell');$('reply').innerHTML=`<h5>📮 人类回信 · 毛线球 #${r.no}</h5><q>${esc(r.thx)}</q><div class="chain">球权链：${r.chain.map(esc).join(' → ')}</div>`;$('reply').classList.add('show');replyT=8;drawStamps()},
-  stamps:()=>{sfx('stamp');drawStamps();touch()},camp:()=>{panelKey=''},book:()=>openGuide(),renamed:n=>{if(cat)cat.name=n;meKey=''}};
+  stamps:()=>{sfx('stamp');drawStamps();touch()},camp:()=>{panelKey=''},book:()=>openGuide(),renamed:n=>{if(cat)cat.name=n;meKey=''},prizes:L=>L.forEach(queuePrize)};
 let bigT1=0,bigT2=0;function bigTitle(a,b,c,delay=1600,hold=4400){const el=$('vtitle');el.innerHTML=`<small>${esc(a)}</small><b>${esc(b)}</b><span>${esc(c)}</span>`;clearTimeout(bigT1);clearTimeout(bigT2);
   bigT1=setTimeout(()=>el.classList.add('show'),delay);bigT2=setTimeout(()=>el.classList.remove('show'),delay+hold)}
 function drawNews(){const now=performance.now();$('news').innerHTML=NEWS.filter(n=>now-n.t<12000).map(n=>`<div style="opacity:${now-n.t>9000?.4:1}">${esc(n.s)}</div>`).join('')}
@@ -139,12 +139,13 @@ function weatherNow(d=new Date()){const m=d.getMonth()+1,day=d.getDate();if(m===
 
 /* ---------- 联机：接了服务端才有（设计见 docs/联机.md） ---------- */
 function startNet(){if(Account.mode!=='server')return;const L=game.A.live;L.send=o=>Net.send(o);
-  Net.start({onState:s=>L.state(s),onMsg:m=>{if(m.t==='bye'){if(m.why==='elsewhere')sleep(true);else gone(m.why);return}if(m.t==='prize'){prizeQ.push(m);return}L.recv(m)}})}
+  Net.start({onState:s=>L.state(s),onMsg:m=>{if(m.t==='bye'){if(m.why==='elsewhere')sleep(true);else gone(m.why);return}if(m.t==='prize'){queuePrize(m);return}L.recv(m)}})}
 // 被封禁、暗号被重置、登录过期：请出店，下次重新报名字和暗号
 function gone(why){playing=false;Net.stop();const T={ban:['这只猫暂时不能进店','有疑问请找组织者。'],reset:['暗号换过了','组织者给这只猫换了一组新暗号，用新暗号重新进店吧。']}[why]||['要重新进店','这台电脑记着的登录过期了。报上名字和暗号，就能领回你的猫。'];
   $('goneh').textContent=T[0];$('gonep').textContent=T[1];$('gone').style.display='flex';$('goneb').onclick=()=>Account.logout().then(()=>location.reload())}
 // 抽中了：前台猫来告诉你领奖码。进店动画、对话框、看风景的时候先等等
-const prizeQ=[];
+// 同一轮只弹一次：进店时的账号快照、联机时推过来的、重连时补发的，可能是同一条
+const prizeQ=[],prizeNos=new Set(),queuePrize=p=>{if(!p||!Number.isInteger(p.no)||prizeNos.has(p.no))return;prizeNos.add(p.no);prizeQ.push(p)};
 function tryPrize(){if(!prizeQ.length||!playing||asleep||dlg.open||game.A.arriving()||game.A.vista.on)return;const p=prizeQ.shift();sfx('fanfare');
   game.A.dlg.show({id:'prize-'+p.no,kind:'info',head:{icon:'star',title:'你被抽中了'},blocks:[{k:'say',pal:DESK_PAL,name:'前台猫',t:`第 ${p.no} 轮抽奖，抽中了你！`},
     {k:'code',label:'领奖码',t:p.code},...(p.how?[{k:'text',t:'怎么领：'+p.how}]:[]),{k:'text',t:'这个码只有你看得到。把它发给组织者，就能领奖。'}],acts:[{id:'ok',t:'记下了',key:'E'}]},{close:()=>Account.prizeSeen(p.no)})}
@@ -202,7 +203,7 @@ function enter({cat:c,how}){cat=c;const me=game.me,st=c.state||{};SAVE={g:st.g||
   me.name=me.label=c.name;me.pal=EA.palOf(c.look);me.myFace=me.ex=c.look.face;
   // 补位的猫是在认出你之前生成的：要是有一只刚好和你同名，给它改个名
   const U=game.A.usedNames;if(U){for(const b of game.S.cats)if(b!==me&&b.kind==='bot'&&b.name===c.name){U.delete(b.name);let n;do n=c.name+(2+Math.floor(Math.random()*98));while(U.has(n));b.name=n;U.add(n)}U.add(c.name)}
-  game.A.guide.load(SAVE.g);Object.assign(game.S.stamps,st.stamps||{});drawStamps();meKey='';panelKey='';prizeQ.push(...(c.prizes||[]));
+  game.A.guide.load(SAVE.g);Object.assign(game.S.stamps,st.stamps||{});drawStamps();meKey='';panelKey='';(c.prizes||[]).forEach(queuePrize);
   if(how==='drop'){game.A.guide.mark('move');game.A.firstRoom('atrium')}
   Entry.leave();veil={how,t0:performance.now()};playing=true;dirty=true;claim();startNet();$('game').classList.add('on');
   game.A.arrive(how,{...(st.pos||{}),onLand:()=>{},onDone:()=>{flush();$('game').focus()}});

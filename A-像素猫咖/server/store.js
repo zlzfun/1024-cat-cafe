@@ -36,7 +36,7 @@ function setBlocked(words){blocked=[...new Set(words.map(s=>String(s).normalize(
 
 /* ---------- 令牌 ---------- */
 function issue(c){const t=crypto.randomBytes(32).toString('base64url');db.tokens[sha(t)]={id:c.id,k:key(c.name),exp:Date.now()+TOKEN_DAYS*864e5};return t}
-function who(token){if(!token)return null;const h=sha(token),tk=db.tokens[h];if(!tk)return null;
+function who(token){if(typeof token!=='string'||!token||token.length>200)return null;const h=sha(token),tk=db.tokens[h];if(!tk)return null;
   if(tk.exp<Date.now()){delete db.tokens[h];save();return null}const c=db.cats[tk.k];if(!c||c.id!==tk.id||c.banned)return null;tk.exp=Date.now()+TOKEN_DAYS*864e5;return{c,h}}
 function revoke(id){for(const [h,t] of Object.entries(db.tokens))if(t.id===id)delete db.tokens[h];save()}
 // 改名：名册按名字键存，令牌里也记着名字键

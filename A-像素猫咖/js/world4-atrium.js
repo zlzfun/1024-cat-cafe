@@ -157,13 +157,14 @@ const now=()=>A.t,tick=f=>A.tickers.push(f),near=(a,b,d)=>Math.hypot(a.x-b.x,a.y
 
 /* ---------- 全店一起挂：橱窗里每挂一件，树上多挂一件；挂满了满树金光 ---------- */
 const kinds=Object.keys(KNIT);S.tree={orn:Array.from({length:12},()=>({kind:rnd(kinds),ci:Math.floor(Math.random()*5),t0:-99})),blooms:0,bloom:0,v:1};
-function treeAdd(item){const T0=S.tree;if(T0.bloom||T0.orn.length>=TREE.N)return;T0.orn.push({kind:item.kind,ci:item.ci,t0:now()});T0.v++;if(T0.orn.length>=TREE.N)bloom()}
+// 满树金光那十几秒里又有人挂：先记在下一轮（next），金光收起来以后挂上去，不丢
+function treeAdd(item){const T0=S.tree;if(T0.bloom){(T0.next=T0.next||[]).push({kind:item.kind,ci:item.ci});return}if(T0.orn.length>=TREE.N)return;T0.orn.push({kind:item.kind,ci:item.ci,t0:now()});T0.v++;if(T0.orn.length>=TREE.N)bloom()}
 function bloom(){const T0=S.tree;if(T0.bloom)return;T0.bloom=now();T0.blooms++;news(`毛线巨树挂满了 ${TREE.N} 件！满树金光`);if(A.play&&inAtrium(me)){sfx('fanfare');say('毛线巨树挂满了！满树金光')}
     S.cats.forEach(c=>{if(inAtrium(c)&&!c.me&&!c.hidden&&Math.random()<.6)emote(c,'bang',2)});
-    after(14,()=>{T0.orn=[];T0.bloom=0;T0.v++;if(A.play&&inAtrium(me))say('树上的成品收下来了，又可以从头挂')})}
+    after(14,()=>{T0.orn=(T0.next||[]).slice(0,TREE.N-1).map(o=>({kind:o.kind,ci:o.ci,t0:now()}));T0.next=[];T0.bloom=0;T0.v++;if(A.play&&inAtrium(me))say('树上的成品收下来了，又可以从头挂')})}
 // 联机时（A.shared）树跟着服务端走：谁挂了一件，world-online.js 调 A.tree.add；连上时用 A.tree.set 换成服务端那一份
 const h0=A.onHang;A.onHang=(c,item)=>{if(h0)h0(c,item);if(!A.shared)treeAdd(item)};
-A.tree={add:treeAdd,bloom,set:list=>{const T0=S.tree;if(T0.bloom)return;T0.orn=list.slice(0,TREE.N-1).map(o=>({kind:o.kind,ci:o.ci,t0:-99}));T0.v++},get n(){return S.tree.orn.length},N:TREE.N};
+A.tree={add:treeAdd,bloom,set:list=>{const T0=S.tree;if(T0.bloom){T0.next=list.map(o=>({kind:o.kind,ci:o.ci}));return}T0.orn=list.slice(0,TREE.N-1).map(o=>({kind:o.kind,ci:o.ci,t0:-99}));T0.v++},get n(){return S.tree.orn.length},N:TREE.N};
 
 /* ---------- 爬树：一根根横枝跳上去；你先上树顶，别的猫随便挑一根 ---------- */
 const FLOOR=TREE.floor,up=i=>i<6?TREE_PERCH.slice(0,i+1):[...TREE_PERCH.slice(0,6),TREE_PERCH[i]];

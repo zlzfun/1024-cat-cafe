@@ -11,8 +11,10 @@ const stamps=c=>{const s=(c.state&&c.state.stamps)||{};return{ball:!!s.ball,inne
 const eligible=c=>{const s=stamps(c);return !c.banned&&s.ball&&s.inner&&s.site};
 const startOfDay=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
 const won=c=>(c.prizes||[]).map(p=>p.no);
-function row(c){const g=(c.state&&c.state.g)||{},s=stamps(c);
-  return{id:c.id,name:c.name,look:c.look,created:c.created,last:c.last,visits:(c.state&&c.state.visits)||0,balls:g.balls||0,disc:Object.keys(g.disc||{}).length,hangs:c.hangs||0,
+// 存档是玩家自己交上来的：数字字段一律压成有界的非负整数再给后台看
+const int=v=>{const n=Math.floor(Number(v));return Number.isFinite(n)&&n>0?Math.min(n,1e9):0};
+function row(c){const g=(c.state&&typeof c.state.g==='object'&&c.state.g)||{},s=stamps(c);
+  return{id:c.id,name:c.name,look:c.look,created:c.created,last:c.last,visits:int(c.state&&c.state.visits),balls:int(g.balls),disc:g.disc&&typeof g.disc==='object'?Object.keys(g.disc).length:0,hangs:int(c.hangs),
     stamps:s,eligible:eligible(c),online:live.isOnline(c.id),banned:!!c.banned,flag:s.ball&&!c.hangs?'noHang':null,won:won(c)}}
 const cats=()=>Object.values(S.db.cats);
 const find=id=>typeof id==='string'&&S.byId(id);
