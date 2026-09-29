@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C · 绘本手绘</title>
+<style>
+  html,body{margin:0;height:100%;background:#efe3cc;overflow:hidden;user-select:none;font-family:"Kaiti SC","STKaiti","KaiTi","LXGW WenKai",serif;color:#4a3b32}
+  svg{width:100%;height:100%;display:block}
+  .hit{cursor:pointer}
+  .caption{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:18px;letter-spacing:1px;text-shadow:0 1px 0 #f5ecd9}
+  .corner{position:absolute;right:18px;top:12px;font-size:15px}
+  #note{position:absolute;left:50%;top:50%;width:340px;transform:translate(-50%,-46%) rotate(-1.5deg);background:#fffaf0;padding:22px 26px 18px;box-shadow:2px 6px 0 #4a3b3222,0 0 0 1px #d8c8ae;opacity:0;pointer-events:none;transition:.3s;
+        background-image:repeating-linear-gradient(transparent 0 29px,#d9e4ef 29px 30px);line-height:30px;font-size:17px}
+  #note.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) rotate(-1.5deg)}
+  #note::before{content:"";position:absolute;top:-10px;left:42%;width:70px;height:22px;background:#e8c46a99;transform:rotate(3deg)}
+  #note .from{font-size:14px;color:#a0826a}
+  #note .acts{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+  #note button{font:inherit;font-size:16px;background:none;border:0;text-align:left;padding:0 4px;cursor:pointer;color:#b0563c}
+  #note button:hover{text-decoration:underline wavy}
+</style>
+</head>
+<body>
+<svg id="svg" viewBox="0 0 900 500" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="4"/></filter>
+    <filter id="wash" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="3" seed="8" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="7" result="d"/><feGaussianBlur in="d" stdDeviation=".6"/></filter>
+    <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="2"/><feColorMatrix values="0 0 0 0 .35  0 0 0 0 .27  0 0 0 0 .2  0 0 0 .09 0"/></filter>
+    <pattern id="wall" width="46" height="46" patternUnits="userSpaceOnUse"><rect width="46" height="46" fill="#f3dfc4"/><circle cx="12" cy="12" r="3" fill="#e7c49f"/><circle cx="35" cy="35" r="3" fill="#e7c49f"/></pattern>
+  </defs>
+  <g filter="url(#wash)">
+    <rect width="900" height="410" fill="url(#wall)"/>
+    <rect x="-20" y="400" width="940" height="140" fill="#c99a6e"/>
+    <path d="M0 404 H900" stroke="#8e6445" stroke-width="3"/>
+  </g>
+  <g id="scene" filter="url(#rough)" stroke="#4a3b32" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></g>
+  <g id="actors"></g>
+  <rect width="900" height="500" filter="url(#paper)" pointer-events="none"/>
+</svg>
+<div class="corner" id="count">解开的毛线球：0</div>
+<div class="caption" id="cap">下雨的午后，猫咖里很安静。点点地板，四处走走吧。</div>
+<div id="note"></div>
+<script>
+const NS='http://www.w3.org/2000/svg',scene=document.getElementById('scene'),actors=document.getElementById('actors'),svg=document.getElementById('svg');
+function el(t,a,p=scene){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const cap=t=>document.getElementById('cap').textContent=t;
+
+/* 窗 + 雨 */
+const win=el('g',{class:'hit'});
+el('rect',{x:300,y:70,width:230,height:190,fill:'#b9d3dc'},win);
+const sky=el('rect',{x:300,y:70,width:230,height:190,fill:'#8fa9b8',opacity:.8},win);
+const rain=el('g',{stroke:'#e8f1f5','stroke-width':1.6},win);
+for(let k=0;k<26;k++){const x=310+Math.random()*210,y=80+Math.random()*160;const l=el('line',{x1:x,y1:y,x2:x-4,y2:y+12},rain);el('animateTransform',{attributeName:'transform',type:'translate',values:'0 -20;0 40',dur:(0.7+Math.random()*.5)+'s',repeatCount:'indefinite'},l)}
+const sun=el('circle',{cx:470,cy:120,r:26,fill:'#f7d77a',opacity:0},win);
+el('path',{d:'M415 70 V260 M300 165 H530',fill:'none','stroke-width':5,stroke:'#f5ecd9'},win);
+el('rect',{x:300,y:70,width:230,height:190,fill:'none','stroke-width':5},win);
+el('rect',{x:288,y:258,width:254,height:12,fill:'#d7a77a'},win);
+el('path',{d:'M296 64 q60 40 0 110 M534 64 q-60 40 0 110',fill:'#e9a38b',opacity:.85},win);
+let raining=true;win.onclick=()=>{raining=!raining;rain.style.display=raining?'':'none';sky.setAttribute('fill',raining?'#8fa9b8':'#cfe6f0');sun.setAttribute('opacity',raining?0:1);cap(raining?'雨又下起来了，嘀嗒嘀嗒。':'雨停了，太阳探出头来。')};
+
+/* 吊灯 */
+const lamps=[];[[180,0],[650,0]].forEach(([x])=>{const g=el('g',{class:'hit'});el('line',{x1:x,y1:0,x2:x,y2:70},g);el('path',{d:`M${x-26} 96 q26 -44 52 0z`,fill:'#e2b04a'},g);
+  const glow=el('ellipse',{cx:x,cy:130,rx:70,ry:44,fill:'#ffe9a8',opacity:.45,stroke:'none'},g);
+  el('animateTransform',{attributeName:'transform',type:'rotate',values:`-2 ${x} 0;2 ${x} 0;-2 ${x} 0`,dur:'5s',repeatCount:'indefinite'},g);
+  g.onclick=()=>{const on=glow.getAttribute('opacity')!=='0';glow.setAttribute('opacity',on?0:.45);cap(on?'咔哒，灯关了。':'咔哒，灯亮了，暖洋洋的。')};lamps.push(g)});
+
+/* 书架 + 小狸花 */
+el('rect',{x:40,y:130,width:150,height:210,fill:'#b98356'});[180,240,300].forEach(y=>el('path',{d:`M40 ${y} H190`,fill:'none'}));
+[[50,140,14,'#d9705a'],[66,146,12,'#6f9a8d'],[80,138,16,'#e0b25e'],[100,150,12,'#8a78a8'],[120,196,40,'#e9e0cc'],[52,256,12,'#6f9a8d'],[66,250,14,'#d9705a'],[140,254,14,'#e0b25e']].forEach(([x,y,w,c])=>el('rect',{x,y,width:w,height:(y<180?180:y<240?240:300)-y,fill:c}));
+
+/* 吧台 */
+el('rect',{x:640,y:250,width:260,height:152,fill:'#a86f47'});el('rect',{x:630,y:238,width:280,height:18,fill:'#e8c9a0'});
+el('path',{d:'M700 238 v-50 h40 v50 M690 188 h60',fill:'#cfd6da'});el('path',{d:'M780 238 v-20 q20 -40 40 0 v20',fill:'#f6e7d2'});el('circle',{cx:800,cy:196,r:8,fill:'#d9705a'});
+el('path',{d:'M670 300 h200 M670 350 h200',fill:'none',opacity:.5});
+
+/* 沙发 */
+const sofa=el('g',{class:'hit'});
+el('path',{d:'M40 400 v-70 q0 -24 24 -24 h170 q24 0 24 24 v70 z',fill:'#d9705a'},sofa);
+el('path',{d:'M60 360 h180 v30 h-180z',fill:'#e8927a'},sofa);
+el('path',{d:'M28 400 v-50 q0 -14 16 -14 q16 0 16 14 v50z M240 400 v-50 q0 -14 16 -14 q16 0 16 14 v50z',fill:'#c25f49'},sofa);
+sofa.onclick=()=>walkTo(150,'sofa');
+
+/* 桌子 + 人类 */
+el('path',{d:'M420 400 v-78 M380 322 h80',fill:'none','stroke-width':3});el('ellipse',{cx:420,cy:318,rx:58,ry:9,fill:'#e8c9a0'});
+el('path',{d:'M404 310 v-12 h18 v12z',fill:'#fff'});el('path',{d:'M422 300 q8 2 0 8',fill:'none'});
+el('path',{d:'M500 400 v-60 h40 v60 M494 340 h52',fill:'none',stroke:'#8e6445','stroke-width':3});
+const human=el('g',{});el('path',{d:'M492 336 q-6 -70 26 -80 q34 8 26 80z',fill:'#8aa6c9'},human);el('circle',{cx:518,cy:232,r:22,fill:'#f2d3b3'},human);
+el('path',{d:'M496 226 q22 -30 46 0 q-10 -10 -24 -8 q-14 -2 -22 8z',fill:'#5c4636'},human);el('path',{d:'M510 238 q4 -3 8 0 M522 238 q4 -3 8 0',fill:'none','stroke-width':2},human);
+el('path',{d:'M512 248 q6 -4 12 0',fill:'none','stroke-width':2},human);
+const hl=el('text',{x:470,y:200,'font-size':17,'text-anchor':'middle',stroke:'none',fill:'#8e6445'},human);hl.textContent='人类 · 阿满';
+
+/* 毛线球：从头顶的乌云里掉出来 */
+const cloud=el('g',{class:'hit'});el('path',{d:'M540 170 q-6 -24 18 -24 q8 -18 28 -8 q22 -8 24 14 q18 4 8 18z',fill:'#b8b3c4'},cloud);
+const yarn=el('g',{class:'hit'});el('circle',{cx:580,cy:176,r:14,fill:'#e0735a'},yarn);el('path',{d:'M568 172 q12 -8 24 4 M570 182 q10 -6 20 2 M578 162 q6 10 2 28',fill:'none','stroke-width':1.6,stroke:'#fff4e6'},yarn);
+el('animateTransform',{attributeName:'transform',type:'translate',values:'0 0;0 -4;0 0',dur:'2s',repeatCount:'indefinite'},yarn);
+yarn.onclick=cloud.onclick=()=>walkTo(470,'yarn');
+
+/* 猫：水彩圆团 */
+function cat(o){const g=el('g',{},actors),b=el('g',{filter:'url(#rough)',stroke:'#4a3b32','stroke-width':2.2,'stroke-linejoin':'round','stroke-linecap':'round'},g);
+  el('ellipse',{cx:0,cy:0,rx:30,ry:5,fill:'#4a3b32',opacity:.15,stroke:'none'},g);
+  const tail=el('path',{d:'M24 -12 q26 -2 22 -30',fill:'none','stroke-width':7,stroke:o.dark},b);
+  el('path',{d:'M-24 -40 l4 -24 l14 16 M24 -40 l-4 -24 l-14 16',fill:o.col},b);
+  el('path',{d:'M-30 -22 q0 -30 30 -30 q30 0 30 30 q0 22 -30 22 q-30 0 -30 -22z',fill:o.col},b);
+  if(o.patch)el('path',{d:'M-12 -50 q12 -6 24 0 q-4 12 -12 12 q-8 0 -12 -12z',fill:o.patch,stroke:'none',opacity:.8},b);
+  const eyes=el('g',{},b);el('path',{d:'M-11 -26 v3 M11 -26 v3','stroke-width':3.4},eyes);
+  el('path',{d:'M-4 -18 q4 4 8 0',fill:'none','stroke-width':1.6},b);
+  el('circle',{cx:-18,cy:-16,r:4,fill:'#f0a3a3',stroke:'none',opacity:.6},b);el('circle',{cx:18,cy:-16,r:4,fill:'#f0a3a3',stroke:'none',opacity:.6},b);
+  if(o.scarf)el('path',{d:'M-22 -6 q22 8 44 0 l-2 7 q-20 6 -40 0z',fill:o.scarf},b);
+  const lab=el('text',{y:o.labelY||-78,'font-size':17,'text-anchor':'middle',fill:o.me?'#b0563c':'#8e6445'},g);lab.textContent=o.label;
+  const bub=el('text',{y:-100,'font-size':16,'text-anchor':'middle',fill:'#4a3b32',opacity:0},g);
+  return Object.assign(o,{g,b,eyes,tail,bub})}
+function say(c,t,ms=2800){c.bub.textContent=t;c.bub.setAttribute('opacity',1);clearTimeout(c._t);c._t=setTimeout(()=>c.bub.setAttribute('opacity',0),ms)}
+
+const lihua=cat({x:120,y:130,col:'#d8b98a',dark:'#8e6445',patch:'#9b7650',label:'小狸花 · NPC · 睡觉中',labelY:-70,sleep:true});
+const banban=cat({x:760,y:404,col:'#e8a45e',dark:'#9a5a2a',patch:'#b8703a',label:'斑斑（NPC）',tx:600,wait:0});
+const me=cat({x:300,y:404,col:'#fffaf1',dark:'#7b6658',scarf:'#b0563c',label:'你',me:true});
+
+let target=null,after=null,busy=false,solved=0;
+svg.addEventListener('click',e=>{if(busy||e.target.closest('.hit'))return;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());walkTo(Math.max(40,Math.min(860,p.x)))});
+function walkTo(x,what){if(busy)return;me.curl=false;target=x;after=what||null}
+function arrive(){if(after==='sofa'){me.curl=true;me.y=370;cap('你跳上沙发，把自己团成一个球。');say(me,'呼……')}
+  if(after==='yarn')openNote();after=null}
+
+/* 便签 */
+const note=document.getElementById('note');
+function openNote(){busy=true;note.classList.add('on');
+  note.innerHTML=`<div class="from">🧶 从阿满头顶的小乌云里掉下来的毛线球</div>今天方案被否了第三次……<br>什么都不想说，就想有只猫陪一会儿。<div class="acts">
+  <button data-r="你轻轻蹭了蹭阿满的手背。|阿满笑了一下：「好吧，再改一版。」">→ 过去蹭蹭他</button>
+  <button data-r="你从吧台叼来一杯热可可。|阿满：「连猫都比我会照顾人……谢谢你。」">→ 叼一杯热可可过去</button>
+  <button data-r="你一屁股坐在他的键盘上：jjjjjjjjjjj|阿满：「哈哈哈哈行吧，今天不改了！」">→ 一屁股坐上键盘</button></div>`;
+  note.querySelectorAll('button').forEach(b=>b.onclick=()=>{const [a,r]=b.dataset.r.split('|');note.innerHTML=`<div class="from">✨ 毛线球解开了</div>${a}<br>${r}<br><span style="color:#a0826a">—— 已交付：一份「今日份治愈」</span>`;
+    yarn.style.display=cloud.style.display='none';solved++;document.getElementById('count').textContent='解开的毛线球：'+solved;
+    setTimeout(()=>{note.classList.remove('on');busy=false;cap('阿满头顶的乌云散了。书架上的小狸花翻了个身。');say(lihua,'喵…（梦话）',2500)},3200)})}
+
+/* 动画循环 */
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  if(target!=null){const d=target-me.x,s=150*dt;me.moving=true;me.face=d>0?1:-1;me.y=404;if(Math.abs(d)<=s){me.x=target;target=null;me.moving=false;arrive()}else me.x+=Math.sign(d)*s}else me.moving=false;
+  if(banban.tx!=null){const d=banban.tx-banban.x,s=60*dt;banban.moving=true;banban.face=d>0?1:-1;if(Math.abs(d)<=s){banban.tx=null;banban.wait=2+Math.random()*3;if(Math.random()<.4)say(banban,['这里有新人！','我去吧台偷块饼干','喵？'][Math.floor(Math.random()*3)])}else banban.x+=Math.sign(d)*s}
+  else{banban.moving=false;banban.wait-=dt;if(banban.wait<=0)banban.tx=300+Math.random()*540}
+  for(const c of [me,banban,lihua]){const f=c.face||1,bob=c.moving?-Math.abs(Math.sin(t*9))*6:Math.sin(t*2)*1.2;
+    c.g.setAttribute('transform',`translate(${c.x},${c.y})`);
+    c.b.setAttribute('transform',(c.curl||c.sleep)?'translate(0,4) scale(1.15,.7)':`translate(0,${bob}) scale(${f},1)`);
+    c.eyes.setAttribute('transform',(c.curl||c.sleep||(t*1000%3600)<150)?'translate(0,-24) scale(1,.2) translate(0,24)':'');
+    c.tail.setAttribute('transform',`rotate(${Math.sin(t*(c.sleep?1.5:3))*10} 24 -12)`)}
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

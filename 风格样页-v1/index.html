@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>猫咖风格样页</title>
+<style>
+  :root{--ink:#1f2328;--sub:#59636e;--line:#e3e6ea;--bg:#f7f7f5;--accent:#d9573b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1120px;margin:0 auto;padding:48px 24px 80px}
+  h1{font-size:26px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:18px;line-height:1.4;margin:0}
+  h3{font-size:13px;margin:14px 0 2px;color:var(--sub);font-weight:600}
+  p{margin:0}
+  .lead{color:var(--sub);max-width:760px}
+  table{width:100%;border-collapse:collapse;margin:28px 0 8px;background:#fff;border:1px solid var(--line)}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--sub);font-weight:600;background:#fbfbfa}
+  td a{color:var(--ink);font-weight:600;text-decoration:none}
+  td a:hover{color:var(--accent)}
+  .note{font-size:12px;color:var(--sub);margin-bottom:40px}
+  section{display:grid;grid-template-columns:280px 1fr;gap:24px;padding:32px 0;border-top:1px solid var(--line)}
+  .meta .no{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:1px}
+  .meta ul{margin:0;padding-left:18px}
+  .meta li{margin:1px 0}
+  .meta .open{display:inline-block;margin-top:14px;font-size:13px;color:var(--accent);text-decoration:none}
+  .frame{position:relative;aspect-ratio:16/10;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  @media (max-width:820px){section{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>猫猫咖啡馆 · 风格样页</h1>
+  <p class="lead">六组不同的视觉风格，主题都是「你是一只猫，在咖啡馆里接人类的毛线球」。每组都能直接玩：走动、躺沙发、解开毛线球。为了一次看全，每组演示的解球方式也不同（选择、填空、动作、拖拽、传球链）。<b>风格和玩法可以拆开重新组合。</b></p>
+
+  <table>
+    <tr><th>组</th><th>一句话气质</th><th>怎么走动</th><th>本组演示的解球方式</th><th>上手门槛</th><th>实现成本</th></tr>
+    <tr><td><a href="#a">A 像素 RPG</a></td><td>怀旧游戏，"真的在玩"</td><td>方向键 / 点地板</td><td>选择题 + @猫传球</td><td>中</td><td>中</td></tr>
+    <tr><td><a href="#b">B 等距小屋</a></td><td>清新治愈，像精致的模拟经营</td><td>点地板寻路</td><td>填空题</td><td>低</td><td>中高</td></tr>
+    <tr><td><a href="#c">C 绘本手绘</a></td><td>温暖叙事，像在翻一本绘本</td><td>点哪走哪（横向）</td><td>动作型选择（治愈日常）</td><td>最低</td><td>中</td></tr>
+    <tr><td><a href="#d">D 终端字符</a></td><td>1024 程序员梗，极客浪漫</td><td>方向键 / hjkl / 点地图</td><td>选择题 + 命令式传球</td><td>高（非技术同事）</td><td>低</td></tr>
+    <tr><td><a href="#e">E 软糯黏土</a></td><td>Q 萌潮玩，一眼想捏</td><td>点地板（单排舞台）</td><td>把毛线球拖给被 @ 的猫</td><td>最低</td><td>低中</td></tr>
+    <tr><td><a href="#f">F 剖面楼层</a></td><td>整栋店都在营业，热闹</td><td>点楼层，自动走楼梯</td><td>多猫协作传球链</td><td>低</td><td>中</td></tr>
+  </table>
+  <p class="note">所有样页都是纯前端、单文件、无外部依赖，本地双击就能打开。样页里的 NPC 都有明确标注；F 组另外演示了"真人玩家"和 NPC 的区分。</p>
+
+  <section id="a">
+    <div class="meta"><div class="no">STYLE A</div><h2>像素 RPG</h2>
+      <h3>画面</h3><p>16-bit 俯视角，暖木地板、粉色沙发、黑板写着 CAT CAFE 1024。美术全部由代码逐像素绘制。</p>
+      <h3>试试</h3><ul><li>先点一下画面，用方向键走，或者直接点地板</li><li>走上沙发会躺平</li><li>桌上的毛线球：按空格或点它</li><li>解开后会冒出一颗 @砚砚 的球，传给它</li></ul>
+      <h3>考量</h3><p>游戏感最强；但对没玩过游戏的同事，"这是个游戏"本身就是门槛。</p>
+      <a class="open" href="styles/a-pixel.html" target="_blank">全屏打开 ↗</a></div>
+    <div class="frame"><iframe src="styles/a-pixel.html" loading="lazy" title="A 像素"></iframe></div>
+  </section>
+
+  <section id="b">
+    <div class="meta"><div class="no">STYLE B</div><h2>等距小屋</h2>
+      <h3>画面</h3><p>45° 等距视角的小房间，薄荷墙、奶油地砖、柔和阴影，像一个可以转动的迷你模型。</p>
+      <h3>试试</h3><ul><li>点任意地砖，猫会自动绕开家具走过去</li><li>点沙发躺一会儿</li><li>点桌上闪烁的毛线球，做一道 git 填空题</li></ul>
+      <h3>考量</h3><p>好看又好懂，纯鼠标即可。家具多了以后，遮挡排序和统一的美术风格需要花功夫维护。</p>
+      <a class="open" href="styles/b-iso.html" target="_blank">全屏打开 ↗</a></div>
+    <div class="frame"><iframe src="styles/b-iso.html" loading="lazy" title="B 等距"></iframe></div>
+  </section>
+
+  <section id="c">
+    <div class="meta"><div class="no">STYLE C</div><h2>绘本手绘</h2>
+      <h3>画面</h3><p>纸纹、抖动的蜡笔线、水彩晕染，窗外在下雨，楷体旁白像绘本的配文。</p>
+      <h3>试试</h3><ul><li>点地板左右走，点沙发团成球</li><li>点窗户切换晴雨，点吊灯开关灯</li><li>点人类头顶的小乌云，用"蹭蹭 / 叼热可可 / 坐键盘"来安慰他</li></ul>
+      <h3>考量</h3><p>情感浓度最高，也最不像游戏，最适合非玩家。手绘滤镜在低配电脑上会稍微吃性能，而且只能沿一条线走动。</p>
+      <a class="open" href="styles/c-storybook.html" target="_blank">全屏打开 ↗</a></div>
+    <div class="frame"><iframe src="styles/c-storybook.html" loading="lazy" title="C 绘本"></iframe></div>
+  </section>
+
+  <section id="d">
+    <div class="meta"><div class="no">STYLE D</div><h2>终端字符</h2>
+      <h3>画面</h3><p>咖啡色终端，用字符画出整间店；你就是那个 <code>@</code>。右侧 events.log 实时滚动剧情。</p>
+      <h3>试试</h3><ul><li>方向键 / WASD / hjkl 移动，也可以点地图上任意字符</li><li>撞一下红色闪烁的 <code>*</code>，按 1/2/3 作答</li><li>第二颗球用 <code>pass --to 烁烁</code> 传出去</li></ul>
+      <h3>考量</h3><p>最贴 1024 程序员节，也最轻量。但可爱度低，非技术同事可能看不懂。可以只做成彩蛋模式。</p>
+      <a class="open" href="styles/d-terminal.html" target="_blank">全屏打开 ↗</a></div>
+    <div class="frame"><iframe src="styles/d-terminal.html" loading="lazy" title="D 终端"></iframe></div>
+  </section>
+
+  <section id="e">
+    <div class="meta"><div class="no">STYLE E</div><h2>软糯黏土</h2>
+      <h3>画面</h3><p>奶油粉背景，黏土质感的圆团猫和家具，内外双层阴影营造出"捏出来"的手感。</p>
+      <h3>试试</h3><ul><li>把中间的毛线球<b>拖</b>给标签上 @ 的那只猫</li><li>拖错了，猫会告诉你该给谁</li><li>点猫会弹一下，点沙发会躺下</li></ul>
+      <h3>考量</h3><p>几乎不用教，拖一下就懂，"传球"最直观。代价是自由走动很弱，只有一排舞台，同屏容纳不了太多猫。</p>
+      <a class="open" href="styles/e-clay.html" target="_blank">全屏打开 ↗</a></div>
+    <div class="frame"><iframe src="styles/e-clay.html" loading="lazy" title="E 黏土"></iframe></div>
+  </section>
+
+  <section id="f">
+    <div class="meta"><div class="no">STYLE F</div><h2>剖面楼层</h2>
+      <h3>画面</h3><p>夜晚的两层小楼剖面，扁平撞色。吧台、工位、沙发、楼梯一屏看全，人类头顶挂着待解的毛线球。</p>
+      <h3>试试</h3><ul><li>点任意楼层的地板，猫会自己走楼梯</li><li>点 2F 小林：你写周报，传给烁烁配图，再交付（三步传球链）</li><li>点 1F 小周：@砚砚 的球，传给砚砚</li></ul>
+      <h3>考量</h3><p>最能表现"多人 + NPC + 协作"，热闹感强。但信息密度高，窄屏上字会偏小。</p>
+      <a class="open" href="styles/f-cutaway.html" target="_blank">全屏打开 ↗</a></div>
+    <div class="frame"><iframe src="styles/f-cutaway.html" loading="lazy" title="F 剖面"></iframe></div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E · 软糯黏土</title>
+<style>
+  :root{--bg:#ffe9dc;--floor:#f7cdb6;--ink:#5a3d3a}
+  html,body{margin:0;height:100%;overflow:hidden;user-select:none;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink)}
+  body{background:radial-gradient(120% 90% at 50% 10%,#fff3ea 0%,var(--bg) 60%,#fbd7c4 100%)}
+  #stage{position:absolute;inset:0}
+  .floor{position:absolute;left:-10%;right:-10%;bottom:0;height:34%;background:linear-gradient(#f9d6c1,#f3bfa4);border-radius:50% 50% 0 0/22% 22% 0 0;box-shadow:inset 0 14px 24px #fff8}
+  .clay{border-radius:28px;box-shadow:inset -8px -10px 18px #0000001f,inset 8px 10px 16px #ffffffa6,0 14px 22px #b0634026}
+  /* 吧台 */
+  .counter{position:absolute;right:6%;bottom:26%;width:34%;height:26%;background:#f6a88a}
+  .counter::after{content:"";position:absolute;left:-4%;right:-4%;top:-14%;height:22%;border-radius:22px;background:#fff1e6;box-shadow:inset -6px -6px 12px #0000001a,inset 6px 6px 10px #fff}
+  .cup{position:absolute;bottom:100%;width:44px;height:40px;border-radius:12px 12px 20px 20px;background:#fff;margin-bottom:10%}
+  .cup::after{content:"";position:absolute;right:-12px;top:8px;width:14px;height:18px;border:6px solid #fff;border-left:0;border-radius:0 12px 12px 0}
+  .machine{position:absolute;right:10%;bottom:100%;margin-bottom:9%;width:70px;height:86px;background:#c9d7e8;border-radius:22px}
+  /* 沙发 */
+  .sofa{position:absolute;left:5%;bottom:22%;width:30%;height:22%;background:#a7c7a0;cursor:pointer}
+  .sofaBack{position:absolute;left:6.5%;bottom:36%;width:27%;height:16%;background:#b9d6b1;cursor:pointer}
+  .sofa:hover{filter:brightness(1.04)}
+  /* 挂饰 */
+  .sign{position:absolute;left:50%;top:7%;transform:translateX(-50%);padding:12px 26px;background:#fff6ee;font-weight:800;font-size:22px;letter-spacing:2px;color:#e0735a;border-radius:24px}
+  .sign small{display:block;text-align:center;font-size:12px;letter-spacing:4px;color:#c99a86;font-weight:600}
+  .bubbleWin{position:absolute;left:8%;top:10%;width:18%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 35%,#e3f4ff,#a8d5f0)}
+  /* 猫 */
+  .cat{position:absolute;bottom:23%;width:110px;height:100px;transform:translateX(-50%);transition:left 1.1s cubic-bezier(.4,.1,.3,1);cursor:pointer}
+  .cat .b{position:absolute;inset:0;border-radius:50% 50% 46% 46%/58% 58% 42% 42%;transform-origin:50% 100%;transition:transform .25s}
+  .cat .e{position:absolute;top:-8px;width:34px;height:34px;border-radius:9px;z-index:-1}
+  .cat .e.l{left:12px;transform:rotate(35deg) skew(-8deg,-8deg)}.cat .e.r{right:12px;transform:rotate(55deg) skew(8deg,8deg)}
+  .cat .eye{position:absolute;top:40%;width:11px;height:14px;border-radius:50%;background:#3d2a28;box-shadow:inset 2px 2px 0 #fff9}
+  .cat .eye.l{left:30%}.cat .eye.r{right:30%}
+  .cat .ck{position:absolute;top:56%;width:18px;height:10px;border-radius:50%;background:#ff9fae88}
+  .cat .ck.l{left:14%}.cat .ck.r{right:14%}
+  .cat .sc{position:absolute;left:12%;right:12%;bottom:12%;height:16px;border-radius:10px;background:#ff8a6b;box-shadow:inset -3px -4px 6px #0002,inset 3px 3px 5px #fff6}
+  .cat .nm{position:absolute;left:50%;bottom:calc(100% + 26px);transform:translateX(-50%);white-space:nowrap;font-size:12px;padding:4px 10px;border-radius:999px;background:#fff;box-shadow:0 4px 10px #b0634022}
+  .cat.me .nm{background:#ff8a6b;color:#fff;font-weight:700}
+  .cat .say{position:absolute;left:50%;bottom:calc(100% + 58px);transform:translateX(-50%) scale(.6);opacity:0;transition:.2s;white-space:nowrap;font-size:13px;padding:8px 14px;border-radius:18px;background:#fff;box-shadow:0 6px 14px #b0634026}
+  .cat .say.on{opacity:1;transform:translateX(-50%) scale(1)}
+  .cat.hop .b{animation:hop .5s}
+  @keyframes hop{30%{transform:scale(1.15,.8)}60%{transform:translateY(-18px) scale(.92,1.1)}100%{transform:none}}
+  .cat.walk .b{animation:wob .35s infinite alternate}
+  @keyframes wob{from{transform:rotate(-5deg) translateY(0)}to{transform:rotate(5deg) translateY(-6px)}}
+  .cat.lie .b{transform:scale(1.3,.62)}.cat.lie .e{top:34px}.cat.lie .e.l{left:2px}.cat.lie .e.r{right:2px}.cat .e{transition:.25s}.cat.lie .eye{height:3px;top:46%}
+  .cat.drop .b{box-shadow:0 0 0 6px #ffd66e,inset -8px -10px 18px #0000001f,inset 8px 10px 16px #ffffffa6}
+  /* 毛线球 */
+  #yarn{position:absolute;width:62px;height:62px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffb49c,#e0735a 65%,#c85a44);cursor:grab;z-index:5;touch-action:none;
+        box-shadow:0 12px 18px #b0634040,inset -6px -8px 12px #0002;transition:transform .2s}
+  #yarn::before,#yarn::after{content:"";position:absolute;inset:12px;border-radius:50%;border:3px solid #fff5;border-left-color:transparent;border-bottom-color:transparent;transform:rotate(20deg)}
+  #yarn::after{inset:22px;transform:rotate(200deg)}
+  #yarn .at{position:absolute;left:50%;top:-30px;transform:translateX(-50%);font-size:12px;font-weight:700;background:#ffd66e;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  #yarn:active{cursor:grabbing;transform:scale(1.1)}
+  #msg{position:absolute;left:50%;top:22%;transform:translateX(-50%);width:min(420px,80%);background:#fff;border-radius:26px;padding:16px 22px;font-size:14px;line-height:1.7;box-shadow:0 14px 30px #b0634024,inset -4px -6px 10px #0000000d}
+  #msg .who{font-size:12px;color:#c9876f}
+  #msg .how{font-size:12px;color:#fff;background:#e0735a;display:inline-block;border-radius:999px;padding:2px 10px;margin-top:6px}
+  .count{position:absolute;right:18px;top:14px;font-size:13px;background:#fff;border-radius:999px;padding:6px 14px;box-shadow:0 4px 10px #b0634022}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bubbleWin clay"></div>
+  <div class="sign clay">CAT CAFE<small>1024 营业中</small></div>
+  <div class="floor"></div>
+  <div class="counter clay"><div class="machine clay"></div><div class="cup clay" style="left:12%"></div><div class="cup clay" style="left:32%;background:#ffe3a3"></div></div>
+  <div class="sofaBack clay" id="sofaB"></div><div class="sofa clay" id="sofa"></div>
+  <div id="msg"></div>
+  <div class="count" id="count">🧶 0</div>
+</div>
+<script>
+const stage=document.getElementById('stage');
+function cat(o){const d=document.createElement('div');d.className='cat'+(o.me?' me':'');d.style.left=o.x+'%';
+  d.innerHTML=`<div class="e l clay" style="background:${o.ear}"></div><div class="e r clay" style="background:${o.ear}"></div><div class="b clay" style="background:${o.col}">
+  <div class="eye l"></div><div class="eye r"></div><div class="ck l"></div><div class="ck r"></div>${o.me?'<div class="sc"></div>':''}</div><div class="nm">${o.label}</div><div class="say"></div>`;
+  stage.appendChild(d);d.onclick=e=>{e.stopPropagation();d.classList.remove('hop');void d.offsetWidth;d.classList.add('hop');say(o,o.pokes[Math.floor(Math.random()*o.pokes.length)])};return Object.assign(o,{d})}
+function say(o,t,ms=2400){const s=o.d.querySelector('.say');s.textContent=t;s.classList.add('on');clearTimeout(o._t);o._t=setTimeout(()=>s.classList.remove('on'),ms)}
+
+const cats=[
+  cat({name:'你',x:40,col:'#fff8f1',ear:'#fff0e4',label:'你',me:true,pokes:['喵？','（蹭蹭）']}),
+  cat({name:'砚砚',x:62,col:'#b9c9a8',ear:'#a5b893',label:'砚砚 · NPC',pokes:['我在看代码，别闹','先写测试。']}),
+  cat({name:'斑斑',x:80,col:'#ffc07a',ear:'#f4a95c',label:'斑斑 · NPC',pokes:['要玩吗要玩吗！','我什么都想试试！']}),
+];
+const me=cats[0];
+
+/* 点地板横向走；点沙发去躺 */
+stage.addEventListener('click',e=>{if(e.target.closest('#yarn,#msg'))return;const x=e.clientX/innerWidth*100;walk(Math.max(8,Math.min(92,x)))});
+document.getElementById('sofaB').onclick=document.getElementById('sofa').onclick=e=>{e.stopPropagation();walk(20,()=>{me.d.classList.add('lie');say(me,'软软的……不想动了')})};
+function walk(x,then){me.d.classList.remove('lie');me.d.classList.add('walk');me.d.style.left=x+'%';me.x=x;clearTimeout(me._w);me._w=setTimeout(()=>{me.d.classList.remove('walk');then&&then()},1100)}
+
+/* NPC 小碎步 */
+setInterval(()=>{const n=cats[2];if(n.busy)return;n.x=Math.max(74,Math.min(92,n.x+(Math.random()-.5)*16));n.d.classList.add('walk');n.d.style.left=n.x+'%';setTimeout(()=>n.d.classList.remove('walk'),1100)},3200);
+
+/* 毛线球：拖给被 @ 的那只猫 */
+const msg=document.getElementById('msg');
+const Q=[
+  {who:'人类「前端 小唐」',text:'<b>@砚砚</b> 帮我 review 一下这个 PR，我感觉 useEffect 写得有点怪……',to:'砚砚',ok:'砚砚：依赖数组漏了 userId，改完再叫我。✓ 已交付'},
+  {who:'人类「测试 阿凯」',text:'<b>@斑斑</b> 周末想去露营，帮我列个不会忘东西的清单！',to:'斑斑',ok:'斑斑：帐篷！驱蚊水！还有……充电宝！✓ 已交付'},
+  {who:'人类「产品 Lily」',text:'今天好累，谁来陪我聊两句？（没有 @ 谁，谁接都行）',to:'*',ok:'你陪 Lily 聊了五分钟，她说好多了。✓ 已交付'}];
+let qi=0,solved=0;
+const yarn=document.createElement('div');yarn.id='yarn';stage.appendChild(yarn);
+function nextYarn(){const q=Q[qi%Q.length];yarn.innerHTML=`<span class="at">${q.to==='*'?'谁都可以接':'@'+q.to}</span>`;yarn.style.left='47%';yarn.style.top='52%';yarn.style.display='';
+  msg.innerHTML=`<div class="who">🧶 毛线球 · ${q.who}</div>${q.text}<br><span class="how">把毛线球拖给${q.to==='*'?'任意一只猫':' '+q.to+' '}</span>`}
+nextYarn();
+let drag=null;
+yarn.addEventListener('pointerdown',e=>{drag={dx:e.clientX-yarn.offsetLeft,dy:e.clientY-yarn.offsetTop};yarn.setPointerCapture(e.pointerId)});
+yarn.addEventListener('pointermove',e=>{if(!drag)return;yarn.style.left=(e.clientX-drag.dx)+'px';yarn.style.top=(e.clientY-drag.dy)+'px';cats.forEach(c=>c.d.classList.toggle('drop',hit(c)))});
+yarn.addEventListener('pointerup',e=>{if(!drag)return;drag=null;const c=cats.find(hit);cats.forEach(c=>c.d.classList.remove('drop'));const q=Q[qi%Q.length];
+  if(!c){nextPos();return}
+  if(q.to!=='*'&&c.name!==q.to){say(c,c.me?`这颗是 @${q.to} 的，传给它吧～`:`不是给我的哦，是 @${q.to} 的`);nextPos();return}
+  yarn.style.display='none';c.d.classList.remove('hop');void c.d.offsetWidth;c.d.classList.add('hop');say(c,'接到啦！',1600);solved++;document.getElementById('count').textContent='🧶 '+solved;
+  msg.innerHTML=`<div class="who">✨ 毛线球解开了</div>${q.ok}`;setTimeout(()=>{qi++;nextYarn()},2600)});
+function hit(c){const a=yarn.getBoundingClientRect(),b=c.d.getBoundingClientRect();const x=a.left+a.width/2,y=a.top+a.height/2;return x>b.left&&x<b.right&&y>b.top-20&&y<b.bottom}
+function nextPos(){yarn.style.left='47%';yarn.style.top='52%'}
+setTimeout(()=>say(cats[1],'那颗毛线球好像是给我的'),900);
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F · 剖面楼层</title>
+<style>
+  html,body{margin:0;height:100%;background:#1f2a44;overflow:hidden;user-select:none;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  svg{width:100%;height:100%;display:block}
+  .hit{cursor:pointer}
+  #panel{position:absolute;left:16px;bottom:16px;width:290px;background:#fffdf7;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.65;color:#1f2a44;box-shadow:0 6px 0 #0003;display:none}
+  #panel .h{font-weight:800;font-size:12px;letter-spacing:1px;color:#ef6f4a;margin-bottom:4px}
+  #panel .steps{display:flex;gap:4px;margin:8px 0}
+  #panel .steps span{flex:1;text-align:center;font-size:11px;padding:3px 0;border-radius:4px;background:#eef0f5;color:#8990a3}
+  #panel .steps span.on{background:#1f2a44;color:#fff}
+  #panel .steps span.ok{background:#39b37a;color:#fff}
+  #panel button{font:inherit;font-weight:700;font-size:12px;border:0;border-radius:6px;padding:6px 10px;margin:4px 4px 0 0;background:#ffd23f;color:#1f2a44;cursor:pointer}
+  #panel button:hover{background:#ffc300}
+  .legend{position:absolute;right:16px;bottom:14px;font-size:12px;color:#c9d2e8;display:flex;gap:12px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<svg id="svg" viewBox="0 0 900 520"></svg>
+<div id="panel"></div>
+<div class="legend"><span><i style="background:#ef6f4a"></i>你</span><span><i style="background:#39b37a"></i>真人玩家</span><span><i style="background:#8990a3"></i>NPC</span></div>
+<script>
+const NS='http://www.w3.org/2000/svg',svg=document.getElementById('svg');
+function el(t,a,p=svg){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+function text(p,x,y,s,a={}){const t=el('text',{x,y,'font-size':12,'text-anchor':'middle','font-weight':700,...a},p);t.textContent=s;return t}
+
+/* 夜空 + 楼 */
+for(let k=0;k<40;k++)el('circle',{cx:Math.random()*900,cy:Math.random()*110,r:Math.random()*1.4+.4,fill:'#fff',opacity:Math.random()*.6+.2});
+el('circle',{cx:820,cy:50,r:22,fill:'#ffe9a8'});el('circle',{cx:830,cy:44,r:20,fill:'#1f2a44'});
+el('rect',{x:0,y:480,width:900,height:40,fill:'#2b3a5c'});
+el('path',{d:'M70 124 L450 40 L830 124 Z',fill:'#ef6f4a'});
+el('rect',{x:360,y:74,width:180,height:40,rx:8,fill:'#1f2a44'});
+const sign=text(svg,450,100,'CAT CAFE · 1024',{fill:'#ffd23f','font-size':18,'letter-spacing':2});
+el('animate',{attributeName:'opacity',values:'1;1;.4;1;1',dur:'4s',repeatCount:'indefinite'},sign);
+el('rect',{x:80,y:124,width:740,height:356,fill:'#f6c97a'});
+const F2=290,F1=470;
+el('rect',{x:92,y:136,width:716,height:F2-136,fill:'#ffe8b8'});
+el('rect',{x:92,y:F2+12,width:716,height:F1-F2-12,fill:'#fff1d0'});
+el('rect',{x:80,y:F2,width:740,height:12,fill:'#c98a45'});el('rect',{x:80,y:F1,width:740,height:10,fill:'#c98a45'});
+text(svg,120,158,'2F',{fill:'#c98a45','font-size':14,'text-anchor':'start'});text(svg,120,326,'1F',{fill:'#c98a45','font-size':14,'text-anchor':'start'});
+// 楼梯
+const SX0=700,SX1=800;
+for(let k=0;k<9;k++)el('rect',{x:SX0+k*11,y:F1-(k+1)*20,width:100-k*11,height:20,fill:k%2?'#e5a55c':'#dd9a4f'});
+// 2F：猫爬架 + 沙发 + 工位
+el('rect',{x:160,y:170,width:10,height:120,fill:'#b0723a'});el('rect',{x:130,y:200,width:70,height:10,rx:5,fill:'#6fb5d9'});el('rect',{x:140,y:245,width:60,height:10,rx:5,fill:'#6fb5d9'});
+const sofa=el('g',{class:'hit'});el('rect',{x:230,y:240,width:150,height:50,rx:14,fill:'#5a7fd6'},sofa);el('rect',{x:240,y:222,width:130,height:30,rx:12,fill:'#6f92e6'},sofa);text(sofa,305,280,'沙发',{fill:'#fff','font-size':11,opacity:.7});
+[[540],[640]].forEach(([x])=>{el('rect',{x:x-30,y:250,width:60,height:6,fill:'#8b5a2b'});el('rect',{x:x-26,y:256,width:4,height:34,fill:'#8b5a2b'});el('rect',{x:x+22,y:256,width:4,height:34,fill:'#8b5a2b'});el('rect',{x:x-14,y:234,width:28,height:16,rx:2,fill:'#3b4766'})});
+// 1F：吧台 + 桌
+el('rect',{x:110,y:380,width:190,height:90,rx:6,fill:'#ef6f4a'});el('rect',{x:104,y:372,width:202,height:12,rx:4,fill:'#ffd23f'});
+el('rect',{x:130,y:340,width:40,height:32,rx:6,fill:'#9fb0c8'});el('rect',{x:200,y:356,width:16,height:16,rx:3,fill:'#fff'});el('rect',{x:228,y:356,width:16,height:16,rx:3,fill:'#fff'});
+[[430],[580]].forEach(([x])=>{el('ellipse',{cx:x,cy:420,rx:36,ry:7,fill:'#8b5a2b'});el('rect',{x:x-3,y:420,width:6,height:50,fill:'#8b5a2b'})});
+// 窗
+
+/* 人类 */
+const humans=[];
+function human(x,floor,name,col,yarnInfo){const g=el('g',{class:'hit'});const y=floor;
+  el('rect',{x:x-11,y:y-54,width:22,height:40,rx:9,fill:col},g);el('circle',{cx:x,cy:y-66,r:11,fill:'#f2c9a0'},g);el('path',{d:`M${x-11} ${y-68}a11 11 0 0 1 22 0z`,fill:'#2b2b3a'},g);
+  el('rect',{x:x-9,y:y-14,width:18,height:14,fill:'#3b4766'},g);text(g,x,y-86,name,{fill:'#1f2a44','font-size':10,opacity:.75});
+  let yg=null;if(yarnInfo){yg=el('g',{},g);el('circle',{cx:x,cy:y-108,r:10,fill:'#ef4a6a'},yg);el('path',{d:`M${x-7} ${y-110}q7 -5 14 3M${x-6} ${y-104}q6 -4 12 1`,stroke:'#fff',fill:'none','stroke-width':1.5},yg);
+    if(yarnInfo.at){el('rect',{x:x+12,y:y-118,width:44,height:18,rx:9,fill:'#ffd23f'},yg);text(yg,x+34,y-105,'@'+yarnInfo.at,{fill:'#1f2a44','font-size':10})}
+    el('animateTransform',{attributeName:'transform',type:'translate',values:'0 0;0 -5;0 0',dur:'1.6s',repeatCount:'indefinite'},yg)}
+  const h={x,floor,name,g,yg,info:yarnInfo};g.onclick=e=>{e.stopPropagation();if(yg&&yg.style.display!=='none')go(x-40,floor,()=>openTask(h))};humans.push(h);return h}
+human(430,F1,'人类·阿杰','#4a9fd8',null);
+const hZhou=human(580,F1,'人类·小周','#39b37a',{at:'砚砚'});
+const hLin=human(560,F2,'人类·小林','#b36fd6',{task:true});
+human(660,F2,'人类·Amy','#e0a13a',null);
+
+/* 猫 */
+const layer=el('g',{});
+function cat(o){const g=el('g',{},layer),b=el('g',{},g);
+  el('ellipse',{cx:0,cy:0,rx:18,ry:4,fill:'#0002'},g);
+  el('path',{d:'M14 -8 q14 -2 12 -18',stroke:o.col2,'stroke-width':6,fill:'none','stroke-linecap':'round'},b);
+  el('path',{d:'M-15 -26 l2 -14 l11 9z M15 -26 l-2 -14 l-11 9z',fill:o.col2},b);
+  el('circle',{cx:0,cy:-17,r:18,fill:o.col},b);
+  el('circle',{cx:-6,cy:-19,r:2.4,fill:'#1f2a44'},b);el('circle',{cx:6,cy:-19,r:2.4,fill:'#1f2a44'},b);
+  el('rect',{x:-14,y:-8,width:28,height:5,rx:2.5,fill:o.tagCol,opacity:o.kind==='me'?1:0},b);
+  const tg=el('g',{},g);const w=o.label.length*11+14;el('rect',{x:-w/2,y:-58,width:w,height:17,rx:4,fill:o.tagCol},tg);text(tg,0,-46,o.label,{fill:'#fff','font-size':10});
+  const bub=el('g',{opacity:0},g);const br=el('rect',{y:-86,height:22,rx:6,fill:'#fff'},bub);const bt=text(bub,0,-71,'',{fill:'#1f2a44','font-size':11,'font-weight':600});
+  return Object.assign(o,{g,b,bub,br,bt,path:[]})}
+function say(c,t,ms=2600){const w=t.length*11+18;c.br.setAttribute('x',-w/2);c.br.setAttribute('width',w);c.bt.textContent=t;c.bub.setAttribute('opacity',1);clearTimeout(c._t);c._t=setTimeout(()=>c.bub.setAttribute('opacity',0),ms)}
+const me=cat({x:340,y:F2,col:'#fff7ec',col2:'#e8d6c4',tagCol:'#ef6f4a',label:'你',kind:'me'});
+const npcs=[
+  cat({x:210,y:F1-100,col:'#c7b3e6',col2:'#9d86c4',tagCol:'#8990a3',label:'宪宪·店长 NPC',fixed:true}),
+  cat({x:500,y:F1,col:'#b9c9a8',col2:'#8a9e76',tagCol:'#8990a3',label:'砚砚·NPC'}),
+  cat({x:420,y:F2,col:'#f3e6cf',col2:'#6b5446',tagCol:'#8990a3',label:'烁烁·NPC'}),
+  cat({x:200,y:F2,col:'#8a8f99',col2:'#5d626b',tagCol:'#39b37a',label:'老王的猫·真人'}),
+];
+
+/* 寻路：同层直走；跨层走楼梯 */
+function route(fx,fy,tx,ty){if(fy===ty)return[[tx,ty]];return fy===F1?[[SX0,F1],[SX1,F2],[tx,F2]]:[[SX1,F2],[SX0,F1],[tx,F1]]}
+let after=null,busy=false;
+function go(x,floor,then){if(busy)return;if(me.lie){me.lie=false;me.y=F2}me.path=route(me.x,me.y,x,floor);after=then||null}
+svg.addEventListener('click',e=>{if(busy)return;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+  if(p.x<96||p.x>804||p.y<136||p.y>F1)return;go(Math.min(p.x,SX0-10),p.y<F2+6?F2:F1)});
+sofa.onclick=e=>{e.stopPropagation();go(305,F2,()=>{me.lie=true;me.y=F2-24;say(me,'在沙发上摊成猫饼')})};
+
+/* 任务：传球链 */
+const panel=document.getElementById('panel');let solved=12;
+function openTask(h){if(h!==hLin){busy=true;panel.style.display='block';panel.innerHTML=`<div class="h">🧶 毛线球 · 来自 ${h.name}</div>「<b>@砚砚</b> 帮我查下为什么这个接口老超时」<br><span style="color:#8990a3">这颗 @ 了砚砚。先传给它吧。</span><br><button id="p">传给砚砚</button>`;
+    panel.querySelector('#p').onclick=()=>{fly(me,npcs[1],()=>{say(npcs[1],'收到，我去看看日志');npcs[1].path=[[h.x-36,F1]];setTimeout(()=>{h.yg.style.display='none';say(npcs[1],'搞定，已交付 ✓');solved++;hud()},2600)});close()};return}
+  busy=true;panel.style.display='block';stepA(h)}
+function steps(n){return `<div class="steps">${['① 你：写周报','② 烁烁：配图','③ 交付'].map((s,i)=>`<span class="${i<n?'ok':i===n?'on':''}">${s}</span>`).join('')}</div>`}
+function stepA(h){panel.innerHTML=`<div class="h">🧶 毛线球 · 来自 ${h.name}</div>「帮我写本周周报：修了 3 个 bug、开了 5 个会、摸了 1 次鱼。」${steps(0)}选一个语气：<br>
+  <button data-t="正式版">正式版</button><button data-t="凡尔赛版">凡尔赛版</button><button data-t="诚实版">诚实版</button>`;
+  panel.querySelectorAll('button').forEach(b=>b.onclick=()=>stepB(h,b.dataset.t))}
+function stepB(h,tone){panel.innerHTML=`<div class="h">🧶 周报（${tone}）已写好</div>小林还想要一张图。画图是烁烁的强项 —— 把球传过去？${steps(1)}<button id="p">传给烁烁</button>`;
+  panel.querySelector('#p').onclick=()=>{panel.innerHTML=`<div class="h">🧶 传球中…</div>${steps(1)}<span style="color:#8990a3">烁烁正在配图</span>`;
+    fly(me,npcs[2],()=>{say(npcs[2],'配好了！用了暖橘色～',2200);setTimeout(()=>fly(npcs[2],h,()=>{h.yg.style.display='none';say(me,'交付完成！');solved++;hud();
+      panel.innerHTML=`<div class="h">✨ 毛线球解开了</div>小林：「周报 + 配图，这周稳了！」${steps(3)}<button id="ok">好</button>`;panel.querySelector('#ok').onclick=close}),1400)})}}
+function close(){panel.style.display='none';busy=false}
+function fly(a,b,done){const g=el('g',{});el('circle',{r:9,fill:'#ef4a6a'},g);const t0=performance.now(),ax=a.x,ay=a.y-30,bx=b.x,by=(b.floor||b.y)-(b.floor?100:30);
+  (function f(now){const p=Math.min(1,(now-t0)/800),x=ax+(bx-ax)*p,y=ay+(by-ay)*p-Math.sin(p*Math.PI)*80;g.setAttribute('transform',`translate(${x},${y})`);if(p<1)requestAnimationFrame(f);else{g.remove();done()}})(t0)}
+const hudT=text(svg,450,510,'',{fill:'#c9d2e8','font-size':12,'font-weight':500});function hud(){hudT.textContent=`今日营业：已解开 ${solved} 颗毛线球 · 在线 2 位真人 + 4 只 NPC 猫`}hud();
+
+/* 循环 */
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  for(const c of [me,...npcs]){if(c.path.length){const [tx,ty]=c.path[0],dx=tx-c.x,dy=ty-c.y,l=Math.hypot(dx,dy),sp=(c===me?170:70)*dt;if(Math.abs(dx)>.5)c.face=dx>0?1:-1;c.moving=true;
+      if(l<=sp){c.x=tx;c.y=ty;c.path.shift();if(!c.path.length&&c===me&&after){const f=after;after=null;f()}}else{c.x+=dx/l*sp;c.y+=dy/l*sp}}
+    else{c.moving=false;if(c!==me&&!c.fixed&&Math.random()<dt*.35){const fl=c.y===F1?F1:F2;c.path=[[Math.max(110,Math.min(SX0-20,c.x+(Math.random()-.5)*260)),fl]]}}
+    const bob=c.moving?-Math.abs(Math.sin(t*11))*4:0;c.g.setAttribute('transform',`translate(${c.x},${c.y})`);
+    c.b.setAttribute('transform',c.lie?'translate(0,4) scale(1.3,.65)':`translate(0,${bob}) scale(${c.face||1},1)`)}
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+setTimeout(()=>{say(npcs[3],'我先去 1F 转转');npcs[3].path=route(npcs[3].x,npcs[3].y,330,F1)},1200);setTimeout(()=>say(npcs[0],'欢迎光临～ 小林那颗毛线球要两只猫合作'),600);
+</script>
+</body>
+</html>

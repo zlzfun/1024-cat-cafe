@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>像素猫定稿</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:19px;margin:40px 0 4px;line-height:1.4}
+  p{margin:0}
+  .lead,.desc{color:var(--sub)}
+  .desc{font-size:13px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:flex-start}
+  .cell{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px 6px;text-align:center}
+  .cell b{color:var(--ink);font-weight:600;font-size:13px}
+  .cell .grp{font-size:11px;color:var(--acc)}
+  table{border-collapse:collapse;margin-top:14px;background:var(--card);border:1px solid var(--line)}
+  th,td{padding:6px 12px;border-bottom:1px solid var(--line);text-align:center;font-size:12px;color:var(--sub);font-weight:normal}
+  th{color:var(--ink)}
+  td.n{text-align:left;color:var(--ink)}
+  .play{position:relative;border-radius:4px;overflow:hidden;outline:none;cursor:pointer;margin-top:12px}
+  .play canvas{width:100%;height:auto}
+  .play .tip{position:absolute;left:10px;top:8px;font-size:12px;background:#241a2ecc;padding:1px 8px;border-radius:3px}
+  .play:focus .tip{background:var(--acc);color:var(--bg)}
+  .btns{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .btns button{font:inherit;font-size:13px;color:var(--bg);background:var(--acc);border:0;border-radius:3px;padding:3px 12px;cursor:pointer}
+  .btns button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .spec{margin-top:14px;font-size:13px;color:var(--sub)}
+  .spec code{font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：猫猫定稿 v1</h1>
+  <p class="lead">静止态是 <b>V3 端坐猫</b>（头宽 14px），移动态是 <b>S2 3/4 转头</b>（身长 −5px，已按这个身长重画身体，四条腿分成前后两组，不会挤在一起）。另有 4 个玩毛线球动作和 7 个状态。精灵数据已单独存成 <code>cat-sprites.js</code>，开发游戏时直接复用。</p>
+
+  <h2>一、动作表</h2>
+  <div class="row" id="sheet"></div>
+
+  <h2>二、7 种毛色 × 关键形态</h2>
+  <table id="breeds"></table>
+
+  <h2>三、试玩：一只猫在店里的一天</h2>
+  <p class="desc">方向键操控白猫；不操作时，NPC 会自己闲逛，偶尔洗脸、睡觉、玩球。点"解一颗毛线球"可以看完整流程：发现 → 走过去 → 玩球 → 开心。</p>
+  <div class="btns"><button id="solve">演示：解一颗毛线球</button><button class="ghost" data-act="sleep">睡一觉</button><button class="ghost" data-act="groom">洗个脸</button><button class="ghost" data-act="loaf">趴成猫饼</button></div>
+  <div class="play" tabindex="0"><canvas id="pc"></canvas><div class="tip">点我 · 方向键移动</div></div>
+
+  <p class="spec">规格：静止精灵 <code>20×21</code>，侧走精灵 <code>26×19</code>，锚点在头部中轴的脚底。行走 4 帧、每秒 8 帧，尾巴 2 帧、每秒 2 帧，每 3 秒眨一次眼。向左走时直接水平翻转，上下移动时沿用最后一次的左右朝向。</p>
+</main>
+<script src="cat-sprites-v1.js"></script>
+<script>
+const mk=(parent,w,h,s)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.style.width=w*s+'px';c.style.height=h*s+'px';parent.appendChild(c);return c};
+const blinkAt=(t,o=0)=>((t+o)*1000%3000)<150;
+
+/* 全部形态：返回 {G, cx, dy, flip, blink}；cx = 头部中轴 */
+const POSE={
+  sit:(t,tf,o=0)=>({G:sit(tf),cx:9.5,blink:blinkAt(t,o)}),
+  walkR:(t,tf,o=0)=>{const G=sideWalk(Math.floor(t*8)+o,tf);return{G,cx:G.cx}},
+  walkL:(t,tf,o=0)=>{const G=sideWalk(Math.floor(t*8)+o,tf);return{G,cx:G.cx,flip:true}},
+  groom:t=>({G:st_groom(Math.floor(t*4)%2),cx:9.5}),
+  happy:t=>{const f=Math.floor(t*4)%2;return{G:st_happy(f),cx:9.5,dy:f?-1:0}},
+  hold:t=>({G:st_hold(Math.floor(t*2.5)%2),cx:9.5}),
+  loaf:(t,tf,o=0)=>({G:st_loaf(tf),cx:9.5,blink:blinkAt(t,o)}),
+  sleep:t=>({G:st_sleep(Math.floor(t*1.2)%2),cx:9.5}),
+  alert:t=>({G:st_alert(Math.floor(t*3)%2),cx:9.5}),
+  belly:t=>({G:p_belly(Math.floor(t*4)%2),cx:22}),
+  paw:t=>({G:p_paw(t),cx:9.5}),
+  swing:t=>({G:p_swing(t),cx:9.5}),
+  tangle:t=>({G:p_tangle(t),cx:10.5+(Math.floor(t*8)%2)}),
+};
+const SHEET=[['sit','待机','静止'],['walkR','侧走 →','移动'],['walkL','侧走 ←','移动'],['groom','洗脸','闲置'],['loaf','猫饼','闲置'],['sleep','睡觉','闲置'],
+  ['alert','发现毛线球','解球'],['hold','抱毛线球','解球'],['belly','四脚朝天蹬球','解球'],['paw','趴着拨球','解球'],['swing','坐着拍吊球','解球'],['tangle','被毛线缠住','解球'],['happy','开心','解开']];
+
+/* 一、动作表 */
+const sheet=SHEET.map(([k,n,g])=>{const d=document.createElement('div');d.className='cell';const c=mk(d,36,32,4);d.insertAdjacentHTML('beforeend',`<span class="grp">${g}</span><b>${n}</b>`);document.getElementById('sheet').appendChild(d);return{k,c}});
+
+/* 二、毛色表 */
+const COLS=[['sit','待机'],['walkR','侧走'],['belly','四脚朝天'],['loaf','猫饼'],['happy','开心']];
+const tb=document.getElementById('breeds');tb.innerHTML='<tr><th></th>'+COLS.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
+const breedCells=BREEDS.map((b,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="n">${b.name}</td>`;tb.appendChild(tr);
+  return COLS.map(([k])=>{const td=document.createElement('td');tr.appendChild(td);return{k,c:mk(td,36,32,2.5),i}})}).flat();
+
+/* 三、试玩 */
+function disc(c,cx,cy,rx,ry,col){c.fillStyle=col;for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++)if(x*x/(rx*rx+.6)+y*y/(ry*ry+.6)<=1)c.fillRect(cx+x,cy+y,1,1)}
+const PW=260,PH=96,pc=document.getElementById('pc');pc.width=PW;pc.height=PH;
+const bg=document.createElement('canvas');bg.width=PW;bg.height=PH;{const c=bg.getContext('2d'),R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  R(0,0,PW,16,'#6b4a6e');for(let x=0;x<PW;x+=8)R(x,0,4,12,'#744f78');R(0,12,PW,4,'#4a3150');
+  for(let r=0,y=16;y<PH;y+=6,r++){R(0,y,PW,6,r%2?'#c48a58':'#bb8150');R(0,y+5,PW,1,'#a56f43');for(let x=(r*13)%24;x<PW;x+=24)R(x,y,1,5,'#a56f43')}
+  R(10,20,48,9,'#c25a73');R(10,28,48,10,'#d86f88');R(6,22,6,18,'#a84860');R(56,22,6,18,'#a84860');
+  R(PW-30,26,10,14,'#4d7cc9');disc(c,PW-25,21,4,4,'#f2c9a0');R(PW-29,16,9,3,'#3a2a2a');R(PW-29,40,3,12,'#3b4766');R(PW-24,40,3,12,'#3b4766');
+  R(PW-12,22,8,8,'#b0613e');disc(c,PW-8,18,6,5,'#5b8c5a')}
+const play=document.querySelector('.play'),keys={};
+play.addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')){keys[e.key]=true;e.preventDefault()}});play.addEventListener('keyup',e=>keys[e.key]=false);play.addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
+const cats=[{b:0,x:120,y:76,me:1},{b:2,x:170,y:56},{b:3,x:200,y:88},{b:5,x:90,y:52},{b:1,x:34,y:38,sofa:1}].map((c,i)=>({...c,o:i*.37,face:'right',moving:false,tx:null,wait:1+Math.random()*2,act:c.sofa?'sleep':null,actT:c.sofa?1e9:0,queue:[]}));
+const me=cats[0];let yarn=null;
+function doAct(c,act,dur){c.act=act;c.actT=dur;c.tx=null}
+document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{me.queue=[];doAct(me,b.dataset.act,4)});
+document.getElementById('solve').onclick=()=>{const x=90+Math.random()*120,y=48+Math.random()*40;yarn={x,y};
+  const plays=['belly','paw','swing','tangle','hold'];const p=plays[Math.floor(Math.random()*plays.length)];
+  me.queue=[{act:'alert',dur:1},{go:[x-14,y]},{act:p,dur:3.4,take:1},{act:'happy',dur:1.6}];me.act=null;me.tx=null;next(me)};
+function next(c){const q=c.queue.shift();if(!q){c.act=null;return}if(q.go){c.tx=q.go[0];c.ty=q.go[1];c.onArrive=()=>next(c)}else{if(q.take)yarn=null;doAct(c,q.act,q.dur);c.after=()=>next(c)}}
+
+/* ================= 主循环 ================= */
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000,tf=Math.floor(t*2)%2;
+  sheet.forEach(({k,c})=>{const x=c.getContext('2d');x.clearRect(0,0,36,32);const P=POSE[k](t,tf);draw(x,P,BREEDS[0],fitX(P),31)});
+  breedCells.forEach(({k,c,i})=>{const x=c.getContext('2d');x.clearRect(0,0,36,32);{const P=POSE[k](t+i*.21,(tf+i)%2,i);draw(x,P,BREEDS[i],fitX(P),31)}});
+  // 试玩
+  const c=pc.getContext('2d');c.drawImage(bg,0,0);
+  cats.forEach(a=>{let dx=0,dy=0;const ctrl=a.me&&(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp||keys.ArrowDown);
+    if(ctrl){dx=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);dy=(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0);a.act=null;a.queue=[];a.tx=null;a.wait=4}
+    else if(a.act){a.actT-=dt;if(a.actT<=0){a.act=null;const f=a.after;a.after=null;f?f():0}}
+    else if(a.tx!=null){const ex=a.tx-a.x,ey=a.ty-a.y,l=Math.hypot(ex,ey);if(l<1){a.tx=null;const f=a.onArrive;a.onArrive=null;f?f():0}else{dx=ex/l;dy=ey/l}}
+    else if(!a.me||!a.queue.length){a.wait-=dt;if(a.wait<=0){a.wait=2+Math.random()*3;
+      if(!a.me&&Math.random()<.35)doAct(a,['groom','loaf','belly','paw','sleep'][Math.floor(Math.random()*5)],3+Math.random()*3);
+      else if(!a.me){a.tx=80+Math.random()*140;a.ty=40+Math.random()*(PH-44)}}}
+    const l=Math.hypot(dx,dy);a.moving=l>0;
+    if(a.moving){const s=30*dt;a.x=Math.max(70,Math.min(PW-40,a.x+dx/l*s));a.y=Math.max(40,Math.min(PH-2,a.y+dy/l*s));if(Math.abs(dx)>.2)a.face=dx>0?'right':'left'}});
+  if(yarn){c.fillStyle='#9e2f2a';disc(c,Math.round(yarn.x),Math.round(yarn.y)-3,3,3,'#9e2f2a');disc(c,Math.round(yarn.x),Math.round(yarn.y)-3,2,2,'#e0533d')}
+  [...cats].sort((p,q)=>p.y-q.y).forEach(a=>{const P=a.moving?POSE[a.face==='left'?'walkL':'walkR'](t,(tf+a.b)%2,a.b):POSE[a.act||'sit'](t+a.o,(tf+a.b)%2,a.o);
+    draw(c,P,BREEDS[a.b],a.x,a.y);
+    if(a.me){c.fillStyle='#e0533d';const top=Math.round(a.y)-P.G.length-4+(P.dy||0);c.fillRect(Math.round(a.x)-1,top,3,2);c.fillRect(Math.round(a.x),top+2,1,1)}});
+  requestAnimationFrame(loop)}
+const fitX=P=>{const w=P.G[0].length;return (P.flip?w-P.cx:P.cx)+Math.floor((36-w)/2)};
+function draw(ctx,P,b,x,y){drawF(ctx,P.G,b,x,y,{cx:P.cx,flip:P.flip,dy:(P.dy||0)-(P.G.bob||0),blink:P.blink})}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

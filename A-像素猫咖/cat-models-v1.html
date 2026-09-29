@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>像素猫造型样页</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:17px;margin:0 0 6px;line-height:1.4}
+  h2 .no{color:var(--acc);margin-right:8px;font-family:ui-monospace,Menlo,monospace}
+  p{margin:0}
+  .lead{color:var(--sub);max-width:820px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:20px;margin-top:22px}
+  .card.base{opacity:.85;border-style:dashed}
+  .top{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start}
+  .big{background:#3a2c4a;border-radius:4px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .btns{display:flex;gap:4px}
+  .btns button{font:inherit;font-size:12px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:3px;padding:1px 8px;cursor:pointer}
+  .btns button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .chips span{font-size:12px;border:1px solid var(--line);border-radius:3px;padding:0 7px;color:var(--sub)}
+  .desc{color:var(--sub);font-size:13px}
+  .label{font-size:12px;color:var(--sub);margin:16px 0 6px}
+  .breeds{display:flex;flex-wrap:wrap;gap:10px}
+  .breed{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--sub);background:#3a2c4a;border-radius:4px;padding:6px 4px 2px;min-width:92px}
+  .scene{border-radius:4px;overflow:hidden;width:100%}
+  .scene canvas{width:100%;height:auto}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：猫猫造型样页</h1>
+  <p class="lead">现状的圆团只有两个小耳朵和两点眼睛，不说明的话看不出是猫。下面五款在同一种像素画风里，加进了不同组合的"猫的识别信号"：三角耳配粉色内耳、胡须、粉鼻子配 ω 嘴、额头的 M 纹、有描边的尾巴、揣手或坐姿的轮廓。项圈统一用各只猫的品牌色，一眼就能认出是谁。<br>每款都有三行：放大的造型，可以切换待机、走路、睡觉；7 种毛色；以及<b>游戏里的真实比例场景</b>（最后这行最能说明问题）。</p>
+  <div id="list"></div>
+</main>
+<script>
+/* ---------------- 调色 ---------------- */
+const BREEDS=[
+  {name:'你（默认）',shade:'#e8d2c0',body:'#fff3e0',light:'#ffffff',outline:'#5a3a4a',collar:'#e0533d',whisk:'#9a7a8a'},
+  {name:'宪宪 · 布偶',shade:'#d8ccc0',body:'#f3ece2',light:'#ffffff',outline:'#5a4a52',points:'#8c7a70',collar:'#9B7EBD',whisk:'#9a8a90'},
+  {name:'砚砚 · 缅因',body:'#9a8a70',light:'#e2d6bf',outline:'#3a3028',stripe:'#62533f',tuft:1,collar:'#5B8C5A',whisk:'#e2d6bf'},
+  {name:'烁烁 · 暹罗',shade:'#d8c8a8',body:'#f1e4c8',light:'#fbf4e4',outline:'#3e3028',points:'#5a4436',collar:'#5B9BD5',whisk:'#b8a890'},
+  {name:'小狸花 · 狸花',body:'#b99a6c',light:'#e8dcc0',outline:'#3e3024',stripe:'#6a5236',collar:'#e0533d',whisk:'#e8dcc0'},
+  {name:'斑斑 · 孟加拉',body:'#e3a456',light:'#f7e0b6',outline:'#4a2c14',spot:'#8a4f1e',collar:'#4a7fd0',whisk:'#f7e0b6'},
+  {name:'金哥 · 金渐层',body:'#dcb46c',light:'#f5e6c0',outline:'#4a3818',stripe:'#c49a50',collar:'#6a4a9a',whisk:'#f5e6c0'},
+];
+function color(ch,b){switch(ch){
+  case 'o':return b.outline;case 'b':return b.body;case 'l':return b.light;case 'p':return '#f4a6b8';case 'n':return '#e27a8f';
+  case 'e':return '#241a2e';case 'w':return '#ffffff';case 'k':return b.whisk;case 'c':return b.collar;
+  case 'x':case 'm':case 't':return b.points||b.body;
+  case 'f':case 'g':return b.stripe||b.spot||b.body;
+  case 'd':return b.shade||b.whisk;case 'u':return b.tuft?b.outline:null;default:return null}}
+
+/* ---------------- 造型数据 ----------------
+   o描边 b身体 l浅色 p粉 n鼻 e眼 w高光 k胡须 c项圈 x耳(重点色) m口鼻(重点色) t尾 f额纹 g身纹 u耳簇毛(仅缅因) */
+const M=rows=>rows.map(r=>r+[...r].reverse().join(''));
+// 稀疏行：{y:"x:chars|x:chars"}
+function sparse(rows,h){const out=[];for(let y=0;y<h;y++){let line=[];(rows[y]||'').split('|').filter(Boolean).forEach(seg=>{const [x,s]=seg.split(':');[...s].forEach((c,i)=>line[+x+i]=c)});out.push(line)}return out}
+
+const MODELS=[
+{key:'v1',name:'圆团 · 强化版',tags:['保留无脚圆团','大三角耳+粉内耳','胡须','粉鼻+ω嘴','额头 M 纹','翘尾巴','项圈'],
+ desc:'轮廓还是那个圆团，但补齐了猫脸的全部要素，尾巴也有描边、会摆动。改动最小，"无脚圆团"的设定保持不变。',
+ rows:M(["....u.....","....o.....","....oo....","....opo...","...oppxooo","...obbbfbf","..obbbbbbf","..obbbbebb","..obbbbebb","kkobpbbbmn","..obbbbbom","kkobbbbbbb","..occccccc","..obbbglll","..obbgblll","...obbbbll","....oobbbb","......oooo"]),
+ tail:[{8:"20:o",9:"19:oto",10:"19:oto",11:"19:oto",12:"19:oto",13:"18:oto",14:"17:oto",15:"16:oto",16:"16:oo"},
+       {8:"21:o",9:"20:oto",10:"20:oto",11:"19:oto",12:"19:oto",13:"18:oto",14:"17:oto",15:"16:oto",16:"16:oo"}],
+ lieDrop:[13,14]},
+{key:'v2',name:'面包猫 · 揣手',tags:['横向猫饼','揣着的两只白爪','尾巴绕在身前','胡须画在脸上','项圈'],
+ desc:'经典的"猫猫揣手 / 吐司猫"姿势，静止时最萌，也最有梗。走路时靠弹跳来表现，稍显敦实。',
+ rows:M(["....u.......","....o.......","....oo......","....opo.....","...oppxooooo","..obbbbbbfbf",".obbbbbbbbbf",".obbbbbbbebb",".obbbbbbbebb",".obbbkkpbbmn",".obbbbbkbbom",".obbbbbccccc",".obbgbbbllll",".obbbgbolllo","..oooooooooo"]),
+ tail:[{12:"18:oooooo",13:"17:ottttto",14:"18:oooooo"},{12:"17:ooooooo",13:"16:otttttto",14:"17:ooooooo"}],
+ lieDrop:[]},
+{key:'v3',name:'端坐猫',tags:['头身分开','脖子+项圈','两条前腿+爪','尾巴立在身侧','胡须伸出脸外'],
+ desc:'经典的猫坐姿剪影，有头、有脖子、有前腿，识别度最高。个子比圆团高一截，睡觉时收起前腿变成猫饼。',
+ rows:M(["..u......","..o......","..oo.....","..opo....","..oppxooo",".obbbbfbf",".obbbbbbf",".obbbbebb","kobbbbebb",".obpbbbmn","kobbbbbom","..obbbbbb","...occccc","...obbbll","..obbbbll","..obgblld","..obbglld",".obbbblld",".obgbblld",".obbbolld","..ooooooo"]),
+ tail:[{11:"18:o",12:"17:oto",13:"17:oto",14:"17:oto",15:"17:oto",16:"17:oto",17:"17:oto",18:"17:oto",19:"16:otto",20:"16:ooo"},
+       {11:"19:o",12:"18:oto",13:"18:oto",14:"17:oto",15:"17:oto",16:"17:oto",17:"17:oto",18:"17:oto",19:"16:otto",20:"16:ooo"}],
+ lieDrop:[15,16,17]},
+{key:'v4',name:'侧身猫',tags:['侧面长身体','竖起的尾巴','3/4 侧脸双眼','四只小短脚','走路会迈步'],
+ desc:'身体侧着、尾巴竖起，走路时四只小短脚交替迈步。猫的识别往往靠侧面剪影，所以它<b>走起来最像猫</b>；朝向感也最强，缺点是要画左右两个方向。',
+ rows:sparse({0:"17:o|21:o",1:"17:oo|21:oo",2:"17:opo|21:opo",3:"16:obbbbbbbo",4:"15:obbbbfbfbbo",5:"15:obbbebbbebo",6:"15:obbbebbbebo",7:"7:oooooooo|15:bbpbbbnbpbo",
+   8:"5:obbbgbbbbb|15:bkkbbobobkk",9:"5:obgbbbbgbb|15:bbccccccbo",10:"5:obbbgbbbbbbbbbooooo",11:"5:obbbbgbbbbbbbbo",12:"5:obllllllllllbbo",13:"6:olllllllllllo",14:"7:ooooooooooo"},16),
+ tail:[{0:"2:o",1:"1:oto",2:"1:oto",3:"1:oto",4:"1:oto",5:"2:oto",6:"2:oto",7:"3:oto",8:"4:ot"},
+       {0:"3:o",1:"2:oto",2:"2:oto",3:"2:oto",4:"2:oto",5:"2:oto",6:"2:oto",7:"3:oto",8:"4:ot"}],
+ feet:{idle:{15:"8:oo|15:oo"},a:{15:"7:oo|14:oo"},b:{15:"9:oo|16:oo"}},side:true,lieDrop:[]},
+{key:'v5',name:'Q 版大头',tags:['头大身小 2:1','2×2 大眼带高光','胡须','小身体+两只爪','表情空间大'],
+ desc:'更"角色化"：大头配大眼，表情能做得最丰富（开心、疑惑、得意），适合当猫猫的立绘和头像。',
+ rows:M(["..u......","..o......","..oo.....","..opo....","..oppxooo",".obbbbfbf",".obbbbbbf","obbbbbbbb","obbbwebbb","obbbeebbb","kkbpbbbmn","obbbbbbom","kkbbbbbbb",".obbbbbbb","..ooocccc","....obbll","....obgll","....olllo",".....oooo"]),
+ tail:[{13:"16:o",14:"15:oto",15:"15:oto",16:"14:oto",17:"13:oto",18:"13:oo"},{13:"17:o",14:"16:oto",15:"15:oto",16:"14:oto",17:"13:oto",18:"13:oo"}],
+ lieDrop:[15,16]},
+];
+MODELS.forEach(m=>{m.grid=m.rows.map(r=>Array.isArray(r)?r:[...r]);m.w=Math.max(...m.grid.map(r=>r.length));m.h=m.grid.length});
+
+/* ---------------- 绘制 ---------------- */
+// 在 (x,y)=底部中心 处画猫；st:{flip,tail,walk,step,blink,lie}
+function drawCat(ctx,m,b,x,y,st){
+  if(m.key==='v0')return drawV0(ctx,b,x,y,st);
+  const g=m.grid.map(r=>r.slice());
+  const put=(ov)=>{for(const yy in ov)ov[yy].split('|').filter(Boolean).forEach(seg=>{const [sx,s]=seg.split(':');[...s].forEach((c,i)=>{(g[yy]=g[yy]||[])[+sx+i]=c})})};
+  if(m.tail&&!(st.lie&&!m.side&&m.key!=='v2'))put(m.tail[st.tail?1:0]);
+  if(m.feet&&!st.lie)put(st.walk?(st.step?m.feet.b:m.feet.a):m.feet.idle);
+  const closed=st.blink||st.lie;
+  let rows=g;if(st.lie&&m.lieDrop.length)rows=g.filter((_,i)=>!m.lieDrop.includes(i));
+  const H=rows.length,ox=Math.round(x-m.w/2),oy=Math.round(y-H)+(st.walk&&st.step&&!m.side?-1:0);
+  rows.forEach((r,ry)=>{if(!r)return;r.forEach((ch,rx)=>{if(!ch||ch==='.')return;
+    if(closed&&(ch==='e'||ch==='w')){const below=(rows[ry+1]||[])[rx];if(below==='e'||below==='w')ch='b'}
+    const c=color(ch,b);if(!c)return;ctx.fillStyle=c;ctx.fillRect(st.flip?ox+m.w-1-rx:ox+rx,oy+ry,1,1)})});
+  return H}
+// 现状（对照）：原来的程序化圆团
+function disc(c,cx,cy,rx,ry,col){c.fillStyle=col;for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++)if(x*x/(rx*rx+.6)+y*y/(ry*ry+.6)<=1)c.fillRect(cx+x,cy+y,1,1)}
+function drawV0(ctx,b,x,y,st){x=Math.round(x);const d=st.flip?-1:1;const R=(a,bb,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(a,bb,w,h)};const ear=(ex,top)=>{for(let i=0;i<3;i++)R(ex-i,top+i,2*i+1,1,b.outline)};
+  if(st.lie){const yy=Math.round(y)-5;disc(ctx,x,yy,10,5,b.outline);ear(x-6,yy-7);ear(x+2,yy-7);disc(ctx,x,yy,9,4,b.body);R(x-4,yy-1,2,1,b.outline);R(x+1,yy-1,2,1,b.outline);return 10}
+  const yy=Math.round(y)-8-(st.walk&&st.step?1:0);
+  R(x-8*d,yy+1,2,2,b.outline);R(x-9*d,yy-2,2,3,b.outline);disc(ctx,x,yy,7,7,b.outline);ear(x-4,yy-9);ear(x+4,yy-9);disc(ctx,x,yy,6,6,b.body);
+  R(x-4,yy-7,1,1,'#f4a6b8');R(x+4,yy-7,1,1,'#f4a6b8');R(x-2+d,yy-1,1,st.blink?1:2,'#241a2e');R(x+2+d,yy-1,1,st.blink?1:2,'#241a2e');R(x-4+d,yy+2,1,1,'#f4a6b8');R(x+4+d,yy+2,1,1,'#f4a6b8');
+  R(x-5,yy+4,11,2,b.collar);return 17}
+MODELS.unshift({key:'v0',name:'现状（对照）',tags:['无脚圆团','小耳朵','两点眼睛'],desc:'问题：缺少猫的识别信号，看起来更像小鸡、饭团或者小狗。',w:20,h:18,base:true});
+
+/* ---------------- 场景背景（游戏真实比例） ---------------- */
+function paintFloor(c,W,H){const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  R(0,0,W,14,'#6b4a6e');for(let x=0;x<W;x+=8)R(x,0,4,10,'#744f78');R(0,10,W,4,'#4a3150');
+  for(let r=0,y=14;y<H;y+=6,r++){R(0,y,W,6,r%2?'#c48a58':'#bb8150');R(0,y+5,W,1,'#a56f43');for(let x=(r*13)%24;x<W;x+=24)R(x,y,1,5,'#a56f43')}
+  // 沙发
+  R(10,26,52,11,'#c25a73');R(10,36,52,13,'#d86f88');R(27,37,1,12,'#b65770');R(44,37,1,12,'#b65770');R(5,28,7,23,'#a84860');R(60,28,7,23,'#a84860');
+  // 桌 + 人类（身高参照）
+  R(214,28,10,14,'#4d7cc9');disc(c,219,23,4,4,'#f2c9a0');R(215,18,9,3,'#3a2a2a');R(215,42,3,12,'#3b4766');R(220,42,3,12,'#3b4766');
+  disc(c,196,40,12,6,'#caa57a');disc(c,196,39,11,5,'#e9d3b0');R(195,45,3,10,'#6b3a3a');R(192,35,3,3,'#fff');
+  // 植物
+  R(W-12,22,8,8,'#b0613e');disc(c,W-8,18,6,5,'#5b8c5a');}
+
+/* ---------------- 页面搭建 ---------------- */
+const list=document.getElementById('list');const cards=[];
+MODELS.forEach((m,i)=>{
+  const card=document.createElement('section');card.className='card'+(m.base?' base':'');
+  card.innerHTML=`<div class="top"><div class="big"><canvas class="cv-big"></canvas><div class="btns"><button data-s="idle" class="on">待机</button><button data-s="walk">走路</button><button data-s="lie">睡觉</button></div></div>
+    <div><h2><span class="no">${m.base?'V0':'V'+i}</span>${m.name}</h2><div class="chips">${m.tags.map(t=>`<span>${t}</span>`).join('')}</div><p class="desc">${m.desc}</p>
+    <div class="label">毛色 × 7</div><div class="breeds">${BREEDS.map((b,j)=>`<div class="breed"><canvas data-b="${j}"></canvas>${b.name}</div>`).join('')}</div></div></div>
+    <div class="label">游戏里的真实像素尺寸（放大显示）：左边是沙发，右边站着的人类可以当身高参照</div><div class="scene"><canvas class="cv-scene"></canvas></div>`;
+  list.appendChild(card);
+  const big=card.querySelector('.cv-big');const BW=30,BH=26;big.width=BW;big.height=BH;big.style.width=BW*8+'px';big.style.height=BH*8+'px';
+  const bcs=[...card.querySelectorAll('.breed canvas')];bcs.forEach(c=>{c.width=28;c.height=24;c.style.width=28*3+'px';c.style.height=24*3+'px'});
+  const sc=card.querySelector('.cv-scene');const SW=260,SH=64;sc.width=SW;sc.height=SH;
+  const bg=document.createElement('canvas');bg.width=SW;bg.height=SH;paintFloor(bg.getContext('2d'),SW,SH);
+  const actors=[{b:0,x:110,y:50,tx:null,wait:.5},{b:2,x:150,y:58,tx:null,wait:1.5},{b:3,x:80,y:62,tx:null,wait:2.5},{b:1,x:36,y:47,sofa:true}];
+  const c={m,state:'idle',big,bcs,sc,bg,actors,phase:Math.random()*3};
+  card.querySelectorAll('.btns button').forEach(bt=>bt.onclick=()=>{card.querySelectorAll('.btns button').forEach(x=>x.classList.remove('on'));bt.classList.add('on');c.state=bt.dataset.s});
+  cards.push(c)});
+
+/* ---------------- 动画 ---------------- */
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  cards.forEach(c=>{const m=c.m,tl=Math.floor((t+c.phase)*2)%2,blink=((t+c.phase)*1000%3300)<150,step=Math.floor(t*6.5)%2;
+    // 放大
+    const bx=c.big.getContext('2d');bx.clearRect(0,0,30,26);
+    let flip=false,wx=15;if(c.state==='walk'){const p=(t*.25)%2;flip=p>1;wx=15+(p<1?p:2-p)*4-2}
+    drawCat(bx,m,BREEDS[0],wx,25,{tail:tl,blink,walk:c.state==='walk',step,lie:c.state==='lie',flip});
+    if(c.state==='lie'&&Math.floor(t*1.5)%2){bx.fillStyle='#b9a8c9';bx.fillRect(24,3,3,1);bx.fillRect(26,4,1,1);bx.fillRect(25,5,1,1);bx.fillRect(24,6,3,1)}
+    // 毛色
+    c.bcs.forEach((cv,j)=>{const x=cv.getContext('2d');x.clearRect(0,0,28,24);drawCat(x,m,BREEDS[j],14,23,{tail:(tl+j)%2,blink:((t+j*.7)*1000%3300)<150,walk:c.state==='walk',step,lie:c.state==='lie',flip:false})});
+    // 场景
+    const sx=c.sc.getContext('2d');sx.drawImage(c.bg,0,0);
+    c.actors.forEach(a=>{if(a.sofa)return;if(a.tx==null){a.wait-=dt;a.walk=false;if(a.wait<=0){a.tx=80+Math.random()*100;a.wait=1+Math.random()*2.5}}
+      else{const d=a.tx-a.x;a.flip=d<0;a.walk=true;if(Math.abs(d)<.6)a.tx=null;else a.x+=Math.sign(d)*18*dt}});
+    [...c.actors].sort((p,q)=>p.y-q.y).forEach(a=>drawCat(sx,m,BREEDS[a.b],a.x,a.y,{tail:(tl+a.b)%2,blink:((t+a.b)*1000%3300)<150,walk:a.walk,step,lie:!!a.sofa,flip:a.flip}))});
+  requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

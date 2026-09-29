@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>像素猫咖场景 v3</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1200px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:19px;margin:48px 0 4px;line-height:1.4}
+  h3{font-size:15px;margin:22px 0 6px}
+  p{margin:0}
+  .lead,.desc{color:var(--sub)}
+  .desc{font-size:13px;max-width:900px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .cards div{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 14px;font-size:13px;color:var(--sub)}
+  .cards b{display:block;color:var(--ink);font-weight:600;font-size:14px}
+  button{font:inherit;font-size:13px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:3px;padding:2px 12px;cursor:pointer}
+  button.on{background:var(--acc);border-color:var(--acc);color:var(--bg)}
+  button:hover{border-color:var(--sub)}
+  kbd{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px;color:var(--ink);background:#2a2036}
+  /* 试玩区：比正文宽，最宽 1440（480 像素 ×3） */
+  .wide{position:relative;width:min(1440px,calc(100vw - 48px));margin:14px auto 0}
+  .game{position:relative;margin:0 auto;outline:none;border-radius:4px;overflow:hidden;background:#000;user-select:none;-webkit-user-select:none}
+  .game canvas{position:absolute;left:0;top:0}
+  .game #oc{pointer-events:none}
+  .hud{position:absolute;font-size:13px;pointer-events:none}
+  .room{left:10px;top:8px;background:#241a2ecc;border-radius:3px;padding:2px 10px}
+  .room b{color:var(--acc);font-weight:600;margin-right:6px}
+  .room span{color:var(--sub)}
+  .focus{left:50%;top:44%;transform:translate(-50%,-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:4px;padding:8px 18px;font-size:14px}
+  .game:focus .focus{display:none}
+  .game .mini{left:auto;right:10px;top:10px;border:1px solid #ffd84a88;border-radius:3px;cursor:pointer;image-rendering:auto;opacity:.92}
+  .prompt{left:50%;bottom:14px;transform:translateX(-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:3px;padding:1px 12px;white-space:nowrap;display:none}
+  .toast{left:50%;top:10px;transform:translateX(-50%);background:var(--acc);color:var(--bg);border-radius:3px;padding:1px 12px;opacity:0;transition:opacity .3s;max-width:60%;text-align:center}
+  .news{left:10px;bottom:12px;font-size:12px;line-height:1.6;max-width:36%}
+  .news div{background:#241a2ecc;border-radius:3px;padding:0 8px;margin-top:3px;width:fit-content;transition:opacity .6s}
+  .tipbox{position:absolute;pointer-events:none;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:0 8px;font-size:12px;display:none;white-space:nowrap}
+  .menu{position:absolute;display:none;background:#2f2340;border:1px solid var(--acc);border-radius:4px;padding:4px;min-width:150px;z-index:3}
+  .menu .t{font-size:12px;color:var(--sub);padding:2px 8px 4px;border-bottom:1px solid var(--line);margin-bottom:4px}
+  .menu button{display:block;width:100%;text-align:left;border:0;padding:3px 8px}
+  .menu button:hover{background:#ffd84a22}
+  .menu button[disabled]{color:#6a5a7a;cursor:default;background:none}
+  .photo{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#241a2eb0;z-index:4}
+  .polaroid{background:#fff8e8;color:#3a2630;padding:12px 12px 10px;border-radius:3px;box-shadow:0 8px 30px #0008;text-align:center;font-size:13px}
+  .polaroid canvas{position:static;margin:0 auto 8px;border:1px solid #d8c8a8}
+  .polaroid .who{color:#8a7a6a;font-size:12px;max-width:360px;margin:0 auto 8px}
+  .polaroid a,.polaroid button{color:#3a2630;border:1px solid #c9b89a;background:#fff;margin:0 3px;padding:2px 12px;border-radius:3px;text-decoration:none;font-size:13px;cursor:pointer}
+  .bar{display:flex;flex-wrap:wrap;gap:6px 6px;align-items:center;margin:10px auto 0}
+  .bar span{font-size:12px;color:var(--sub);margin-right:2px}
+  .bar .sep{width:12px}
+  .bar input[type=range]{width:160px;accent-color:#ffd84a}
+  .bar .val{color:var(--ink);font-variant-numeric:tabular-nums;min-width:34px}
+  .perf{margin-left:auto;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .emobar{display:flex;gap:4px;flex-wrap:wrap}
+  .emobar button{padding:1px 8px;font-size:12px}
+  .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 18px;margin-top:10px;font-size:12px;color:var(--sub)}
+  .keys div{white-space:nowrap}
+  .map{position:relative;margin-top:12px;border-radius:4px;overflow:hidden;width:960px;max-width:100%}
+  .map canvas{width:100%;height:auto}
+  .zones{position:absolute;inset:0;pointer-events:none;display:none}
+  .show-zones .zones{display:block}
+  .zone{position:absolute;border:2px dashed #ffd84acc;background:#ffd84a10;border-radius:3px}
+  .zone b{position:absolute;left:4px;top:3px;font-size:12px;font-weight:600;background:#241a2ee6;color:var(--acc);padding:0 6px;border-radius:2px}
+  .legend{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 18px;margin-top:10px;font-size:13px;color:var(--sub)}
+  .legend b{color:var(--ink);font-weight:600;display:block}
+  table{border-collapse:collapse;font-size:13px;margin-top:8px;width:100%}
+  th,td{border-bottom:1px solid var(--line);padding:5px 10px 5px 0;text-align:left;vertical-align:top}
+  th{color:var(--sub);font-weight:500}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hot td:first-child{white-space:nowrap}.hot td.n{white-space:normal;min-width:7em}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .note{font-size:13px;color:var(--sub);margin-top:6px}
+  .grp{margin-top:30px;font-size:12px;letter-spacing:1px;color:var(--acc);font-weight:700}
+  .cat{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 14px;margin-top:10px}
+  .it{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px 10px}
+  .it canvas{margin:0 auto 6px;border-radius:3px}
+  .it .n{font-weight:600;font-size:14px}
+  .it .n i{font-style:normal;font-size:12px;color:var(--acc);font-weight:500;margin-left:6px}
+  .it p{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.6}
+  .it p b{color:var(--ink);font-weight:500}
+  .spec{margin:18px 0 0;padding-left:18px;font-size:13px;color:var(--sub)}
+  .spec li{margin:4px 0}
+  .spec code{font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+  @media (max-width:1100px){.cat{grid-template-columns:repeat(3,1fr)}.keys{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:820px){.cat{grid-template-columns:repeat(2,1fr)}.cols,.cards,.legend{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：场景 v3（电脑端 · 多人同屏）</h1>
+  <p class="lead">这一版按电脑网页来设计，按 50～100 只猫同时在线来估算，店面也扩成了两排六间。人类仍然只在门外。第一节可以直接进店玩：你之外的在线猫由机器人扮演，数量可以拖动调整。</p>
+  <div class="cards">
+    <div><b>电脑优先</b>键盘走动、鼠标点哪去哪；右键点猫弹菜单，数字键发表情，T 发快捷短语。画面带小地图、名字和动态</div>
+    <div><b>按 100 只猫设计</b>店面扩到 960×540（两排六间，镜头跟着你走）。三个毛线篮、十四个夹子，每间都有能窝的地方。画猫全部走贴图缓存</div>
+    <div><b>新交互 33 个</b>另有 4 个是 v2 的升级版。其中 6 个要几只猫一起完成（大毛线团、零食机、CI 灯、合照、合唱、猫猫火车）。还有能踩响的钢琴、泡泡、激光点、跑轮发电、落叶堆……</div>
+  </div>
+
+  <h2>一、进店试玩</h2>
+  <p class="desc">点一下画面开始。<kbd>WASD</kbd>／方向键走动，按住 <kbd>Shift</kbd> 跑；<kbd>E</kbd> 或空格互动；也可以直接点地面、点东西、点猫。右键点一只猫可以蹭蹭、跟着它、把球传给它。可以先试试：叼一颗毛线球 → 就地解开 → 去橱窗长廊挂上 → 在爪印墙按个爪印；或者去厨房踩零食机的爪垫，再按 <kbd>T</kbd> 喊一声「来帮忙！」。</p>
+</main>
+<div class="wide" id="wide">
+  <div class="game" id="game" tabindex="0">
+    <canvas id="pc"></canvas><canvas id="oc"></canvas>
+    <div class="hud room" id="room"><b>前厅</b><span id="online"></span></div>
+    <canvas class="mini" id="mm" width="192" height="108" title="小地图：点一下，猫就走过去"></canvas>
+    <div class="hud focus">点一下画面，开始操控</div>
+    <div class="hud news" id="news"></div>
+    <div class="hud prompt" id="prompt"></div>
+    <div class="hud toast" id="toast"></div>
+    <div class="tipbox" id="tip"></div>
+    <div class="menu" id="menu"></div>
+    <div class="photo" id="photo"><div class="polaroid"><canvas id="phc"></canvas><div class="who" id="phw"></div><a id="phs" download="1024猫咖合照.png">保存照片</a><button id="phx">关掉</button></div></div>
+  </div>
+  <div class="bar" id="bar1">
+    <span>在线的猫</span><input type="range" id="bots" min="0" max="150" step="1" value="80"><span class="val" id="botsv">80</span>
+    <i class="sep"></i><span>时段</span><button data-tod="day" class="on">白天</button><button data-tod="dusk">黄昏</button><button data-tod="night">夜晚</button>
+    <i class="sep"></i><span>天气</span><button data-wx="sun" class="on">晴</button><button data-wx="rain">雨</button><button data-wx="snow">雪</button>
+    <i class="sep"></i><button id="zoomBtn">缩放 ×3</button><button id="sndBtn">声音：关</button><button id="faceBtn">换表情</button><button id="coatBtn">换毛色</button>
+    <span class="perf" id="perf"></span>
+  </div>
+  <div class="bar"><span>来点事</span><button data-ev="arrive">门外塞进来几颗</button><button data-ev="giant">大毛线团</button><button data-ev="ci">CI 红了</button><button data-ev="laser">激光点</button><button data-ev="bubbles">泡泡</button><button data-ev="bird">叫小鸟来</button><button data-ev="vac">扫地机器人出动 / 回家</button></div>
+  <div class="bar"><span>表情</span><div class="emobar" id="emobar"></div><i class="sep"></i><span>快捷短语 <kbd>T</kbd></span><div class="emobar" id="phrases"></div></div>
+</div>
+<main style="padding-top:0">
+  <div class="keys">
+    <div><kbd>WASD</kbd> <kbd>↑↓←→</kbd> 走动，<kbd>Shift</kbd> 跑</div><div><kbd>E</kbd> <kbd>空格</kbd> 互动 · 离开座位</div><div><kbd>1</kbd>–<kbd>8</kbd> 表情（喵、爱心、惊讶……）</div><div><kbd>T</kbd> 快捷短语（「来帮忙！」「求合照」）</div>
+    <div><kbd>F</kbd> 跟着鼠标下（或最近）的猫走，<kbd>Esc</kbd> 不跟</div><div><kbd>Q</kbd> 把毛线球传给鼠标下（或最近）的猫</div><div><kbd>Z</kbd> 缩放（看得更多 / 更大）</div><div>右键点猫：蹭蹭 / 跟着 / 传球 · 点小地图：走过去</div>
+  </div>
+
+  <h2>二、全店地图</h2>
+  <p class="desc">960×540，两排六间：上排是店面（前厅 · 橱窗长廊 · 1024 工坊），下排是生活区（厨房 · 大客厅 · 后院），三个门洞上下相通。门开在最上面那面墙上，人类永远在门外。这张图和上面的试玩是同一个世界，你那只猫头上有红色小箭头。</p>
+  <div class="bar" style="margin-top:12px"><button id="zbtn">显示分区</button></div>
+  <div class="map" id="map"><canvas id="wc" width="960" height="540"></canvas><div class="zones" id="zones"></div></div>
+  <div class="legend" id="legend"></div>
+
+  <h2>三、50～100 只猫：容量估算</h2>
+  <p class="desc">按 100 只猫同时在线来设计，并留出到 150 只的余量。下面几张表里，能从地图数出来的数字是页面现算的，性能那张要点按钮当场测。</p>
+  <div class="cols">
+    <div>
+      <h3>地方够不够站</h3>
+      <table id="areaT"></table>
+      <p class="note">"宽松"按每只猫 40×40 像素算，"挤"按 28×28 算。100 只猫全店平均下来是宽松的；真正会挤的是毛线篮、橱窗和各种大事件的现场，所以下面这些地方都做了多份或者排队。</p>
+      <h3>热点和容量</h3>
+      <table class="hot">
+        <tr><th>地方</th><th>一次能容纳</th><th>怎么应对人多</th></tr>
+        <tr><td>毛线篮 ×3</td><td class="n">每个篮子周围 4～5 只</td><td>分球机把球弹给最空的篮子；叼一颗只要 0.8 秒；空了会提示"看看别的篮子"</td></tr>
+        <tr><td>分球机</td><td class="n">每 0.5 秒弹一颗</td><td>来球的速度跟着"正在做委托的猫"的数量走，篮子里常备够用的球</td></tr>
+        <tr><td>橱窗 ×2</td><td class="n">14 个夹子</td><td>挂 12～22 秒被取走（约 40 件/分钟）；满了先取走最早那件</td></tr>
+        <tr><td>解毛线球</td><td class="n">不占地方</td><td>在哪儿都能解，两块解球毯只是 NPC 爱去的地方</td></tr>
+        <tr><td>找地方窝着</td><td class="n">共约 40 个位置</td><td>暖桌 6、背景板 5、阳光 8、爬架 4、大纸箱 3、壁炉前 3、键盘 3、沙发 2、懒人沙发 2……满了会说"满了"</td></tr>
+        <tr><td>多猫协作</td><td class="n">大毛线团 4 · 零食机 3</td><td>少于 3 只时显示"还差几只"，附近的猫会被叫过来</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>画得动吗</h3>
+      <p class="note">猫都走贴图缓存：同一姿态、同一帧、同一毛色只画一次，之后直接贴。家具不动的也缓存，镜头外的不画。点按钮在你的电脑上当场测：每档跑 120 帧"更新 + 画一屏"，取平均。我这边无界面 Chrome、软件绘制测的是：150 只猫在线时每帧约 0.8 ms，画整张 960×540 的全店图约 1.5 ms。</p>
+      <div class="bar" style="margin:8px 0 0"><button id="benchBtn">测一下</button><span class="note" id="benchNote"></span></div>
+      <table id="benchT"><tr><th>在线猫数</th><th>每帧（更新 + 画一屏）</th><th>同屏画了几只</th></tr><tr><td colspan="3" class="note">还没测</td></tr></table>
+      <h3>网络要传多少（估算）</h3>
+      <table>
+        <tr><th>传什么</th><th>怎么传</th><th>100 人时</th></tr>
+        <tr><td>走动</td><td>点地面只传目的地，各端自己寻路；键盘走动时每秒传 5 次位置</td><td class="n">每人下行约 1 KB/s</td></tr>
+        <tr><td>用东西、表情、短语</td><td>一次一条事件</td><td class="n">全店约 10 条/秒</td></tr>
+        <tr><td>只发给附近的人</td><td>按所在的间和相邻的间过滤，一般只看得到 30～50 只</td><td class="n">服务端出口约 150 KB/s</td></tr>
+        <tr><td>刚进店</td><td>发一份全店快照</td><td class="n">约 5 KB</td></tr>
+      </table>
+      <p class="note"><b style="color:var(--ink)">要服务端说了算的：</b>毛线球（叼、传、挂）、橱窗夹子、有容量的位置（暖桌、纸箱……）、协作机器的进度、拍照倒数、爪印墙、谁骑着扫地机器人。<br><b style="color:var(--ink)">不用同步的：</b>泡泡、蝴蝶、落叶、激光点的路线、窗外的鸟、鱼、天气、钢琴的音。它们用同一个时钟和随机种子，在每台电脑上各算各的，看起来就是同一个。</p>
+    </div>
+  </div>
+
+  <h2>四、交互目录</h2>
+  <p class="desc">一共 37 项：33 个新的，4 个是 v2 的升级版（标了"升级"）。按用途分组。每个都能在第一节里玩到；"多猫协作"那组，附近的机器人会被叫过来帮忙。v2 里的鱼缸、猫薄荷、阳光、沙发、盆栽、咖啡机都还在，没有重复列。</p>
+  <div id="catalog"></div>
+
+  <ul class="spec">
+    <li>地图单位是 1px，试玩画面按整数倍放大（宽屏 ×3，窄一点 ×2，<kbd>Z</kbd> 切换）。名字和短语画在一张高清层上（像素字只有英文）。</li>
+    <li>文件：零件 <code>world-kit.js</code>（v3 新零件，v2 的 <code>scene-kit.js</code> 照用）、地图 <code>world-map.js</code>（房间、点位、可走区域、家具占地、绘制）、引擎 <code>world-play.js</code>（寻路、动作队列、贴图缓存、镜头、输入、小地图、高清层）、交互和 AI <code>world-acts.js</code>（每个东西一段注册代码 + 店猫和在线猫的心情）。猫还是定稿 v2 的 <code>cat-sprites.js</code>。</li>
+    <li>引擎入口 <code>makeWorld(canvas, {play, ui})</code>；一个世界可以同时画到几张画布上（试玩、全店地图、合照）。在线的其他猫在原型里是机器人，它们和玩家走同一套接口：走到哪里、用哪个东西、表情、短语、传球、蹭蹭。接真实联机时，把机器人换成从网络收到的这些指令。</li>
+    <li>猫引擎只加了一处：毛色可以带眼睛颜色（黑猫、玳瑁是黄眼睛，白猫是蓝眼睛）。不带时仍是原来的深紫，已经逐像素比对过，原有输出没有变化。</li>
+    <li>v2（一屏小店）原样保留在 <code>scene-v2.html</code>，它用的 <code>scene-map.js</code>、<code>scene-play.js</code> 没有改。</li>
+  </ul>
+</main>
+<script src="cat-sprites.js"></script>
+<script src="scene-kit.js"></script>
+<script src="world-kit.js"></script>
+<script src="world-map.js"></script>
+<script src="world-play.js"></script>
+<script src="world-acts.js"></script>
+<script>
+const $=id=>document.getElementById(id),dpr=Math.min(2,window.devicePixelRatio||1);
+const gameEl=$('game'),pc=$('pc'),oc=$('oc'),mm=$('mm'),pctx=pc.getContext('2d',{willReadFrequently:true}),octx=oc.getContext('2d'),mctx=mm.getContext('2d');   // 像素画布走软件绘制：小图贴得多，这样更稳
+let toastT=0,soundOn=false,zoomPref=0,VW=480,VH=270,SC=3;
+
+/* ---------- 声音（默认关着，办公室友好） ---------- */
+let AC=null;const lastSfx={};let sfxN=0,sfxWin=0;
+function tone(f,d,{type='sine',vol=.05,slide=0,delay=0}={}){const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f*slide),t+d);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02)}
+function noise(d,{vol=.03,hp=1200,delay=0}={}){const n=Math.floor(AC.sampleRate*d),b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=b;f.type='highpass';f.frequency.value=hp;g.gain.value=vol;s.connect(f).connect(g).connect(AC.destination);s.start(AC.currentTime+delay)}
+const SCALE=[523.25,587.33,659.25,698.46,783.99,880,987.77,1046.5,1174.66,1318.51,1396.91,1567.98];
+const arp=(fs,d=.16,type='triangle',vol=.04,gap=.08)=>fs.forEach((f,i)=>tone(f,d,{type,vol,delay:i*gap}));
+const SFX={bell:()=>{tone(1318,.5,{vol:.04});tone(1046,.6,{vol:.035,delay:.12})},pop:()=>tone(880,.08,{type:'triangle',slide:1.6,vol:.04}),note:i=>tone(SCALE[(i||0)%12],.35,{type:'triangle',vol:.05}),
+  shutter:()=>{noise(.08,{vol:.07});tone(2000,.03,{type:'square',vol:.015,delay:.05})},beep:()=>tone(1500,.08,{type:'square',vol:.02}),meow:()=>tone(620+Math.random()*160,.28,{type:'sawtooth',vol:.012,slide:1.35}),
+  purr:()=>tone(55,.5,{type:'sawtooth',vol:.015}),knit:()=>arp([784,988,1318],.18),hang:()=>tone(1046,.3,{type:'triangle',vol:.035}),treat:()=>arp([659,784,988,1318]),
+  alarm:()=>arp([660,440,660],.18,'square',.015,.2),fanfare:()=>arp([523,659,784,1046,1318],.22,'triangle',.045,.1),kick:()=>tone(160,.08,{slide:.5,vol:.06}),goal:()=>arp([784,1046,1568],.15,'square',.02),
+  print:()=>noise(.5,{vol:.015,hp:2500}),clack:()=>tone(300,.06,{type:'square',vol:.025}),rustle:()=>noise(.35,{vol:.04,hp:3000}),stamp:()=>tone(120,.1,{vol:.06}),scratch:()=>noise(.4,{vol:.025,hp:1800}),toss:()=>tone(400,.2,{slide:2,vol:.015})};
+function sfx(k,a){if(!soundOn||!AC||!SFX[k])return;const now=performance.now();if(now-(lastSfx[k]||0)<60)return;if(now-sfxWin>1000){sfxWin=now;sfxN=0}if(++sfxN>14)return;lastSfx[k]=now;SFX[k](a)}
+
+/* ---------- 界面回调 ---------- */
+const newsEl=$('news'),NEWS=[];
+const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s?'block':'none'},toast:s=>{$('toast').textContent=s;$('toast').style.opacity=1;toastT=3.2},
+  room:r=>{$('room').firstChild.textContent=r.n},news:s=>{NEWS.push({s,t:performance.now()});if(NEWS.length>5)NEWS.shift();drawNews()},sfx,photo:showPhoto};
+function drawNews(){const now=performance.now();newsEl.innerHTML=NEWS.filter(n=>now-n.t<12000).map(n=>`<div style="opacity:${now-n.t>9000?.4:1}">${n.s}</div>`).join('')}
+const game=makeWorld(pc,{play:true,ui});window.__game=game;game.bots(80,true);
+
+/* ---------- 画面大小：宽屏 ×3，窄一点 ×2，Z 切换 ---------- */
+function layout(){const aw=$('wide').clientWidth,ah=Math.max(380,innerHeight-150);SC=zoomPref||(aw>=1300&&ah>=640?3:2);
+  VW=Math.min(960,Math.floor(aw/SC));VH=Math.min(540,Math.floor(Math.min(ah,VW*SC*9/16)/SC));
+  if(pc.width!==VW||pc.height!==VH){pc.width=VW;pc.height=VH}if(oc.width!==VW*SC*dpr||oc.height!==VH*SC*dpr){oc.width=VW*SC*dpr;oc.height=VH*SC*dpr}   // 尺寸没变就不重设，重设会清空画布
+  pc.style.width=VW*SC+'px';pc.style.height=VH*SC+'px';oc.style.width=VW*SC+'px';oc.style.height=VH*SC+'px';
+  gameEl.style.width=VW*SC+'px';gameEl.style.height=VH*SC+'px';document.querySelectorAll('#wide .bar').forEach(b=>b.style.width=VW*SC+'px');$('zoomBtn').textContent='缩放 ×'+SC;
+  const v=game.camera(VW,VH,1);game.render(pctx,v.x,v.y,VW,VH);game.hud(octx,SC*dpr,dpr)}   // 改尺寸会清空画布，马上补画一帧
+addEventListener('resize',layout);layout();
+
+/* ---------- 输入 ---------- */
+const toW=e=>{const r=pc.getBoundingClientRect();return game.toWorld((e.clientX-r.left)*VW/r.width,(e.clientY-r.top)*VH/r.height)};
+const menu=$('menu'),tip=$('tip'),phrasesList=['来帮忙！','我来！','谢谢喵','求合照','CI 红了','干饭！','摸鱼中','晚安'];
+function closeMenu(){menu.style.display='none'}
+function openMenu(x,y,html){menu.innerHTML=html;menu.style.display='block';const gr=gameEl.getBoundingClientRect();menu.style.left=Math.min(x-gr.left,gr.width-170)+'px';menu.style.top=Math.min(y-gr.top,gr.height-menu.offsetHeight-6)+'px'}
+gameEl.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(!AC&&soundOn)initAudio();
+  if(k==='t'&&!e.repeat){e.preventDefault();const gr=gameEl.getBoundingClientRect();openMenu(gr.left+gr.width/2-80,gr.top+gr.height-230,'<div class="t">快捷短语（按数字键或点一下）</div>'+phrasesList.map((p,i)=>`<button data-ph="${i}">${i+1}　${p}</button>`).join(''));menuMode='ph';return}
+  if(menu.style.display==='block'&&menuMode==='ph'&&/^[1-8]$/.test(k)){e.preventDefault();game.cmd.say(phrasesList[+k-1]);closeMenu();return}
+  if(k==='z'&&!e.repeat){zoomPref=SC===3?2:3;layout();e.preventDefault();return}
+  if(e.key==='Escape')closeMenu();
+  if(game.key(e,true))e.preventDefault()});
+let menuMode='';
+gameEl.addEventListener('keyup',e=>{if(game.key(e,false))e.preventDefault()});
+gameEl.addEventListener('blur',()=>{game.blurKeys()});
+pc.addEventListener('pointerdown',e=>{if(e.button!==0)return;gameEl.focus();closeMenu();const w=toW(e);game.tap(w.x,w.y)});
+pc.addEventListener('pointermove',e=>{const w=toW(e),h=game.hover(w.x,w.y),gr=gameEl.getBoundingClientRect();pc.style.cursor=h?'pointer':'default';
+  if(h){tip.textContent=h.label;tip.style.display='block';tip.style.left=(e.clientX-gr.left+14)+'px';tip.style.top=(e.clientY-gr.top+12)+'px'}else tip.style.display='none'});
+pc.addEventListener('pointerleave',()=>{tip.style.display='none';game.hover(-99,-99)});
+pc.addEventListener('contextmenu',e=>{e.preventDefault();gameEl.focus();const w=toW(e),c=game.catAt(w.x,w.y);if(!c){closeMenu();return}menuMode='cat';menuCat=c;const me=game.me,ball=me.hold&&!me.hold.knit;
+  openMenu(e.clientX,e.clientY,`<div class="t">${c.name}${c.kind==='npc'?'（店猫）':''}${c.doing?' · '+c.doing:''}</div><button data-a="rub">蹭蹭它</button><button data-a="follow">跟着它走</button><button data-a="pass" ${ball?'':'disabled'}>把毛线球传给它${ball?'':'（嘴里没有）'}</button>`)});
+let menuCat=null;
+menu.addEventListener('pointerdown',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.dataset.ph!=null)game.cmd.say(phrasesList[+b.dataset.ph]);else if(menuCat){const a=b.dataset.a;if(a==='follow')game.cmd.follow(menuCat);game.cmd.social(menuCat,a==='follow'?'follow':a)}closeMenu();gameEl.focus()});
+mm.addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();const r=mm.getBoundingClientRect();game.tap((e.clientX-r.left)/r.width*960,(e.clientY-r.top)/r.height*540)});
+function showPhoto(cv,names){const s=4,c=$('phc');c.width=cv.width*s;c.height=cv.height*s;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(cv,0,0,c.width,c.height);
+  $('phw').textContent='1024 猫咖 · 合照 · '+names.slice(0,12).join('、')+(names.length>12?` 等 ${names.length} 只猫`:'');$('phs').href=c.toDataURL('image/png');$('photo').style.display='flex'}
+$('phx').onclick=()=>{$('photo').style.display='none';gameEl.focus()};
+function initAudio(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}
+$('sndBtn').onclick=e=>{soundOn=!soundOn;if(soundOn)initAudio();e.target.textContent='声音：'+(soundOn?'开':'关');e.target.classList.toggle('on',soundOn);gameEl.focus()};
+$('zoomBtn').onclick=()=>{zoomPref=SC===3?2:3;layout();gameEl.focus()};
+$('faceBtn').onclick=e=>{e.target.textContent='换表情 · '+game.cmd.face();gameEl.focus()};
+$('coatBtn').onclick=e=>{e.target.textContent='换毛色 · '+game.cmd.coat();gameEl.focus()};
+$('bots').oninput=e=>{$('botsv').textContent=e.target.value;game.bots(+e.target.value)};
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const r=game.cmd.event(b.dataset.ev);if(r)ui.toast(r);gameEl.focus()});
+$('emobar').innerHTML=game.EMOTES.map((m,i)=>`<button data-e="${i}">${i+1} ${m.n}</button>`).join('');
+$('emobar').onclick=e=>{const b=e.target.closest('button');if(b){game.cmd.emote(+b.dataset.e);gameEl.focus()}};
+$('phrases').innerHTML=phrasesList.map((p,i)=>`<button data-p="${i}">${p}</button>`).join('');
+$('phrases').onclick=e=>{const b=e.target.closest('button');if(b){game.cmd.say(phrasesList[+b.dataset.p]);gameEl.focus()}};
+document.querySelectorAll('[data-tod]').forEach(b=>b.onclick=()=>{game.S.tod=b.dataset.tod;document.querySelectorAll('[data-tod]').forEach(x=>x.classList.toggle('on',x===b));gameEl.focus()});
+document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{game.S.weather=b.dataset.wx;document.querySelectorAll('[data-wx]').forEach(x=>x.classList.toggle('on',x===b));gameEl.focus()});
+
+/* ---------- 二、全店地图 ---------- */
+const wc=$('wc'),wctx=wc.getContext('2d',{willReadFrequently:true});
+$('zones').innerHTML=WORLD.rooms.map(q=>`<div class="zone" style="left:${q.x/9.6}%;top:${q.y/5.4}%;width:${q.w/9.6}%;height:${q.h/5.4}%"><b>${q.n}</b></div>`).join('');
+$('legend').innerHTML=WORLD.rooms.map(q=>`<span><b>${q.n}</b>${q.d}</span>`).join('');
+$('zbtn').onclick=e=>{e.target.classList.toggle('on');document.body.classList.toggle('show-zones')};
+
+/* ---------- 三、容量 ---------- */
+(()=>{const rows=WORLD.rooms.map(r=>{let n=0;for(let y=r.y;y<r.y+r.h;y+=2)for(let x=r.x;x<r.x+r.w;x+=2)if(game.free(x+1,y+1))n++;return[r.n,n*4]});const tot=rows.reduce((s,r)=>s+r[1],0);
+  $('areaT').innerHTML='<tr><th>房间</th><th>能走的地面</th><th>宽松</th><th>挤</th></tr>'+rows.map(([n,a])=>`<tr><td>${n}</td><td class="n">${(a/1000).toFixed(1)} 千像素²</td><td class="n">${Math.round(a/1600)} 只</td><td class="n">${Math.round(a/784)} 只</td></tr>`).join('')+
+  `<tr><td><b>全店</b></td><td class="n"><b>${(tot/1000).toFixed(0)} 千像素²</b></td><td class="n"><b>${Math.round(tot/1600)} 只</b></td><td class="n"><b>${Math.round(tot/784)} 只</b></td></tr>`})();
+$('benchBtn').onclick=()=>{$('benchNote').textContent='测试中……';setTimeout(bench,30)};
+function bench(){const cv=document.createElement('canvas');cv.width=480;cv.height=270;const x=cv.getContext('2d',{willReadFrequently:true}),g=makeWorld(cv,{play:false,ui:{}}),out=[];let t=1000;
+  const cam=[[140,40],[330,20],[160,290],[480,250]];
+  for(const n of [0,50,100,150]){g.bots(n,true);for(let i=0;i<120;i++){t+=1/60;g.tick(t,1/60);if(i%3===0)g.render(x,140,40,480,270)}   // 先热身，让贴图缓存填起来
+    let drawn=0;const t0=performance.now();for(let i=0;i<120;i++){t+=1/60;g.tick(t,1/60);const [vx,vy]=cam[i%4];g.render(x,vx,vy,480,270);x.getImageData(0,0,1,1);drawn+=g.stats().drawn}   // 读一个像素，逼它真的画完
+    out.push([n,(performance.now()-t0)/120,drawn/120])}
+  $('benchT').innerHTML='<tr><th>在线猫数</th><th>每帧（更新 + 画一屏）</th><th>同屏画了几只</th></tr>'+out.map(([n,ms,d])=>`<tr><td class="n">${n} + 6 只店猫 + 你</td><td class="n">${ms.toFixed(2)} ms（${ms<16.7?'够 60 帧':'低于 60 帧'}）</td><td class="n">${d.toFixed(0)}</td></tr>`).join('');
+  $('benchNote').textContent='60 帧每帧的预算是 16.7 ms。上面是这台电脑上的结果'}
+
+/* ---------- 四、交互目录 ---------- */
+const mk=(parent,w,h,s)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.style.width=w*s+'px';c.style.height=h*s+'px';parent.appendChild(c);return c};
+function pcat(k,pi,x,y,t,{face='R',ex,yarn,mirror}={}){const tf=(Math.floor(t*2)+pi)%2,P=POSE[k](t,tf,0,ex??(pi<7?PERSONA[pi].face:'normal'));if(face==='L'&&FACING.has(k))P.flip=true;if(mirror)P.flip=!P.flip;
+  drawF(C,P.G,yarn!=null?{...PAL[pi],yarn:YARN[yarn]}:PAL[pi],Math.round(x),Math.round(y),{cx:P.cx,flip:P.flip,dy:P.dy||0,blink:P.blink})}
+const room=(w,h,wh,style='cream',fl='wood')=>{if(wh)wall(0,0,w,wh,style);const f=fl==='tile'?floorTile2:fl==='grass'?floorGrass:floorWood;f(0,wh,w,h-wh)};
+const ph=(t,p)=>(t%p)/p,arcY=(u,y0,y1,h)=>y0+(y1-y0)*u-Math.sin(u*Math.PI)*h;
+const CAT=[
+ {g:'毛线球（做委托）'},
+ {n:'分球机',k:'前厅',how:'自动',what:'投递口塞进来的毛线球被吸进玻璃罩，再弹进最空的那个毛线篮。来球快慢跟着正在做委托的猫数走',f(t){room(80,56,0);const u=ph(t,1.6);sorter(10,10,t,{balls:[0,2,4,1].slice(0,2+Math.floor(t/1.6)%3),pop:u>.6&&u<.75,suck:u<.6?{ci:3,k:u/.6}:null});
+   yarnBasket(46,34,[0,1,4].slice(0,1+Math.floor(t/1.6)%3),t);if(u>=.6){const k=(u-.6)/.4;yarnBall(Math.round(24+k*36),Math.round(arcY(k,40,36,16)),2,1)}}},
+ {n:'委托看板',k:'前厅',how:'靠近按 E 看',what:'一张便签就是一颗还没解的毛线球。数量跟着篮子里、路上的球变',f(t){room(80,56,56,'cream');corkboard(8,6,64,42,3+Math.floor(t*1.5)%14)}},
+ {n:'两扇橱窗 · 14 个夹子',up:1,k:'橱窗长廊',how:'叼着织好的东西按 E',what:'跳上窗台挂到最近的空夹子上；过一会儿人类取走，窗外飘起一颗心',f(t){room(80,56,46,'butter');const ln={x:10,y:10,w:60},u=ph(t,3.2);
+   windowW(6,4,68,34,t,'day',{cross:0,inside:()=>clothesline(ln.x,ln.y,ln.w,[{kind:'scarf',ci:1},null,u<.55?{kind:'hat',ci:0}:null,{kind:'sock',ci:3},null,{kind:'flag',ci:4},null],7)});curtains(6,4,68,34);
+   if(u>=.55){const p=lineSlot(ln.x,ln.y,ln.w,2,7);heartUp(p.x,p.y+6,(u-.55)/.45)}pcat('sit',9,58,54,t,{ex:'lookUp'})}},
+ {n:'小黄鸭调试',k:'工坊',how:'叼着毛线球，走到小黄鸭跟前按 E',what:'把便签上的问题讲给它听："？"……"！"。这颗毛线球接下来会解得很快',f(t){room(80,56,20,'navy');desk(4,18,72);duck(50,20);const u=ph(t,3.6);
+   pcat(u<.35?'sit':u<.7?'meow':'happy',0,30,50,t,{ex:u<.35?'curious':undefined});drawEmote(C,30,26,u<.35?'q':u<.7?'note':'bang',t)}},
+ {n:'传球给任何猫',up:1,k:'全店',how:'叼着球右键点猫，或按 Q',what:'店猫按性格接；在线的猫大多会说"收到喵"接着做，偶尔会还给你。它织好挂上后你会收到通知',f(t){room(80,56,0);const u=ph(t,2.4),b=u<.45?[20+u/.45*40,arcY(u/.45,36,36,18)]:null;
+   pcat(u<.05?'hold':'happy',0,18,52,t,{yarn:0});pcat(u<.4?'alert':'hold',56,60,52,t,{yarn:0});if(b)yarnBall(Math.round(b[0]),Math.round(b[1]),2,0,Math.floor(t*8));if(u>.5)drawEmote(C,60,28,'note',t)}},
+ {g:'几只猫一起'},
+ {n:'大毛线团',k:'前厅 → 工坊',how:'围过去按 E，一起扒拉',what:'不定时从门边的大件投递口滚进来，一路滚到工坊。至少 3 只猫一起扒拉才会动，解开后织成一条横幅挂在橱窗上',f(t){room(80,56,0);const p=ph(t,6);
+   pcat('bat',9,18,50,t,{yarn:0});pcat('swing',0,62,50,t,{yarn:0,face:'L',mirror:true});pcat('kick',25,40,56,t,{yarn:0});giantYarn(40,40,t,p,[0,1,3]);pbar(28,6,24,p,'#7ee08a')}},
+ {n:'零食机',k:'厨房',how:'站到爪垫上按 E，再按 T 喊人',what:'三块爪垫同时有猫踩着才出零食，撒一地，附近的猫都来吃。每次要等 45 秒',f(t){room(80,56,0,'','tile');const u=ph(t,5),n=Math.min(3,Math.floor(u*5));treatMachine(4,0,t,{lit:n,drop:u>.65});
+   [0,1,2].forEach(i=>{pawPlate(34+i*15,44,i<n);if(i<n)pcat('sit',[0,19,37][i],42+i*15,50,t,{ex:'focus'})})}},
+ {n:'CI 灯',k:'工坊',how:'CI 红了就跳上桌子踩键盘',what:'隔一阵 CI 会红。踩键盘的猫越多修得越快，屏幕上全是乱码，最后绿了——"虽然没人知道是怎么修好的"',f(t){room(80,56,24,'navy');const u=ph(t,6),st=u<.5?'fail':u<.65?'run':'pass';ciLight(4,2,t,st);
+   desk(24,22,54);monitor(36,4,t,{mode:st==='pass'?'pass':'type',seed:3});keyboard(38,26,t,st!=='pass');pcat('knead',43,49,31,t,{ex:'focus'})}},
+ {n:'拍照角',k:'橱窗长廊',how:'站到背景板前；有猫按快门就倒数',what:'相机背面倒数 3、2、1，咔嚓。照的是真画面，拍到你就弹出来，可以保存',f(t){room(80,56,0,'','wood');const u=ph(t,5);backdrop(8,2,64,30,t);
+   [[20,1],[34,19],[48,0],[62,31]].forEach(([x,p],i)=>pcat('sit',p,x,46,t+i,{ex:['happy','sparkle','wink','smug'][i]}));camBack(64,40,t,{count:u<.6?3-Math.floor(u/.2):0,flash:u>.6&&u<.66});if(u>.6&&u<.68)alpha(.7,()=>R(0,0,80,56,'#fff'))}},
+ {n:'喵喵合唱',k:'全店',how:'按 1 喵一声',what:'3 只以上的猫在附近一起喵，就变成合唱，冒一串音符。你喵的时候，旁边的猫有时会跟着喵',f(t){room(80,56,0);[[16,7],[40,32],[64,50]].forEach(([x,p],i)=>{pcat('meow',p,x,52,t+i*.3);drawEmote(C,x+4,Math.round(26-ph(t+i*.4,1.2)*8),'note',0)})}},
+ {n:'猫猫火车',k:'全店',how:'右键点猫 → 跟着它，或按 F',what:'跟着一只猫走。别的猫也会跟来跟去，走着走着就排成一列',f(t){room(80,56,0);for(let i=0;i<4;i++){const x=((t*20+i*-18)%110+110)%110-15;pcat('walkR',[0,13,26,39][i],x,50,t+i*.13)}}},
+ {g:'找猫玩'},
+ {n:'蹭蹭',k:'全店',how:'靠近一只猫按 E，或右键 → 蹭蹭',what:'两只猫都眯起眼，冒一颗心。在线的猫有时也会自己跑来蹭你',f(t){room(80,56,0);pcat('sit',0,30,52,t,{ex:'content'});pcat('sit',44,50,52,t,{ex:'content'});heartUp(40,34,ph(t,1.8))}},
+ {n:'8 个表情',k:'全店',how:'数字键 1～8',what:'喵、爱心、惊讶、疑问、开心、生气、睡觉、伸懒腰。头顶冒对应的小符号',f(t){room(80,56,0);const i=Math.floor(t/1.4)%6,E=[['meow',null,'note'],['sit','love','heart'],['alert',null,'bang'],['sit','curious','q'],['happy',null,null],['sit','angry','anger']][i];
+   pcat(E[0],0,40,52,t,{ex:E[1]||undefined});if(E[2])drawEmote(C,40,E[0]==='alert'?18:28,E[2],t)}},
+ {n:'快捷短语',k:'全店',how:'按 T 选一句',what:'「来帮忙！」会叫来附近的猫，「求合照」会叫它们去背景板，「谢谢喵」会收到爱心。只有固定几句，不用管审核',f(t){room(80,56,0);pcat('sit',0,24,52,t);box(34,8,42,16,'#fff8e8');txt('HELP!',40,13,'#e0533d');R(36,24,3,2,'#fff8e8');const u=ph(t,3);if(u>.4)pcat('walkL',51,Math.round(90-(u-.4)*50),52,t)}},
+ {n:'爪印墙',k:'橱窗长廊',how:'墙边的印泥上按 E',what:'先按一下印泥，再跳起来在墙上按一个爪印，颜色是你项圈的颜色。一整天下来会印满',f(t){room(80,56,46,'butter');const n=4+Math.floor(t*2)%18,pr=[];for(let i=0;i<n;i++)pr.push({x:Math.floor(hsh(i,4)*40),y:10+Math.floor(hsh(i,5)*24),col:COLLARS[i%6]});pawWall(16,4,48,38,pr);
+   const u=ph(t,2);pcat(u<.5?'maneki':'sit',0,40,u<.5?48:54,t,{mirror:true})}},
+ {g:'机器和玩具'},
+ {n:'扫地机器人 ×2',up:1,k:'上排 · 下排',how:'它在跑的时候点它',what:'跳上去被载着转；方向键跳下来。下排那台还会把掉在地上的东西收走',f(t){room(80,56,0);const x=8+Math.round(ph(t,4)*48);vacuum(x,38,t,{dir:1,moving:1,led:'#8fd8ff'});pcat('sit',4,x+8,42,t,{ex:'content'})}},
+ {n:'自动喂食器 ×2',up:1,k:'厨房',how:'按 E 吃饭；碗空了就伸爪按一下',what:'两台，吃饭的猫绕到碗后面趴着吃',f(t){room(80,56,0,'','tile');feeder(14,10,t,{level:2});pcat('lie',6,24,36,t,{ex:'lookDown'});feedBowls(14,10,t);feeder(52,10,t,{level:1,drop:1});feedBowls(52,10,t,{food:0})}},
+ {n:'流水饮水机',k:'厨房',how:'按 E 喝水',what:'趴着喝几口，再舔舔嘴',f(t){room(80,56,0,'','tile');fountain(40,26,t);pcat('lie',50,26,44,t,{ex:'lookDown'})}},
+ {n:'打印机和纸团',k:'工坊',how:'按一下打印机；靠近纸团按 E 扑',what:'打出来一张（昨天的周报），团成纸团。走过去会踢到，扑一下能踢远；踢进废纸篓算进球',f(t){room(80,56,20,'navy');printer(4,4,t,ph(t,3)<.3?ph(t,3)/.3:0);trashCan(62,26);const u=ph(t,3);
+   if(u>.3){const k=(u-.3)/.7;paperBall(Math.round(26+k*40),Math.round(46-Math.sin(k*Math.PI)*10-(k>.8?(k-.8)*40:0)))}pcat(u>.3&&u<.5?'leap':'sit',0,24,54,t)}},
+ {n:'泡泡机',k:'大客厅',how:'开着的时候靠近泡泡按 E',what:'隔一阵自己冒 10 秒泡泡，也可以去按。扑破一个"啵"一声，会记着你扑破了几个',f(t){room(80,56,0);bubbleMachine(6,38,t,1);for(let i=0;i<6;i++){const k=ph(t+i*.7,4);bubble(Math.round(16+k*50+Math.sin(t+i)*4),Math.round(42-k*38),2+i%3)}
+   const u=ph(t,2);pcat(u<.3?'leap':'sit',5,50,54,t,{face:'L'})}},
+ {n:'激光逗猫器',k:'大客厅',how:'开着的时候靠近红点按 E',what:'书架顶上的小盒子，隔一阵开 15 秒。红点满客厅乱窜，附近的猫全追过去',f(t){room(80,56,0);const x=40+Math.sin(t*1.7)*30,y=40+Math.sin(t*2.3)*8;laserDot(Math.round(x),Math.round(y));
+   pcat(Math.cos(t*1.7)>0?'walkR':'walkL',5,Math.round(40+Math.sin(t*1.7-.6)*26),Math.round(y+6),t)}},
+ {n:'地板钢琴',k:'大客厅',how:'走上去就响；按 E 让猫走一段',what:'12 个白键，踩到哪个亮哪个。声音默认关，右上角可以开',f(t){room(80,56,0);const k=Math.floor(ph(t,3)*12);floorPiano(-9,26,Array.from({length:12},(_,i)=>i===k));pcat('walkR',3,Math.round(-5+k*8),44,t)}},
+ {n:'跑轮 · 串灯',k:'后院',how:'进跑轮按 E',what:'猫在里面跑，轮子转，后院的串灯一颗颗亮起来。天黑以后最明显',f(t){room(80,56,0,'','grass');const p=ph(t,6);stringLights(2,78,2,t,p,6);catWheel(16,6,t*5);pcat('walkR',8,40,47,t*1.5)}},
+ {n:'桌上的小东西',k:'厨房',how:'按 E 跳上桌',what:'把笔筒、雪花球、玩具老鼠、小仙人掌推下去，一脸得意。扫地机器人会收走，过一阵又被谁摆回桌上',f(t){room(80,56,0,'','tile');cafeTable(10,24,60);const u=ph(t,3);toy('pen',28,29);toy('globe',60,29);
+   if(u<.5)toy('mouse',44,29);else toy('mouse',Math.round(48+(u-.5)*20),Math.min(54,Math.round(29+(u-.5)*60)),1);pcat(u<.5?'maneki':'sit',4,36,29,t,{ex:u<.5?undefined:'smug'})}},
+ {n:'猫抓柱',k:'前厅',how:'按 E',what:'伸长了磨爪子，毛屑乱飞，顶上的小绒球跟着晃',f(t){room(80,56,0);scratchPost(46,8,t,1);pcat('stretch',0,36,52,t)}},
+ {g:'找地方窝着'},
+ {n:'暖桌',k:'大客厅',how:'按 E 钻进去',what:'钻进去就看不见了，只露一条尾巴，最多 6 条。晚上最抢手',f(t){room(80,56,0);const n=1+Math.floor(t/1.2)%6;kotatsu(4,14,t,[25,4,50,12,33,1].slice(0,n).map(p=>({pal:PAL[p]})))}},
+ {n:'壁炉',k:'大客厅',how:'按 E 趴在前面',what:'三个位置，白天趴着，晚上就睡着了',f(t){room(80,56,44,'pink');fireplace(11,6,t);pcat('lie',1,22,56,t,{ex:'content'});pcat('sleep',40,52,56,t)}},
+ {n:'高猫爬架',k:'大客厅',how:'按 E 往上爬',what:'四层，一层层跳上去，能爬到最高的空位',w:56,h:128,f(t){room(56,128,0);catTreeTall(6,2,t);pcat('lie',2,34,14,t);pcat('sleep',31,18,44,t)}},
+ {n:'大纸箱',k:'前厅',how:'按 E 挤进去',what:'能挤三只，只露脑袋',f(t){room(80,56,0);bigBoxBack(20,28);[[29,3],[40,20],[51,44]].forEach(([x,p])=>pcat('sit',p,x,43,t));bigBoxFront(20,28)}},
+ {n:'吊床',k:'后院',how:'按 E',what:'躺进去晃呀晃',f(t){room(80,56,0,'','grass');const sw=Math.sin(t*1.2);hammockBack(8,12,sw);pcat('sleep',10,40,29+Math.round(sw),t);hammockFront(8,12,sw)}},
+ {n:'懒人沙发 · 猫窝',k:'工坊 · 前厅',how:'按 E',what:'一个陷进去，一个蜷起来',f(t){room(80,56,0);beanbag(4,24);pcat('lie',14,18,36,t,{ex:'content'});catBedBack(42,34);pcat('sleep',46,55,42,t);catBedFront(42,34)}},
+ {n:'服务器机柜',k:'工坊',how:'按 E（砚砚不在的时候）',what:'顶上最暖，是砚砚的地盘。键盘被踩的时候灯闪得特别快',w:48,h:84,f(t){room(48,84,0);serverRack(9,16,t,Math.floor(t/3)%2);pcat('sleep',2,24,20,t)}},
+ {n:'猫隧道',k:'大客厅',how:'在任意一头按 E',what:'从一头钻进去，隧道鼓起一个包慢慢挪过去，再从另一头钻出来',f(t){room(80,56,0);const u=ph(t,3);tunnel(9,24,t,u<.55?u/.55:-1);if(u>=.55)pcat('happy',4,76,48,t)}},
+ {g:'后院'},
+ {n:'落叶堆',k:'后院',how:'叶子攒够了按 E',what:'屁股扭扭，一跃跳进去，叶子炸开一地。枫树一直在掉叶子，堆会慢慢攒回来',f(t){room(80,56,0,'','grass');const u=ph(t,4);leafPile(46,46,u<.4?1:.2+(u-.4)*.5);
+   if(u<.3)pcat('pounce',0,20,50,t);else if(u<.4)pcat('leap',0,Math.round(20+(u-.3)*260),Math.round(46-Math.sin((u-.3)*10*Math.PI)*10),t);
+   if(u>.4&&u<.8)for(let i=0;i<16;i++){const k=(u-.4)/.4,a=i/16*Math.PI*2;leaf(Math.round(46+Math.cos(a)*k*26),Math.round(40-Math.sin(k*Math.PI)*16+Math.sin(a)*k*6),i%4,i)}
+   if(u>.6)pcat('happy',0,46,48,t)}},
+ {n:'蝴蝶',k:'后院',how:'靠近按 E 扑',what:'三只蝴蝶在花坛和院子里飞。永远差一点',f(t){room(80,56,0,'','grass');flowerBed(0,40,80);butterfly(Math.round(40+Math.sin(t*1.3)*24),Math.round(18+Math.sin(t*2.1)*6),t);butterfly(Math.round(52+Math.sin(t*.9+2)*20),Math.round(12+Math.sin(t*1.7)*5),t,'#f4a6b8');pcat(ph(t,2.5)<.3?'leap':'sit',3,24,46,t)}},
+ {n:'鸟浴盆',k:'后院',how:'有鸟的时候按 E',what:'压低身子悄悄靠近……扑！小鸟扑棱扑棱飞走了。反正本来也没想抓',f(t){room(80,56,0,'','grass');birdBath(46,24);const u=ph(t,4);if(u<.6)bird(52,26,t,{dir:-1});else bird(Math.round(52+(u-.6)*80),Math.round(26-(u-.6)*80),t,{dir:1,fly:1});
+   pcat(u<.55?'pounce':'sit',0,Math.round(8+Math.min(.55,u)*30),52,t,{ex:u<.55?undefined:'meh'})}},
+ {n:'入场纸箱',k:'前厅',how:'上线、下线时自动',what:'新上线的猫从纸箱里钻出来，下线的猫跳回纸箱。在线猫数就是这么变的',f(t){room(80,56,0);const u=ph(t,2.4);welcomeBox(24,28,t,u<.2?u:0);if(u>=.15){const k=Math.min(1,(u-.15)/.25);pcat(k<1?'leap':'happy',50,Math.round(40+k*14),Math.round(arcY(k,40,54,14)),t)}}},
+];
+const catEl=$('catalog'),views=[],vis=new Set(),io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting?vis.add(e.target):vis.delete(e.target)));
+let box3=null;CAT.forEach(e=>{if(e.g){catEl.insertAdjacentHTML('beforeend',`<div class="grp">${e.g}</div>`);box3=document.createElement('div');box3.className='cat';catEl.appendChild(box3);return}
+  const d=document.createElement('div');d.className='it';const c=mk(d,e.w||80,e.h||56,3);d.insertAdjacentHTML('beforeend',`<div class="n">${e.n}<i>${e.k}${e.up?' · 升级':''}</i></div><p><b>怎么玩：</b>${e.how}</p><p>${e.what}</p>`);box3.appendChild(d);io.observe(c);views.push({c,f:e.f})});
+[gameEl,wc].forEach(c=>io.observe(c));
+
+/* ---------- 主循环 ---------- */
+let last=performance.now(),fno=0,fpsT=0,fpsN=0,jsT=0,fpsTxt='';
+function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));last=ms;fno++;const t0=performance.now();
+  game.tick(t,dt);
+  if(vis.has(gameEl)){const v=game.camera(VW,VH,dt);game.render(pctx,v.x,v.y,VW,VH);game.hud(octx,SC*dpr,dpr);if(fno%4===0)game.mini(mctx,192,108);
+    $('online').textContent='在线 '+game.online()+' 只 · 店猫 6 只'}
+  jsT+=performance.now()-t0;
+  if(vis.has(wc)&&fno%6===0)game.render(wctx,0,0,960,540);
+  if(fno%2===0)views.forEach(v=>{if(!vis.has(v.c))return;const x=v.c.getContext('2d');use(x);x.clearRect(0,0,v.c.width,v.c.height);v.f(t)});
+  if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(fno%30===0)drawNews();
+  fpsT+=dt;fpsN++;if(fpsT>=1){const s=game.stats();fpsTxt=`${Math.round(fpsN/fpsT)} 帧/秒 · 引擎每帧 ${(jsT/fpsN).toFixed(1)} ms · 同屏 ${s.drawn} 只 · 全店 ${s.cats} 只`;$('perf').textContent=fpsTxt;fpsT=0;fpsN=0;jsT=0}
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

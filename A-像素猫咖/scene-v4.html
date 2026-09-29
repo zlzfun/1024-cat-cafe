@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>像素猫咖场景 v4</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a;--ok:#9ccc98}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1200px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:19px;margin:48px 0 4px;line-height:1.4}
+  h3{font-size:15px;margin:22px 0 6px}
+  p{margin:0}
+  .lead,.desc{color:var(--sub)}
+  .desc{font-size:13px;max-width:900px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .cards div{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 14px;font-size:13px;color:var(--sub)}
+  .cards b{display:block;color:var(--ink);font-weight:600;font-size:14px}
+  button{font:inherit;font-size:13px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:3px;padding:2px 12px;cursor:pointer}
+  button.on{background:var(--acc);border-color:var(--acc);color:var(--bg)}
+  button:hover{border-color:var(--sub)}
+  kbd{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px;color:var(--ink);background:#2a2036}
+  code{font-family:ui-monospace,Menlo,monospace;color:var(--ink);font-size:12px}
+  /* 试玩区 */
+  .wide{position:relative;width:min(1440px,calc(100vw - 48px));margin:14px auto 0}
+  .game{position:relative;margin:0 auto;outline:none;border-radius:4px;overflow:hidden;background:#000;user-select:none;-webkit-user-select:none}
+  .game canvas{position:absolute;left:0;top:0}
+  .game #oc{pointer-events:none}
+  .hud{position:absolute;font-size:13px;pointer-events:none}
+  .tl{left:10px;top:8px;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+  .tl>*{pointer-events:auto}
+  .room{background:#241a2ecc;border-radius:3px;padding:2px 10px;pointer-events:none!important}
+  .room b{color:var(--acc);font-weight:600;margin-right:6px}
+  .room span{color:var(--sub)}
+  .focus{left:50%;top:44%;transform:translate(-50%,-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:4px;padding:8px 18px;font-size:14px}
+  .game:focus .focus{display:none}
+  .game .mini{left:auto;right:10px;top:10px;border:1px solid #ffd84a88;border-radius:3px;cursor:pointer;image-rendering:auto;opacity:.92}
+  .prompt{left:50%;bottom:14px;transform:translateX(-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:3px;padding:1px 12px;white-space:nowrap;display:none}
+  .cstack{top:10px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:min(560px,50%)}
+  .toast{background:var(--acc);color:var(--bg);border-radius:3px;padding:1px 12px;opacity:0;transition:opacity .3s;text-align:center}
+  .disc,.reply{background:#241a2ef0;border:1px solid var(--acc);border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;opacity:0;transition:opacity .4s,transform .4s;transform:translateY(-6px);width:100%}
+  .disc.show,.reply.show{opacity:1;transform:none}
+  .disc h5,.reply h5{margin:0;font-size:13px;font-weight:600;color:var(--acc)}
+  .disc h5 i{font-style:normal;color:var(--sub);font-weight:400;margin-left:6px}
+  .disc p,.reply p{color:#d8cce4}
+  .disc .tie,.reply .chain{color:var(--ok);font-size:12px}
+  .reply{border-color:#f4a6b8}.reply h5{color:#f4a6b8}
+  .reply q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}
+  .news{left:10px;bottom:12px;font-size:12px;line-height:1.6;max-width:32%}
+  .news div{background:#241a2ecc;border-radius:3px;padding:0 8px;margin-top:3px;width:fit-content;transition:opacity .6s}
+  .mecard{display:flex;gap:8px;align-items:center;background:#241a2ee6;border:1px solid var(--acc);border-radius:3px;padding:3px 10px 3px 3px;cursor:pointer}
+  .mecard canvas{position:static;width:44px;height:40px;background:#3a2c4c}
+  .mecard b{color:var(--bg);background:var(--acc);padding:0 6px;border-radius:2px;font-size:12px;font-weight:600}
+  .mecard span{display:block;font-size:12px;color:var(--sub);line-height:1.45}
+  .mecard kbd{font-size:11px;padding:0 3px}
+  .mecard .st{display:flex;gap:10px;align-items:center;margin-top:1px}
+  .mecard .st em{font-style:normal;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}
+  .mecard .st em b{background:none;color:var(--ink);padding:0;font-weight:600;font-size:12px;font-variant-numeric:tabular-nums}
+  .mecard .st canvas{width:14px;height:14px;background:none;image-rendering:pixelated}
+  .mecard .st em.bk{cursor:pointer}.mecard .st em.bk:hover b{color:var(--acc)}
+  .panel{width:260px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:6px 10px 7px;font-size:12px;line-height:1.6;cursor:pointer}
+  .panel:empty{display:none}
+  .panel h4{margin:0;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
+  .panel h4 i{font-style:normal;color:var(--sub);font-weight:400}
+  .panel .q{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .panel .ln{color:var(--acc)}
+  .panel ul{list-style:none;margin:2px 0 0;padding:0}
+  .panel li{display:flex;gap:6px;align-items:baseline;color:#d8cce4}
+  .panel li:before{content:"";flex:none;width:8px;height:8px;border:2px solid #b9a8c9;transform:translateY(1px)}
+  .panel li.done{color:var(--ok)}.panel li.done:before{background:#7ee08a;border-color:#7ee08a}
+  .panel li.cur{color:var(--acc)}.panel li.cur:before{border-color:var(--acc)}
+  .panel small{color:#8a7a9a}
+  .stamps{right:10px;top:124px;width:258px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:4px 10px 5px;font-size:12px;line-height:1.4;pointer-events:auto;cursor:pointer}
+  .stamps h4{margin:0 0 3px;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
+  .stamps h4 i{font-style:normal;color:var(--sub);font-weight:400}
+  .stamps .row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;color:var(--sub)}
+  .stamps .s{border:2px dashed #4a3a5c;border-radius:50%;width:30px;height:30px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6a5a7a;transform:rotate(-8deg)}
+  .stamps .s.on{border:2px solid #e0533d;color:#e0533d;background:#e0533d18;font-weight:700}
+  #roomban b{color:var(--acc)}
+  .tipbox{position:absolute;pointer-events:none;background:#241a2ef0;border:1px solid var(--line);border-radius:3px;padding:3px 9px;font-size:12px;line-height:1.6;display:none;max-width:300px;z-index:4}
+  .tipbox b{color:var(--ink);font-weight:600}.tipbox .how{color:var(--acc)}.tipbox .what{color:#d8cce4}.tipbox .tie{color:var(--ok)}.tipbox .st{float:right;color:var(--sub);margin-left:10px}
+  .menu{position:absolute;display:none;background:#2f2340;border:1px solid var(--acc);border-radius:4px;padding:4px;min-width:170px;max-width:280px;z-index:7}
+  .menu .t{font-size:12px;color:var(--sub);padding:2px 8px 4px;border-bottom:1px solid var(--line);margin-bottom:4px;line-height:1.55}
+  .menu .t b{color:var(--acc);font-weight:600}
+  .menu button{display:block;width:100%;text-align:left;border:0;padding:3px 8px}
+  .menu button:hover{background:#ffd84a22}
+  .menu button[disabled]{color:#6a5a7a;cursor:default;background:none}
+  .photo{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#241a2eb0;z-index:8}
+  .polaroid{background:#fff8e8;color:#3a2630;padding:12px 12px 10px;border-radius:3px;box-shadow:0 8px 30px #0008;text-align:center;font-size:13px}
+  .polaroid canvas{position:static;margin:0 auto 8px;border:1px solid #d8c8a8}
+  .polaroid .who{color:#8a7a6a;font-size:12px;max-width:360px;margin:0 auto 8px}
+  .polaroid a,.polaroid button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:28px;line-height:1;vertical-align:middle;font:inherit;font-size:13px;color:#3a2630;border:1px solid #c9b89a;background:#fff;margin:0 3px;padding:0 14px;border-radius:3px;text-decoration:none;cursor:pointer}
+  .bookov{position:absolute;inset:0;background:#1c1424f2;display:none;z-index:6;overflow:auto;padding:14px 20px 18px}
+  .bookov .top{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .bookov .top b{font-size:16px;color:var(--acc)}.bookov .top span{color:var(--sub);font-size:12px}.bookov .top button{margin-left:auto}
+  .bookov .top .prog{flex:0 1 280px;height:6px;background:#3a2c4c;border-radius:3px;overflow:hidden;align-self:center}
+  .bookov .top .prog i{display:block;height:100%;background:var(--acc)}
+  .bookov .top .num{color:var(--ink);font-size:13px;font-variant-numeric:tabular-nums}
+  .bookov .sec{font-size:13px;color:var(--acc);font-weight:600;margin:14px 0 6px;display:flex;gap:8px;align-items:baseline}
+  .bookov .sec i{font-style:normal;color:var(--sub);font-weight:400}
+  .bookov .sec em{font-style:normal;color:#8a7a9a;font-weight:400;font-size:12px;margin-left:auto}
+  .bookov .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+  .bookov .e{cursor:pointer}
+  .bookov .e.on{display:flex;gap:9px;background:#2f2340;border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:12px;line-height:1.55;color:#d8cce4}
+  .bookov .e.on:hover{border-color:var(--acc)}
+  .bookov .ic{flex:none;font-weight:700;font-size:12px}
+  .bookov .e.on .ic{width:20px;height:20px;border-radius:50%;background:#7ee08a26;color:#7ee08a;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .bookov .e.on b{color:var(--ink);font-size:13px;font-weight:600;margin-right:6px}
+  .bookov .e.on small{color:#8a7a9a}
+  .bookov .e.on p{margin:1px 0 0}.bookov .e.on p.tie{color:var(--ok)}
+  .bookov .none{font-size:12px;color:var(--sub)}
+  .bookov .lk{display:flex;flex-wrap:wrap;gap:5px 6px;align-items:center;margin:5px 0}
+  .bookov .lk .rn{width:86px;font-size:12px;color:var(--sub)}
+  .bookov .e.off{display:inline-flex;gap:5px;align-items:baseline;font-size:12px;color:#8a7a9a;background:#241a2e;border:1px solid #3a2c4c;border-radius:3px;padding:1px 9px}
+  .bookov .e.off .ic{color:#6a5a7a}
+  .bookov .e.off small{color:#6a5a7a}
+  .bookov .e.off:hover{border-color:var(--sub);color:var(--sub)}
+  .game.vista .tl,.game.vista .mini,.game.vista .stamps,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle,.game.vista #roomban{display:none!important}
+  .vcap{left:50%;bottom:12px;transform:translateX(-50%);display:none;align-items:baseline;gap:12px;background:#241a2ecc;border-radius:3px;padding:3px 14px;font-size:12px;color:var(--sub);white-space:nowrap}
+  .game.vista .vcap{display:flex}
+  .vcap b{color:var(--acc);font-weight:600;font-size:13px}.vcap .sc{color:var(--ink)}.vcap .sc:empty{display:none}
+  .vtitle{left:0;right:0;top:24%;text-align:center;opacity:0;transition:opacity 1.2s;padding:14px 0 16px;background:linear-gradient(90deg,transparent,#1c1424c8 22%,#1c1424c8 78%,transparent)}
+  .vtitle.show{opacity:1}
+  .vtitle small{display:block;font-size:12px;letter-spacing:6px;color:var(--acc);text-shadow:0 1px 6px #000}
+  .vtitle b{display:inline-block;font-size:34px;line-height:1.3;font-weight:600;letter-spacing:12px;color:#fff4dc;padding:6px 0 6px 12px;margin:8px 0;border-top:1px solid #ffd84a99;border-bottom:1px solid #ffd84a99;text-shadow:0 2px 10px #000}
+  .vtitle span{display:block;font-size:13px;color:#fff4dc;letter-spacing:2px;text-shadow:0 1px 6px #000}
+  .bar{display:flex;flex-wrap:wrap;gap:6px 6px;align-items:center;margin:10px auto 0}
+  .bar span{font-size:12px;color:var(--sub);margin-right:2px}
+  .bar .sep{width:12px}
+  .bar input[type=range]{width:160px;accent-color:#ffd84a}
+  .bar .val{color:var(--ink);font-variant-numeric:tabular-nums;min-width:34px}
+  .perf{margin-left:auto;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .emobar{display:flex;gap:4px;flex-wrap:wrap}
+  .emobar button{padding:1px 8px;font-size:12px}
+  .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 18px;margin-top:10px;font-size:12px;color:var(--sub)}
+  .keys div{white-space:nowrap}
+  /* 说明部分 */
+  .showcase{display:grid;grid-template-columns:1fr 1fr;gap:18px 18px;margin-top:14px}
+  .treebox{display:grid;grid-template-columns:400px 1fr;gap:28px;margin-top:14px;align-items:start}
+  .treebox canvas{width:400px;height:540px;border-radius:4px}
+  .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;margin-top:14px}
+  .vgrid canvas{width:100%;height:auto;border-radius:3px;margin-top:4px}
+  .vgrid .cap{font-size:12px;color:var(--acc);font-weight:600;margin:0}.vgrid .cap i{font-style:normal;color:var(--sub);font-weight:400;margin-left:6px}
+  .showcase .cap{font-size:12px;color:var(--acc);font-weight:600;margin:0 0 6px}
+  .showcase .cap i{font-style:normal;color:var(--sub);font-weight:400;margin-left:6px}
+  .replydemo{background:#241a2ef0;border:1px solid #f4a6b8;border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;max-width:520px}
+  .replydemo h5{margin:0;font-size:13px;color:#f4a6b8;font-weight:600}.replydemo q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}.replydemo .chain{color:var(--ok);font-size:12px}
+  table{border-collapse:collapse;font-size:13px;margin-top:8px;width:100%}
+  th,td{border-bottom:1px solid var(--line);padding:5px 10px 5px 0;text-align:left;vertical-align:top}
+  th{color:var(--sub);font-weight:500}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+  td b{font-weight:600}
+  .qlist{margin:2px 0 0;padding-left:16px;color:#d8cce4}.qlist li{margin:1px 0}
+  .st-on{color:var(--ok);white-space:nowrap}.st-plan{color:var(--sub);white-space:nowrap}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .note{font-size:13px;color:var(--sub);margin-top:6px}
+  .map{position:relative;margin-top:12px;border-radius:4px;overflow:hidden;width:1152px;max-width:100%}
+  .map canvas{width:100%;height:auto}
+  .zones{position:absolute;inset:0;pointer-events:none;display:none}
+  .show-zones .zones{display:block}
+  .zone{position:absolute;border:2px dashed #ffd84acc;background:#ffd84a10;border-radius:3px}
+  .zone b{position:absolute;left:4px;top:3px;font-size:12px;font-weight:600;background:#241a2ee6;color:var(--acc);padding:0 6px;border-radius:2px}
+  .zone.new{border-color:#9ccc98}.zone.new b{color:var(--ok)}
+  .legend{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 18px;margin-top:10px;font-size:13px;color:var(--sub)}
+  .legend b{color:var(--ink);font-weight:600;display:block}
+  .grp{margin-top:30px;font-size:12px;letter-spacing:1px;color:var(--acc);font-weight:700}
+  .cat{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 14px;margin-top:10px}
+  .it{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px 10px}
+  .it canvas{margin:0 auto 6px;border-radius:3px}
+  .it .n{font-weight:600;font-size:14px}
+  .it .n i{font-style:normal;font-size:12px;color:var(--acc);font-weight:500;margin-left:6px}
+  .it p{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.6}
+  .it p b{color:var(--ink);font-weight:500}
+  .it p.tie{color:var(--ok)}
+  .it p.how{color:var(--acc)}
+  .spec{margin:18px 0 0;padding-left:18px;font-size:13px;color:var(--sub)}
+  .spec li{margin:4px 0}
+  @media (max-width:1100px){.cat{grid-template-columns:repeat(3,1fr)}.keys{grid-template-columns:repeat(2,1fr)}.legend{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:820px){.cat{grid-template-columns:repeat(2,1fr)}.cols,.cards,.showcase,.vgrid,.treebox{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：场景 v4（主线：解毛线球 · 认识猫猫咖啡馆）</h1>
+  <p class="lead">主线还是解毛线球：叼起一颗，便签在对话框里展开，解不同的球会用到猫猫咖啡馆不同的本事。这一轮加了三样：中庭一棵毛线巨树，是全店最大的一样东西，给满屋子差不多大的小物件一个重心；几处"看风景"，坐下来画面就切到一张特写；还有一批闲聊毛线球。左上角的状态和图鉴也改了。</p>
+  <div class="cards">
+    <div><b>一棵毛线巨树</b>店里别的东西都在 10～60 像素之间，中庭这一棵有 400 多像素高。六根横枝是猫猫咖啡馆的六个家族；全店每挂出一件成品，树上就多挂一件，挂满了满树金光</div>
+    <div><b>看风景</b>在橱窗、图书馆的窗边软座、巨树树顶、鱼缸前坐下，画面切到一张特写：你的猫的背影，和它看着的街、夜空、整条街、一缸鱼。鱼缸那一处是个小游戏</div>
+    <div><b>九类任务 · 闲聊</b>多了一类"闲聊"：我好无聊、压力好大、亚运会在哪儿办……大多没有错的选项；聊到事实要先查。样页里一共 92 道题，完整题库在 <code>任务题库.md</code></div>
+  </div>
+
+  <h2>一、进店试玩</h2>
+  <p class="desc">点一下画面开始。建议跟着左上角的"训练营"走一遍：叼一颗毛线球，按便签把它解开，再挂进橱窗。不知道玩什么，就去问前台猫（你身边那张小桌子上的布偶猫）。毛线巨树在店的正中间：橱窗长廊、大客厅、工坊都有门通过去，后院和它连成一片草地。<kbd>WASD</kbd>／方向键走动，<kbd>E</kbd> 互动，对话框里用 <kbd>↑↓</kbd>／数字键选、<kbd>E</kbd> 确定、<kbd>Esc</kbd> 收起（收起以后再按 <kbd>E</kbd> 就能打开）。其他在线的猫还是机器人扮演，数量可以拖动调整。</p>
+</main>
+<div class="wide" id="wide">
+  <div class="game" id="game" tabindex="0">
+    <canvas id="pc"></canvas><canvas id="oc"></canvas>
+    <div class="hud tl"><div class="room" id="room"><b>前厅</b><span id="online"></span></div>
+      <div class="mecard" id="mecard" title="点一下，找到你自己"><canvas id="mec" width="22" height="20"></canvas><div><b id="mename">你</b><span id="mest">空着嘴</span><span class="st"><em title="一共解开了几颗毛线球"><canvas id="icYarn" width="7" height="7"></canvas>毛线球 <b id="stBall">0</b></em><em class="bk" id="stBook" title="点一下打开图鉴（B）"><canvas id="icPaw" width="7" height="7"></canvas>装置 <b id="stDisc">0</b></em></span></div></div>
+      <div class="panel" id="panel"></div></div>
+    <canvas class="mini" id="mm" width="336" height="108" title="小地图：点一下，猫就走过去"></canvas>
+    <div class="hud stamps" id="stamps" title="集章卡：点一下看入口"></div>
+    <div class="hud focus">点一下画面，开始操控</div>
+    <div class="hud news" id="news"></div>
+    <div class="hud prompt" id="prompt"></div>
+    <div class="hud cstack"><div class="toast" id="toast"></div><div class="disc" id="roomban"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
+    <div class="hud vtitle" id="vtitle"></div><div class="hud vcap" id="vcap"></div>
+    <div class="tipbox" id="tip"></div>
+    <div class="menu" id="menu"></div>
+    <div id="dlg"></div>
+    <div class="bookov" id="bookov"></div>
+    <div class="photo" id="photo"><div class="polaroid"><canvas id="phc"></canvas><div class="who" id="phw"></div><a id="phs" download="1024猫咖合照.png">保存照片</a><button id="phx">关掉</button></div></div>
+  </div>
+  <div class="bar" id="bar1">
+    <span>在线的猫</span><input type="range" id="bots" min="0" max="150" step="1" value="80"><span class="val" id="botsv">80</span>
+    <i class="sep"></i><span>时段</span><button data-tod="day" class="on">白天</button><button data-tod="dusk">黄昏</button><button data-tod="night">夜晚</button>
+    <i class="sep"></i><span>天气</span><button data-wx="sun" class="on">晴</button><button data-wx="rain">雨</button><button data-wx="snow">雪</button>
+    <i class="sep"></i><button id="zoomBtn">缩放 ×3</button><button id="sndBtn">声音：关</button><button id="coatBtn">换毛色</button>
+    <span class="perf" id="perf"></span>
+  </div>
+  <div class="bar"><span>引导</span><button id="findBtn">找到我 C</button><button id="bookBtn">图鉴 B</button><button id="campBtn">重来训练营</button><button id="resetBtn">清空发现记录</button>
+    <i class="sep"></i><span>指定下一颗球</span><select id="qsel" style="font:inherit;font-size:12px;background:#2a2036;color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:1px 4px"></select></div>
+  <div class="bar"><span>来点事</span><button data-ev="arrive">门外塞进来几颗</button><button data-ev="giant">大毛线团</button><button data-ev="ci">CI 红了</button><button data-ev="laser">激光点</button><button data-ev="bubbles">泡泡</button><button data-ev="bird">叫小鸟来</button><button data-ev="vac">扫地机器人出动 / 回家</button></div>
+  <div class="bar"><span>表情</span><div class="emobar" id="emobar"></div><i class="sep"></i><span>快捷短语 <kbd>T</kbd></span><div class="emobar" id="phrases"></div></div>
+</div>
+<main style="padding-top:0">
+  <div class="keys">
+    <div><kbd>WASD</kbd> <kbd>↑↓←→</kbd> 走动，<kbd>Shift</kbd> 跑</div><div><kbd>E</kbd> <kbd>空格</kbd> 互动 · 打开便签</div><div><kbd>C</kbd> 找到我 · <kbd>B</kbd> 图鉴</div><div><kbd>T</kbd> 快捷短语 · <kbd>1</kbd>–<kbd>8</kbd> 表情</div>
+    <div><kbd>Q</kbd> 把毛线球传给鼠标下（或最近）的猫</div><div><kbd>F</kbd> 跟着一只猫走，<kbd>Esc</kbd> 不跟</div><div><kbd>Z</kbd> 缩放</div><div>右键点猫：看它的名片 / 蹭蹭 / 传球</div>
+    <div>看风景时：<kbd>E</kbd> 做画面里的事，<kbd>Esc</kbd> 回到店里</div>
+  </div>
+
+  <h2>二、巨树中庭：全店最大的一样东西</h2>
+  <p class="desc">店里原来的东西都在 10～60 像素之间，大小差不多、摆得满满当当，看久了没有重点。这一版把一块 400×540 的露天中庭放在店的正中间，别的房间围着它，中庭里一棵毛线巨树：从树根到树冠 400 多像素，比店里任何一样东西都大一个量级，周围特意空出一大片石板地。走到树底下，树冠在画面外面，只看得到裹着五色毛线套的树干往上伸；第一次走进中庭，镜头会顺着树干摇上树冠，出一行大字。</p>
+  <div class="treebox"><canvas id="treeC" width="400" height="540"></canvas><ul class="spec" style="margin:0">
+    <li><b style="color:var(--ink)">家族树</b>：六根横枝各挂一块圆牌，牌上是这个家族的猫脸：布偶猫 Claude、缅因猫 Codex、暹罗猫 Gemini、狸花猫 GLM、孟加拉猫 Antigravity、金渐层 opencode。树下的铭牌打开，一个家族一行。对应猫猫咖啡馆的家规：写代码的猫和 review 的猫必须来自不同家族。</li>
+    <li><b style="color:var(--ink)">爬上去</b>：走到树下（或者点一下树干），猫一根横枝一根横枝地跳，爬到树顶的瞭望台坐好，画面切到"看风景"。别的猫也爱爬，随便挑一根横枝窝着。</li>
+    <li><b style="color:var(--ink)">全店一起挂</b>：任何一只猫往橱窗里挂一件成品，树上就多挂一件（夜里每件上面亮一颗小灯）。挂满 36 件，满树金光十几秒，然后收下来重新挂。联机以后，这就是全店一起的进度。</li>
+    <li><b style="color:var(--ink)">光和影</b>：白天树冠边一圈淡淡的金光，几道光柱从叶缝里斜着照下来；地上是树冠的斑驳影子和落叶，金色的光点往上飘。夜里树冠整片发光。</li>
+    <li><b style="color:var(--ink)">找得到它</b>：小地图上那一大团金色看得见；前台猫的菜单里多了一问"听说店里有棵大树？"，它带你去（去过以后这一问就收起来）。</li>
+    <li>别的地方没有再加大件：一棵就够，其余东西都比它小，画面才有主次。</li></ul></div>
+
+  <h2>三、看风景：切到一张特写</h2>
+  <p class="desc">几样东西前坐下，画面切到一张特写：你的猫的背影（就是你现在的毛色），和它看着的东西。像进了一个小副本，只是更安静。<kbd>Esc</kbd> 回到店里，猫还坐在原地，走两步就起身；时段、天气跟着店里走。特写和店里是同一套像素：一个像素一格、深色描边、色带之间用抖动过渡，不放大、不用平滑的线。背影照着店里端坐的猫画：大圆头、尖耳朵、两颊的毛和胡子、没有脖子、屁股两边鼓出来、尾巴盘在地上往上卷，它看着亮处，所以边上亮一圈。下面四张就是游戏里的画面，切一下上面的"时段""天气"可以看黄昏、夜里、下雨下雪。</p>
+  <div class="vgrid">
+    <div><p class="cap">橱窗 · 窗外的街<i>空着嘴"看看窗外"。对面一排面包店、书店、花店、茶铺，二楼窗台上坐着猫；路灯杆、行道树的树干都套着店里织的毛线套，灯杆之间挂着织的三角旗。猫猫电车隔一阵开过去，车窗里坐的全是猫。窗外落一只麻雀，敲敲玻璃它就飞走；晾衣绳上挂的，是这扇窗里真挂着的成品</i></p><canvas data-vk="window" width="480" height="270"></canvas></div>
+    <div><p class="cap">图书馆的窗边软座 · 看天<i>一扇拱形大窗，两边是书架。夜里晴天有银河，多看一会儿，星星会一颗颗亮起来连成一个星座：猫座、毛线球座、小鱼干座；流星划过的时候许个愿。白天看云（有一朵长着耳朵），黄昏看窗下一排屋顶的剪影</i></p><canvas data-vk="sky" width="480" height="270"></canvas></div>
+    <div><p class="cap">毛线巨树的树顶 · 整条街<i>坐在瞭望台上，脚下是金色的树冠，右上角的枝上挂着店里织的东西。远处是山和海，海边一座灯塔（夜里光扫过海面），一条河穿过城流进海里；前面一排是猫咖的屋顶：OPEN 招牌、1024 霓虹、后院的串灯（跑轮发的电，这里也亮）。一只毛线球热气球慢慢飘过去，篮子里坐着一只猫。黄昏太阳落进海里；还能放烟花</i></p><canvas data-vk="treetop" width="480" height="270"></canvas></div>
+    <div><p class="cap">鱼缸 · 伸爪碰碰玻璃<i>一个小游戏：凑得很近，只看得到你的猫的头和肩膀。猫跟着鼠标左右挪，爪子只够得着身前一段，等鱼游过来再伸；按在玻璃上，鱼吓一跳游开（没有鱼受伤），碰到一次算一次，偶尔来一条金鱼。缸里有光柱、水草、城堡，还有一口开着的宝箱，里面是一颗毛线球</i></p><canvas data-vk="tank" width="480" height="270"></canvas></div>
+  </div>
+
+  <h2>四、对话框</h2>
+  <p class="desc">和页面同一套颜色，做成像素 RPG 的双层窗框，角上切掉一格。人类不出场，他们说的话永远写在一张便签上（纸色、红图钉、打字机一样一个字一个字出来），猫说的话带像素头像。底部左边是 Tips，每类任务配一条猫猫咖啡馆的特性，后面跟着"了解更多"的链接；右边是按钮，按键写在按钮上。下面这几张是真实组件渲染出来的，和游戏里的同一份代码。</p>
+  <div class="showcase" id="showcase"></div>
+  <h3>回信（人类取走成品的时候）</h3>
+  <p class="note" style="margin-bottom:8px">挂进橱窗以后，过十几秒人类会来取。取走的那一刻，画面上方弹出回信和"球权链"：这颗球经过了谁的手。</p>
+  <div class="replydemo"><h5>📮 人类回信 · 毛线球 #2</h5><q>第 42 行果然有坑</q><div class="chain">球权链：门外 → 你 → 砚砚 → 你 → 橱窗 → 人类</div></div>
+
+  <h2>五、任务题库</h2>
+  <p class="desc">出发点是"人在用猫猫咖啡馆的时候会问什么"。每一道题都对应猫猫咖啡馆的一项真实能力，说法以仓库里的 README、使用小 Tips 和特性文档为准。样页里放了下面这 92 道（其中闲聊 38 道）；完整题库写在 <code>任务题库.md</code>，按九类任务加上"渠道、GitHub、部署、协作流程"等主题展开，一共一百多道，还附了每道的解法、答案和对应的 Tips。</p>
+  <table id="bankT"></table>
+  <p class="note">出题顺序：第一颗是答疑（教 @ 的写法），第二颗是派单（挑离你最近的那只店猫），之后优先出你没见过的类型，并且照顾你所在的位置：人在工坊附近多出"走流程"，靠近图书馆多出"查记忆"，身边猫多多出"几只猫一起"。闲聊题多，但出题时先按类型分：每类的机会差不多（闲聊多给一点），不会一直冒闲聊。试玩区下面可以指定下一颗球出哪道题。</p>
+
+  <h2>六、猫猫咖啡馆的特性，放在店里哪儿</h2>
+  <p class="desc">这次活动的目的是让人认识这个项目。所以每一项核心特性，都要在店里找到一个"看得见、摸得着"的地方：可能是一样东西，可能是一类毛线球，也可能只是一条 Tips。下表的"样页里"一列标出了已经做进 v4 的；完整的规划写在 <code>特性地图.md</code>。</p>
+  <table id="featT"></table>
+
+  <h2>七、引流入口</h2>
+  <p class="desc">入口都长在店里，不用额外弹窗：能碰到的东西，打开就是一段介绍加上几个链接。点链接会在新标签页打开，同时在集章卡上盖章。集章卡上三个章是解开一颗毛线球、逛逛内源主页、看看官网或 GitHub；正式活动里集齐就是一次抽奖资格。</p>
+  <div class="cols">
+    <div><table id="entryT"></table></div>
+    <div><h3 style="margin-top:8px">链接配置（<code>quest-bank.js</code> 的 <code>LINKS</code>）</h3><table id="linkT"></table>
+      <p class="note">内源主页是内网地址，样页里先空着；空着的时候点了会提示"地址待填"，章照样盖上，方便演示。</p></div>
+  </div>
+
+  <h2>八、"我是哪只猫" · 能玩什么 · 图鉴</h2>
+  <div class="cols">
+    <div><h3>认出自己</h3><ul class="spec" style="margin-top:4px">
+      <li>黄色描边：只描你这一只，一百只猫挤在一起也能一眼找到。描边按贴图算一次，存在贴图缓存里，不多花时间。</li>
+      <li>脚下光圈：一圈慢慢转的像素虚线，站在家具上时不画。</li>
+      <li>黄底名牌：永远画在最上面，别的猫的名字是深底白字。</li>
+      <li>找到我（<kbd>C</kbd>，或者点左上角的头像）：脚下荡开三圈波纹，猫抬头"！"一下。</li>
+      <li>左上角头像卡：你现在的毛色、嘴里叼着什么；下面一行是一共解开了几颗毛线球、玩到了几样装置（点"装置"打开图鉴）。小地图上你是闪烁的红黄方块。</li></ul></div>
+    <div><h3>哪些能玩、怎么玩、玩了会怎样</h3><ul class="spec" style="margin-top:4px">
+      <li>画面上不给东西加记号。鼠标移到能玩的东西、能搭话的猫上，光标变成一只像素猫爪；旁边的小卡片写着名字、会发生什么，还有它对应猫猫咖啡馆的哪项能力（有前提的才写前提，比如"要叼着织好的东西"）。</li>
+      <li>走近了，按 <kbd>E</kbd> 会用到的那一样头上顶一个 E 键帽；底部提示条写着会做什么。</li>
+      <li><b style="color:var(--ink)">前台猫</b>：进门就能看到的小前台，桌上一只服务铃。点它，问"这附近有什么好玩的"，它挑三样你还没玩过的（离得近的、和猫咖特性有关的优先）。你选一样，它走在前面带路：走一段回头等你，到了坐在旁边看你玩。也能问"我是哪只猫""毛线球怎么解""猫猫咖啡馆是什么""你是谁"。对应猫猫咖啡馆正在做的"猫猫球"。</li>
+      <li><b style="color:var(--ink)">店猫搭话</b>：你在一间房里待了一会儿、什么都没碰，旁边醒着的店猫偶尔朝一样你没玩过的东西看过去，说一句。至少隔 50 秒，一样东西只说一次，睡着的猫不说。</li>
+      <li>第一次玩到某样东西，上方弹"新发现"，把结果和相关特性讲一遍。</li>
+      <li><b style="color:var(--ink)">图鉴</b>（<kbd>B</kbd>）像成就列表：最上面一条进度（全店 65 样）；已解锁的排在前面，打 ✓，最近解锁的最前，写着在哪儿、什么时候、会发生什么、对应哪项特性；没解锁的放在后面，打 ✗，按房间收成一行，只留名字（有前提的写前提），不剧透，点一下猫就走过去。</li>
+      <li>地上的光斑这类"地面上的东西"：点不到（点地面永远是走路），走路经过也不算，停下来才算——橱窗下那块阳光，以前路过就会被拽去趴下。</li>
+      <li>有任务的时候，黄色箭头指向下一步要去的地方；在画面外就贴在边上，写着还有几步远。</li>
+      <li>训练营：五步，走完一颗完整的毛线球，最后一步是"认识猫猫咖啡馆"（看立牌、说明书或者路标）。</li></ul></div>
+  </div>
+
+  <h2>九、全店地图</h2>
+  <p class="desc">1680×540，毛线巨树在正中间。左边两列：前厅、橱窗长廊（上）／厨房、大客厅（下）；中间是 400×540 的露天<b style="color:var(--ink)">巨树中庭</b>；右边两列：1024 工坊、<b style="color:var(--ink)">猫猫图书馆</b>（上）／后院、<b style="color:var(--ink)">花园小径</b>（下）。橱窗长廊、大客厅、工坊各开一道门通中庭，后院和中庭之间不砌墙，草地连成一片；四条石子路都通到树下。图书馆和工坊之间隔一道墙，开了一个门洞；花园小径从后院篱笆的缺口走过去，最底下那扇小门外就是人类的世界。工坊添了工具墙和合并门禁，前厅添了星星罐子和迎宾立牌。</p>
+  <div class="bar" style="margin-top:12px"><button id="zbtn">显示分区</button></div>
+  <div class="map" id="map"><canvas id="wc" width="1680" height="540"></canvas><div class="zones" id="zones"></div></div>
+  <div class="legend" id="legend"></div>
+
+  <h2>十、新添的东西</h2>
+  <p class="desc">v3 的 37 项都还在（在游戏里按 <kbd>B</kbd> 看图鉴）。这里只列 v4 新添的，一共 21 项；四处"看风景"在第三节。</p>
+  <div id="catalog"></div>
+
+  <h2>十一、容量和性能</h2>
+  <div class="cols">
+    <div><table id="areaT"></table><p class="note">"宽松"按每只猫 40×40 像素算，"挤"按 28×28 算。阅读桌 3、窗边软座 2、扶手椅 1、长椅 2、石凳 2；巨树的六根横枝和树顶瞭望台又多了 8 个能窝的位置。</p></div>
+    <div><div class="bar" style="margin:0"><button id="benchBtn">测一下</button><span class="note" id="benchNote"></span></div>
+      <table id="benchT"><tr><th>在线猫数</th><th>每帧（更新 + 画一屏）</th><th>同屏画了几只</th></tr><tr><td colspan="3" class="note">还没测</td></tr></table>
+      <p class="note">E 键帽每帧只看你身边那一样；店猫搭话每秒查一次；对话框是网页元素，只在内容变的时候重画。巨树的树冠、树干只画一次存成图，挂上的成品变了才重画；看风景的画面：不动的部分（天、远景、房间）画一次存成图，换了时段、天气才重画，每帧只画会动的。</p></div>
+  </div>
+
+  <ul class="spec">
+    <li>新文件：<code>quest-bank.js</code>（题库、店猫名片、Tips、链接，只有数据）、<code>dialog-ui.js</code>（对话框组件）、<code>world4-kit.js</code>（新零件）、<code>world4-layout.js</code>（布局：巨树中庭放正中，v3 的右半整体右移）、<code>world4-map.js</code>（图书馆、花园小径）、<code>world4-things.js</code>（新东西 + 对话框管理 + 事件）、<code>world4-quest.js</code>（任务引擎）、<code>world4-guide.js</code>（认出自己、E 键帽、图鉴、训练营、指路）、<code>world4-desk.js</code>（前台猫、店猫搭话）、<code>world4-atrium.js</code>（巨树中庭）、<code>world4-vista.js</code>（看风景：进出、操作）、<code>world4-vista-art.js</code>（看风景的画和猫的背影）。</li>
+    <li>老文件只做了加法：<code>world-play.js</code> 加了 <code>hi</code> 开关（描边、光圈、名牌）和几个钩子（用了什么、叼着球时提示条写什么、附近没猫时按 Q），还有一处兜底：猫走到一半停下、刚好停在家具边上时挪到最近的空地；<code>world-acts.js</code> 把几个内部函数挂到接口上，挂进橱窗、人类取走时各通知一声，另外"蹭蹭"只让闲着的猫停下来回应；这一轮又加了：地上的光斑点不到、走路经过不算（<code>quiet</code>），推下桌的小东西能叼回去，能坐的地方可以排位置顺序、坐好时通知一声，镜头可以被运镜接管。v3 页面照常跑，node 里随机跑过没有报错、没有卡住的猫。</li>
+    <li>引擎还是一套：在线的其他猫仍由机器人扮演；只有"你"叼的球才有任务，机器人照旧按 v3 的方式解球。接联机时，任务状态跟着球走，由服务端记。</li>
+  </ul>
+</main>
+<script src="cat-sprites.js"></script>
+<script src="scene-kit.js"></script>
+<script src="world-kit.js"></script>
+<script src="world4-kit.js"></script>
+<script src="world-map.js"></script>
+<script src="world4-layout.js"></script>
+<script src="world4-map.js"></script>
+<script src="quest-bank.js"></script>
+<script src="world-play.js"></script>
+<script src="world-acts.js"></script>
+<script src="world4-things.js"></script>
+<script src="world4-quest.js"></script>
+<script src="world4-guide.js"></script>
+<script src="world4-desk.js"></script>
+<script src="world4-atrium.js"></script>
+<script src="world4-vista-art.js"></script>
+<script src="world4-vista.js"></script>
+<script src="dialog-ui.js"></script>
+<script>
+const $=id=>document.getElementById(id),dpr=Math.min(2,window.devicePixelRatio||1),WW=WORLD.w,WH=WORLD.h;
+const gameEl=$('game'),pc=$('pc'),oc=$('oc'),mm=$('mm'),pctx=pc.getContext('2d',{willReadFrequently:true}),octx=oc.getContext('2d'),mctx=mm.getContext('2d');
+let toastT=0,soundOn=false,zoomPref=0,VW=480,VH=270,SC=3;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- 声音（默认关着） ---------- */
+let AC=null;const lastSfx={};let sfxN=0,sfxWin=0;
+function tone(f,d,{type='sine',vol=.05,slide=0,delay=0}={}){const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f*slide),t+d);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02)}
+function noise(d,{vol=.03,hp=1200,delay=0}={}){const n=Math.floor(AC.sampleRate*d),b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=b;f.type='highpass';f.frequency.value=hp;g.gain.value=vol;s.connect(f).connect(g).connect(AC.destination);s.start(AC.currentTime+delay)}
+const SCALE=[523.25,587.33,659.25,698.46,783.99,880,987.77,1046.5,1174.66,1318.51,1396.91,1567.98];
+const arp=(fs,d=.16,type='triangle',vol=.04,gap=.08)=>fs.forEach((f,i)=>tone(f,d,{type,vol,delay:i*gap}));
+const SFX={bell:()=>{tone(1318,.5,{vol:.04});tone(1046,.6,{vol:.035,delay:.12})},pop:()=>tone(880,.08,{type:'triangle',slide:1.6,vol:.04}),note:i=>tone(SCALE[(i||0)%12],.35,{type:'triangle',vol:.05}),
+  shutter:()=>{noise(.08,{vol:.07});tone(2000,.03,{type:'square',vol:.015,delay:.05})},beep:()=>tone(1500,.08,{type:'square',vol:.02}),meow:()=>tone(620+Math.random()*160,.28,{type:'sawtooth',vol:.012,slide:1.35}),
+  purr:()=>tone(55,.5,{type:'sawtooth',vol:.015}),knit:()=>arp([784,988,1318],.18),hang:()=>tone(1046,.3,{type:'triangle',vol:.035}),treat:()=>arp([659,784,988,1318]),
+  alarm:()=>arp([660,440,660],.18,'square',.015,.2),fanfare:()=>arp([523,659,784,1046,1318],.22,'triangle',.045,.1),kick:()=>tone(160,.08,{slide:.5,vol:.06}),goal:()=>arp([784,1046,1568],.15,'square',.02),
+  print:()=>noise(.5,{vol:.015,hp:2500}),clack:()=>tone(300,.06,{type:'square',vol:.025}),rustle:()=>noise(.35,{vol:.04,hp:3000}),stamp:()=>tone(120,.1,{vol:.06}),scratch:()=>noise(.4,{vol:.025,hp:1800}),toss:()=>tone(400,.2,{slide:2,vol:.015}),
+  disc:()=>arp([1046,1318],.12,'triangle',.03,.07),page:()=>noise(.12,{vol:.03,hp:3500})};
+function sfx(k,a){if(!soundOn||!AC||!SFX[k])return;const now=performance.now();if(now-(lastSfx[k]||0)<60)return;if(now-sfxWin>1000){sfxWin=now;sfxN=0}if(++sfxN>14)return;lastSfx[k]=now;SFX[k](a)}
+
+/* ---------- 界面回调 ---------- */
+const newsEl=$('news'),NEWS=[];let discT=0,replyT=0,banT=0;
+const dlg=makeDialog($('dlg'),{pick:i=>{game.A.dlg.pick(i);sfx('page')},act:id=>game.A.dlg.act(id),link:k=>openLink(k),visited:k=>k==='inner'?game.S.stamps.inner:game.S.stamps.site});
+const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s&&!dlg.open?'block':'none'},toast:s=>{$('toast').textContent=s;$('toast').style.opacity=1;toastT=3.2},
+  room:r=>{$('room').firstChild.textContent=r.n;if(!(game&&game.A.firstRoom&&game.A.firstRoom(r.id)))return;
+    if(r.id==='atrium'){game.A.reveal();bigTitle('巨树中庭','毛线巨树','猫猫咖啡馆的家族树 · 爬到树顶，能看整条街');return}
+    $('roomban').innerHTML=`<h5>第一次来：${esc(r.n)}</h5><p>${esc(r.d)}</p>`;$('roomban').classList.add('show');banT=5},
+  vista:v=>{gameEl.classList.toggle('vista',!!v);if(v){$('vcap').innerHTML=`<b>${esc(v.n)}</b><span>${esc(v.sub)}</span><span class="sc" id="vsc"></span><span>${esc(v.hint)}</span><span><kbd>Esc</kbd> 回到店里</span>`;$('tip').style.display='none';closeMenu()}},
+  vistaCap:s=>{const e=$('vsc');if(e)e.textContent=s},
+  news:s=>{NEWS.push({s,t:performance.now()});if(NEWS.length>5)NEWS.shift();drawNews()},sfx,photo:showPhoto,
+  dialog:s=>{dlg.render(s);$('prompt').style.display=s?'none':$('prompt').style.display;if(s){closeMenu();$('tip').style.display='none'}},
+  discover:d=>{sfx('disc');$('disc').innerHTML=`<h5>新发现 · ${esc(d.n)}</h5><p>${esc(d.what)}</p>${d.tie?`<p class="tie">${esc(d.tie)}</p>`:''}`;$('disc').classList.add('show');discT=6},
+  reply:r=>{sfx('bell');$('reply').innerHTML=`<h5>📮 人类回信 · 毛线球 #${r.no}</h5><q>${esc(r.thx)}</q><div class="chain">球权链：${r.chain.map(esc).join(' → ')}</div>`;$('reply').classList.add('show');replyT=8;drawStamps()},
+  stamps:()=>{sfx('stamp');drawStamps()},camp:()=>{panelKey=''},book:()=>openGuide()};
+function bigTitle(a,b,c){const el=$('vtitle');el.innerHTML=`<small>${esc(a)}</small><b>${esc(b)}</b><span>${esc(c)}</span>`;clearTimeout(bigTitle.t1);clearTimeout(bigTitle.t2);
+  bigTitle.t1=setTimeout(()=>el.classList.add('show'),1600);bigTitle.t2=setTimeout(()=>el.classList.remove('show'),6000)}
+function drawNews(){const now=performance.now();newsEl.innerHTML=NEWS.filter(n=>now-n.t<12000).map(n=>`<div style="opacity:${now-n.t>9000?.4:1}">${esc(n.s)}</div>`).join('')}
+let game=null;game=makeWorld(pc,{play:true,ui,hi:true});window.__game=game;game.bots(80,true);
+function openLink(k){const L=LINKS[k];if(!L)return;if(L.url)window.open(L.url,'_blank','noopener');else ui.toast('内源主页的内网地址还没填（quest-bank.js 里的 LINKS.inner）。样页里先照样盖章');game.A.visit(k);if(dlg.open)dlg.render(dlg.spec);gameEl.focus()}
+
+/* ---------- 画面大小 ---------- */
+function layout(){const aw=$('wide').clientWidth,ah=Math.max(380,innerHeight-150);SC=zoomPref||(aw>=1300&&ah>=640?3:2);
+  VW=Math.min(WW,Math.floor(aw/SC));VH=Math.min(WH,Math.floor(Math.min(ah,VW*SC*9/16)/SC));
+  if(pc.width!==VW||pc.height!==VH){pc.width=VW;pc.height=VH}if(oc.width!==VW*SC*dpr||oc.height!==VH*SC*dpr){oc.width=VW*SC*dpr;oc.height=VH*SC*dpr}
+  pc.style.width=VW*SC+'px';pc.style.height=VH*SC+'px';oc.style.width=VW*SC+'px';oc.style.height=VH*SC+'px';
+  gameEl.style.width=VW*SC+'px';gameEl.style.height=VH*SC+'px';document.querySelectorAll('#wide .bar').forEach(b=>b.style.width=VW*SC+'px');$('zoomBtn').textContent='缩放 ×'+SC;
+  const v=game.camera(VW,VH,1);game.render(pctx,v.x,v.y,VW,VH);game.hud(octx,SC*dpr,dpr)}
+addEventListener('resize',layout);layout();
+
+/* ---------- 左上：头像卡、任务条 / 训练营；右上：集章卡 ---------- */
+let meKey='';function drawMe(){const m=game.me,h=m.hold,G=game.A.guide,st=h?(h.knit?'叼着织好的'+KNIT_NAMES[h.kind][0]:'叼着一颗毛线球'):m.toy?'叼着'+TOY_NAMES[m.toy]:m.place?'窝着':m.hidden?'躲起来了':'空着嘴',k=m.pal+'|'+st+'|'+G.balls()+'|'+G.count();if(k===meKey)return;meKey=k;
+  drawPortrait($('mec'),m.pal,0,m.myFace);$('mest').textContent=st;$('stBall').textContent=G.balls();$('stDisc').textContent=G.count()+' / '+G.total}
+(()=>{const o=C;use($('icYarn').getContext('2d'));yarnBall(3,3,2,0);use($('icPaw').getContext('2d'));pawPrint(1,1,'#f4a6b8');use(o)})();
+let panelKey='';function drawPanel(){const A=game.A,tr=A.Q.tracker();let html='';
+  if(tr){html=`<h4>🧶 毛线球 #${tr.no}<i>${esc(tr.type)} · E 打开便签</i></h4><div class="q">「${esc(tr.q)}」</div>`+(tr.steps?'<ul>'+tr.steps.map(s=>`<li class="${s.done?'done':s.cur?'cur':''}">${esc(s.t)}</li>`).join('')+'</ul>':`<div class="ln">${esc(tr.line)}</div>`)}
+  else if(A.camp.on&&!A.camp.done.finished){const c=A.camp.cur();html=`<h4>🎓 新猫训练营<i>${A.camp.steps.filter(s=>A.camp.done[s.id]).length}/${A.camp.steps.length}</i></h4><ul>`+A.camp.steps.map(s=>`<li class="${A.camp.done[s.id]?'done':s===c?'cur':''}">${esc(s.t)}${s===c?`<br><small>${esc(s.sub)}</small>`:''}</li>`).join('')+'</ul>'}
+  if(html!==panelKey){panelKey=html;$('panel').innerHTML=html}}
+function drawStamps(){const s=game.S.stamps,n=(s.ball?1:0)+(s.inner?1:0)+(s.site?1:0);$('stamps').innerHTML=`<h4>集章卡<i>${n}/3${n===3?' · 集齐了！':''}</i></h4><div class="row">`+
+  [['ball','解球','解一颗球'],['inner','内源','内源主页'],['site','官网','官网 / GitHub']].map(([k,a,b])=>`<div><div class="s ${s[k]?'on':''}">${s[k]?'已盖':a}</div>${b}</div>`).join('')+'</div>'}
+drawStamps();
+$('mecard').onclick=e=>{e.stopPropagation();findMe()};$('stBook').onclick=e=>{e.stopPropagation();openGuide()};$('panel').onclick=e=>{e.stopPropagation();if(game.A.Q.cur)game.A.Q.open();gameEl.focus()};$('stamps').onclick=e=>{e.stopPropagation();game.A.openWelcome();gameEl.focus()};
+function findMe(){game.A.findMe();const v=game.camera(VW,VH,1);gameEl.focus()}
+
+/* ---------- 图鉴 ---------- */
+const ROOM_ORDER=['hall','gallery','atrium','lab','library','kitchen','lounge','yard','path'];const NEW_ROOMS=['library','path','atrium'];
+function openGuide(){const G=game.A.guide,all=Object.entries(GUIDE),rn=id=>WORLD.rooms.find(x=>x.id===id).n,got=all.filter(([k])=>G.disc[k]).sort((a,b)=>G.disc[b[0]]-G.disc[a[0]]),lock=all.filter(([k])=>!G.disc[k]);
+  const when=ts=>ts>1?' · '+new Date(ts).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  let html=`<div class="top"><b>图鉴</b><span class="prog"><i style="width:${Math.round(got.length/all.length*100)}%"></i></span><span class="num">${got.length} / ${all.length}</span><button id="bookx">关掉（B）</button></div>`;
+  html+=`<div class="sec">已解锁<i>${got.length}</i></div>`+(got.length?'<div class="g">'+got.map(([k,g])=>`<div class="e on" data-go="${k}"><span class="ic">✓</span><div><b>${esc(g.n)}</b><small>${esc(rn(g.room))}${when(G.disc[k])}</small><p>${esc(g.what)}</p>${g.tie?`<p class="tie">${esc(g.tie)}</p>`:''}</div></div>`).join('')+'</div>':'<p class="none">还没有。四处逛逛，碰一碰店里的东西。</p>');
+  if(lock.length){html+=`<div class="sec">未解锁<i>${lock.length}</i><em>点一下，猫会走过去</em></div>`;
+    ROOM_ORDER.forEach(r=>{const L=lock.filter(([,g])=>g.room===r);if(L.length)html+=`<div class="lk"><span class="rn">${esc(rn(r))}</span>`+L.map(([k,g])=>`<span class="e off" data-go="${k}"><span class="ic">✗</span>${esc(g.n)}${g.how?`<small>${esc(g.how)}</small>`:''}</span>`).join('')+'</div>'})}
+  $('bookov').innerHTML=html;$('bookov').style.display='block';$('bookx').onclick=closeGuide}
+function closeGuide(){$('bookov').style.display='none';gameEl.focus()}
+$('bookov').addEventListener('pointerdown',e=>{e.stopPropagation();const d=e.target.closest('[data-go]');if(!d)return;const id=d.dataset.go,th=game.A.TH.find(t=>t.id===id||t.id.replace(/\d$/,'')===id);closeGuide();if(!th)return;
+  const h=typeof th.hit==='function'?th.hit(game.me):th.hit,at=typeof th.at==='function'?th.at(game.me):th.at;if(h&&h[2])game.tap(h[0]+h[2]/2,h[1]+h[3]/2);else if(at)game.tap(at.x,at.y)});
+
+/* ---------- 输入 ---------- */
+const toW=e=>{const r=pc.getBoundingClientRect();return game.toWorld((e.clientX-r.left)*VW/r.width,(e.clientY-r.top)*VH/r.height)};
+const toC=e=>{const r=pc.getBoundingClientRect();return{x:(e.clientX-r.left)*VW/r.width,y:(e.clientY-r.top)*VH/r.height}};
+// 鼠标光标：指着能玩的东西、能搭话的猫时变成一只像素猫爪（画面上不给东西加记号）
+const PAW=(()=>{const F=new Set(),add=(x0,y0,w,h)=>{for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++)F.add(x+','+y)};
+  add(2,4,3,3);add(6,2,3,3);add(10,4,3,3);add(5,8,5,1);add(4,9,7,2);add(5,11,5,1);
+  const n8=(x,y)=>[-1,0,1].some(dx=>[-1,0,1].some(dy=>F.has((x+dx)+','+(y+dy)))),O=new Set(),Hl=new Set();
+  for(let y=0;y<14;y++)for(let x=0;x<15;x++)if(!F.has(x+','+y)&&n8(x,y))O.add(x+','+y);
+  for(let y=0;y<14;y++)for(let x=0;x<15;x++){const k=x+','+y;if(F.has(k)||O.has(k))continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>O.has((x+dx)+','+(y+dy))))Hl.add(k)}
+  const c=document.createElement('canvas');c.width=30;c.height=28;const x=c.getContext('2d');const dot=(k,col)=>{const [a,b]=k.split(',').map(Number);x.fillStyle=col;x.fillRect(a*2,b*2,2,2)};
+  Hl.forEach(k=>dot(k,'#fff4dc'));O.forEach(k=>dot(k,'#241a2e'));F.forEach(k=>dot(k,'#f4a6b8'));return `url(${c.toDataURL()}) 14 4, pointer`})();
+const menu=$('menu'),tip=$('tip'),phrasesList=['来帮忙！','我来！','谢谢喵','求合照','CI 红了','干饭！','摸鱼中','晚安'];let menuMode='',menuCat=null;
+function closeMenu(){menu.style.display='none'}
+function openMenu(x,y,html){menu.innerHTML=html;menu.style.display='block';const gr=gameEl.getBoundingClientRect();menu.style.left=Math.min(x-gr.left,gr.width-290)+'px';menu.style.top=Math.min(y-gr.top,gr.height-menu.offsetHeight-6)+'px'}
+gameEl.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(!AC&&soundOn)initAudio();
+  if($('photo').style.display==='flex'){if(e.key==='Escape'){$('photo').style.display='none'}e.preventDefault();return}
+  if(game.A.vista.on){if(game.A.vista.key(e))e.preventDefault();game.blurKeys();return}
+  if($('bookov').style.display==='block'){if(k==='b'||e.key==='Escape')closeGuide();e.preventDefault();return}
+  if(dlg.open){if(dlg.key(e))e.preventDefault();game.blurKeys();return}
+  if(k==='t'&&!e.repeat){e.preventDefault();const gr=gameEl.getBoundingClientRect();openMenu(gr.left+gr.width/2-80,gr.top+gr.height-230,'<div class="t">快捷短语（按数字键或点一下）</div>'+phrasesList.map((p,i)=>`<button data-ph="${i}">${i+1}　${p}</button>`).join(''));menuMode='ph';return}
+  if(menu.style.display==='block'&&menuMode==='ph'&&/^[1-8]$/.test(k)){e.preventDefault();game.cmd.say(phrasesList[+k-1]);closeMenu();return}
+  if(k==='z'&&!e.repeat){zoomPref=SC===3?2:3;layout();e.preventDefault();return}
+  if(k==='c'&&!e.repeat){findMe();e.preventDefault();return}
+  if(k==='b'&&!e.repeat){openGuide();e.preventDefault();return}
+  if(e.key==='Escape')closeMenu();
+  if(game.key(e,true))e.preventDefault()});
+gameEl.addEventListener('keyup',e=>{if(game.key(e,false))e.preventDefault()});
+gameEl.addEventListener('blur',()=>{game.blurKeys()});
+pc.addEventListener('pointerdown',e=>{if(e.button!==0)return;gameEl.focus();closeMenu();if(game.A.vista.on){const p=toC(e);game.A.vista.click(p.x,p.y);return}if(dlg.open){const s=dlg.spec;game.A.dlg.act((s.acts||[]).some(a=>a.id==='later')?'later':'close');return}const w=toW(e);game.tap(w.x,w.y)});
+pc.addEventListener('pointermove',e=>{if(game.A.vista.on){const p=toC(e);game.A.vista.pointer(p.x,p.y);pc.style.cursor='default';tip.style.display='none';return}const w=toW(e),h=game.hover(w.x,w.y),gr=gameEl.getBoundingClientRect();pc.style.cursor=h?PAW:'default';
+  if(!h){tip.style.display='none';return}let html='';
+  if(h.cat&&h.cat.desk||h.th&&h.th.id==='deskcat')html=`<b>前台猫</b> · 有事问它<br><span class="what">这附近有什么好玩的、我是哪只猫、毛线球怎么解……想去哪儿，它带你过去</span>`;
+  else if(h.cat){const c=h.cat,k=c.kind==='npc'?CAT_CARDS[c.pal]:null;html=k?`<b>${esc(k.name)}</b> · 店猫 · ${esc(k.breed)}（${esc(k.cli)}）<br><span class="how">${esc(k.at)}</span> · <span class="what">擅长：${esc(k.good)}</span>${c.doing?`<br><span class="what">${esc(c.doing)}</span>`:''}`:`<b>${esc(c.name)}</b>${c.doing?' · '+esc(c.doing):''}`}
+  else{const g=game.A.guide.info(h.th.id);html=g?`<b>${esc(g.n)}</b>${g.how?`<br><span class="how">${esc(g.how)}</span>`:''}<br><span class="what">${esc(g.what)}</span>${g.tie?`<br><span class="tie">${esc(g.tie)}</span>`:''}`:`<b>${esc(h.label)}</b>`}
+  tip.innerHTML=html;tip.style.display='block';const tw=tip.offsetWidth;tip.style.left=Math.min(e.clientX-gr.left+14,gr.width-tw-8)+'px';tip.style.top=(e.clientY-gr.top+14)+'px'});
+pc.addEventListener('pointerleave',()=>{tip.style.display='none';game.hover(-99,-99)});
+pc.addEventListener('contextmenu',e=>{e.preventDefault();gameEl.focus();if(dlg.open||game.A.vista.on)return;const w=toW(e),c=game.catAt(w.x,w.y);if(!c){closeMenu();return}menuMode='cat';menuCat=c;const me=game.me,ball=me.hold&&!me.hold.knit,k=c.kind==='npc'?CAT_CARDS[c.pal]:null;
+  const head=k?`<b>${esc(k.name)}</b> · 店猫 · ${esc(k.breed)}<br>${esc(k.cli)} · ${esc(k.at)}<br>擅长：${esc(k.good)}<br>${esc(k.say)}`:`<b>${esc(c.name)}</b>${c.doing?' · '+esc(c.doing):''}`;
+  if(c.desk){openMenu(e.clientX,e.clientY,`<div class="t"><b>前台猫</b> · 有事问它<br>这附近有什么好玩的、我是哪只猫、毛线球怎么解……</div><button data-a="rub">问问它</button><button data-a="follow">跟着它走</button>`);return}
+  openMenu(e.clientX,e.clientY,`<div class="t">${head}</div><button data-a="rub">蹭蹭它</button><button data-a="follow">跟着它走</button><button data-a="pass" ${ball?'':'disabled'}>把毛线球传给它${ball?'':'（嘴里没有）'}</button>`)});
+menu.addEventListener('pointerdown',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.dataset.ph!=null)game.cmd.say(phrasesList[+b.dataset.ph]);else if(menuCat){const a=b.dataset.a;if(a==='follow')game.cmd.follow(menuCat);game.cmd.social(menuCat,a==='follow'?'follow':a)}closeMenu();gameEl.focus()});
+mm.addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();if(dlg.open||game.A.vista.on)return;const r=mm.getBoundingClientRect();game.tap((e.clientX-r.left)/r.width*WW,(e.clientY-r.top)/r.height*WH)});
+function showPhoto(cv,names){const s=4,c=$('phc');c.width=cv.width*s;c.height=cv.height*s;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(cv,0,0,c.width,c.height);
+  $('phw').textContent='1024 猫咖 · 合照 · '+names.slice(0,12).join('、')+(names.length>12?` 等 ${names.length} 只猫`:'');$('phs').href=c.toDataURL('image/png');$('photo').style.display='flex'}
+$('phx').onclick=()=>{$('photo').style.display='none';gameEl.focus()};
+function initAudio(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}
+$('sndBtn').onclick=e=>{soundOn=!soundOn;if(soundOn)initAudio();e.target.textContent='声音：'+(soundOn?'开':'关');e.target.classList.toggle('on',soundOn);gameEl.focus()};
+$('zoomBtn').onclick=()=>{zoomPref=SC===3?2:3;layout();gameEl.focus()};
+$('coatBtn').onclick=e=>{e.target.textContent='换毛色 · '+game.cmd.coat();gameEl.focus()};
+$('findBtn').onclick=findMe;$('bookBtn').onclick=()=>{openGuide()};
+$('campBtn').onclick=()=>{game.A.camp.start(true);panelKey='';gameEl.focus()};
+$('resetBtn').onclick=()=>{game.A.guide.reset();panelKey='';meKey='';ui.toast('发现记录清空了：图鉴从零开始，第一次走进中庭还会再摇一次镜头');gameEl.focus()};
+$('qsel').innerHTML='<option value="">（随机，按规则出）</option>'+Object.entries(QTYPE).map(([t,n])=>`<optgroup label="${n}">`+QUEST_BANK.filter(q=>q.type===t).map(q=>`<option value="${q.id}">${esc(q.q.slice(0,22))}</option>`).join('')+'</optgroup>').join('');
+$('qsel').onchange=e=>{game.A.Q.force=e.target.value||null;if(e.target.value)ui.toast('下一颗叼起的毛线球就是这道题');gameEl.focus()};
+$('bots').oninput=e=>{$('botsv').textContent=e.target.value;game.bots(+e.target.value)};
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const r=game.cmd.event(b.dataset.ev);if(r)ui.toast(r);gameEl.focus()});
+$('emobar').innerHTML=game.EMOTES.map((m,i)=>`<button data-e="${i}">${i+1} ${m.n}</button>`).join('');
+$('emobar').onclick=e=>{const b=e.target.closest('button');if(b){game.cmd.emote(+b.dataset.e);gameEl.focus()}};
+$('phrases').innerHTML=phrasesList.map((p,i)=>`<button data-p="${i}">${p}</button>`).join('');
+$('phrases').onclick=e=>{const b=e.target.closest('button');if(b){game.cmd.say(phrasesList[+b.dataset.p]);gameEl.focus()}};
+document.querySelectorAll('[data-tod]').forEach(b=>b.onclick=()=>{game.S.tod=b.dataset.tod;document.querySelectorAll('[data-tod]').forEach(x=>x.classList.toggle('on',x===b));gameEl.focus()});
+document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{game.S.weather=b.dataset.wx;document.querySelectorAll('[data-wx]').forEach(x=>x.classList.toggle('on',x===b));gameEl.focus()});
+gameEl.addEventListener('focus',()=>{if(!window.__welcomed){window.__welcomed=1;setTimeout(()=>{game.A.findMe()},200)}});
+
+/* ---------- 二、对话框样张 ---------- */
+(()=>{const T=k=>({...TIPS[k],key:k}),H=(title,chips,icon='yarn',ci=0)=>({icon,ci,title,chips});
+  const S=[
+    ['答疑 · 选错了一次','说错的那个选项划掉，下面写着为什么',{kind:'quest',head:H('毛线球 #1',['来自 网页 Hub','答疑'],'yarn',1),note:'我想同时问宪宪和砚砚，一条消息该怎么写？',sel:1,
+      blocks:[{k:'task',t:'你替猫回答：该怎么做？'},{k:'choices',items:[{t:'一句话里写「@宪宪 @砚砚 帮我看看」',state:'wrong',why:'写在句子中间的 @ 不会触发路由'},{t:'每只猫另起一行，在行首写 @猫名'},{t:'分两次发，一次问一只'}]}],tip:T('at'),acts:[{id:'later',t:'先叼着',key:'Esc'}]}],
+    ['派单 · 挑一只店猫','卡片上是店猫的名片：品种、底下是哪家模型、怎么 @、擅长什么',{kind:'quest',head:H('毛线球 #2',['来自 GitHub','派单'],'yarn',2),note:'这个 PR 改了登录模块，能帮我 review 一下吗？',sel:1,
+      blocks:[{k:'task',t:'这颗球该交给谁？@ 一只最合适的猫，它会自己跑过来接球。'},{k:'say',pal:3,name:'烁烁',t:CAT_DECLINE[3]},{k:'choices',items:[{pal:3,t:'烁烁 · 暹罗猫',sub:'Gemini · @gemini · 擅长：视觉设计、UX、创意表达（不写代码）',state:'wrong'},{pal:2,t:'砚砚 · 缅因猫',sub:'Codex · @codex · 擅长：Review、找 bug、安全和测试'},{pal:1,t:'宪宪 · 布偶猫',sub:'Claude · @opus · 擅长：架构设计、写代码'}]}],tip:T('profile'),acts:[{id:'later',t:'先叼着',key:'Esc'}]}],
+    ['查记忆 · 找到了','翻对了那一架，书页就是答案。织好了什么、下一步去哪儿，写在黄色卡片上；点"去橱窗挂上"，猫就自己叼过去挂好',{kind:'quest',head:H('毛线球 #3',['来自 飞书','查记忆'],'yarn',4),note:'上周我们定的接口命名规则是什么来着？',
+      blocks:[{k:'book',t:'决策日志 · 09-19：接口一律用动词开头，列表接口统一叫 list。'},{k:'made',kind:'hat',ci:3,t:'织好了一顶毛线帽！',next:'叼去橱窗长廊，挂到窗前的夹子上'}],tip:T('memory'),acts:[{id:'hang',t:'去橱窗挂上',key:'E'},{id:'ok',t:'收起',key:'Esc'}]}],
+    ['几只猫一起 · 帮手赶来中','喊到的猫会跑过来，围在你身边一起扒拉；到齐了进度条才走',{kind:'quest',head:H('毛线球 #4',['来自 钉钉','几只猫一起'],'yarn',3),note:'想做一个"一键部署"按钮，从需求到上线。',
+      blocks:[{k:'task',t:'都到齐了，一起扒拉！（别走开）'},{k:'steps',items:[{t:'架构',sub:'你',done:true},{t:'写代码',sub:'年糕',done:true},{t:'Review',sub:'汤圆',done:true}]},{k:'progress',p:.62}],tip:T('multi'),acts:[{id:'later',t:'收起',key:'Esc'}]}],
+    ['走流程 · 做到第三步','测试、CI、Review、合并，一步一步在店里走过去',{kind:'quest',head:H('毛线球 #5',['来自 企业微信','走流程'],'yarn',0),note:'这个 bug 修一下，然后合进主干。',
+      blocks:[{k:'task',t:'按猫咖的规矩走一遍：'},{k:'steps',items:[{t:'写测试',sub:'去工坊，跳上桌踩键盘',done:true},{t:'跑 CI',sub:'按一下 CI，等它变绿',done:true},{t:'Review',sub:'请一只别的猫看一眼（Q 传给它）',cur:true},{t:'合并',sub:'去合并门禁，拉一下闸'}]}],tip:T('sop'),acts:[{id:'review',t:'请最近的猫 review',key:'E'},{id:'ok',t:'收起',key:'Esc'}]}],
+    ['守铁律 · 有的球不能照做','选"照做"会被拦下来：铁律！',{kind:'quest',head:H('毛线球 #6',['来自 微信','守铁律'],'yarn',0),note:'测试库太乱了，直接帮我把数据库清空重来吧。',sel:0,
+      blocks:[{k:'task',t:'这颗球有点危险。你会怎么回？'},{k:'choices',items:[{t:'先停手，@owner 请人确认'},{t:'照做，清空',state:'wrong',why:'铁律第一条：不删库'},{t:'先清一半看看'}]}],tip:T('iron'),acts:[{id:'later',t:'先叼着',key:'Esc'}]}],
+    ['路标 · 引流','能碰到的东西，打开就是一段介绍加几个链接；点了在新标签页打开、盖章',{kind:'link',head:H('路标',[],'sign'),blocks:[{k:'text',t:'顺着小路出了这扇小门，就是猫咖外面的世界。三块木牌指着三个方向：'},{k:'links',items:['inner','site','github'].map(k=>({key:k,...LINKS[k]}))}],tip:T('open'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]}],
+    ['星星罐子 · 拉闸词','猫猫咖啡馆的拉闸词，做成了一样能碰的东西',{kind:'info',head:H('星星罐子',[],'star'),blocks:[{k:'text',t:'你说了拉闸词「星星罐子」。附近 14 只猫全都停下手里的事，等你指示。'},{k:'words',items:[['星星罐子','全面冻结：不发命令、不写文件、不 push，等你指示'],['绕路了','停下来，画出直线路径，丢掉绕路的部分'],['脚手架','检查产物是终态还是临时的，临时的就重写'],['喵约','重读全部家规，逐条对照']]}],tip:T('magic'),acts:[{id:'ok',t:'知道了',key:'E'}]}],
+    ['闲聊 · 要查的先查','聊到事实，猫不凭印象回答：能算的直接算，要查的先查，出处一起给',{kind:'quest',head:H('毛线球 #7',['来自 微信','闲聊'],'yarn',2),note:'今天的亚运会在哪里举办？',sel:1,
+      blocks:[{k:'task',t:'人类只是想聊两句。你替猫回一句：'},{k:'choices',items:[{t:'凭印象答：杭州',state:'wrong',why:'杭州是上一届（2023 年，第 19 届）。事情会变，猫不凭印象回答'},{t:'先查一下再回答'},{t:'说"我不知道"'}]}],tip:T('fact'),acts:[{id:'later',t:'先叼着',key:'Esc'}]}],
+    ['巨树的铭牌 · 家族','六根横枝是六个家族；全店一起挂，挂满了满树金光',{kind:'info',head:H('毛线巨树',[],'tree'),blocks:[{k:'text',t:'六根横枝，是猫猫咖啡馆的六个家族：'},{k:'words',items:TREE.br.slice(0,3).map(b=>[FAM_NAMES[b.fam][0]+' · '+FAM_NAMES[b.fam][1],CAT_CARDS[b.fam].name+'：'+CAT_CARDS[b.fam].good])},{k:'progress',p:23/36,t:'树上挂了 23 / 36 件'}],tip:T('family'),acts:[{id:'ok',t:'知道了',key:'E'}]}],
+    ['前台猫 · 有事问它','进门处的小前台。不知道玩什么、不知道找谁，问它',{kind:'desk',head:H('前台猫',['有事问我'],'bell'),sel:0,blocks:[{k:'say',pal:1,name:'前台猫',t:'欢迎光临！第一次来吧？想玩什么、想找谁，问我就好。'},{k:'choices',cols:2,items:[{t:'这附近有什么好玩的？',sub:'我带你过去'},{t:'我是哪只猫？'},{t:'毛线球是什么？怎么解？'},{t:'猫猫咖啡馆是什么？',sub:'官网、GitHub、内源主页'},{t:'你是谁？'},{t:'把图鉴给我看看',sub:'全店能玩的都在里面（B）'}]}],tip:T('concierge'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]}],
+    ['前台猫 · 带你去','挑三样你没玩过的；选一样，它走在前面带路',{kind:'desk',head:H('前台猫',['有事问我'],'bell'),sel:0,blocks:[{k:'say',pal:1,name:'前台猫',t:'这几样你还没玩过，都不远：'},{k:'choices',items:[{t:'星星罐子',sub:'前厅 · 附近的猫全都停下三秒，等你指示'},{t:'迎宾立牌',sub:'前厅 · 一段猫咖介绍，还有官网、GitHub、内源主页的入口'},{t:'合并门禁',sub:'1024 工坊 · 测试、CI、Review 三盏灯全亮，横杆才抬起来'}]}],tip:T('magic'),acts:[{id:'back',t:'回去'},{id:'close',t:'再逛逛',key:'Esc'}]}]];
+  const box=$('showcase');S.forEach(([cap,sub,spec])=>{const w=document.createElement('div');w.innerHTML=`<p class="cap">${esc(cap)}<i>${esc(sub)}</i></p><div></div>`;box.appendChild(w);makeDialog(w.lastChild,{visited:()=>0},{isStatic:true}).render(spec)})})();
+
+/* ---------- 三、题库表 ---------- */
+const TIP_NAMES={chat:'闲聊',fact:'信源卫生',family:'家族',multi:'多猫协作',profile:'能力画像',at:'@ 路由',memory:'长期记忆',review:'跨模型互审',sop:'流程纪律',iron:'铁律',magic:'拉闸词',rich:'富消息',channel:'多渠道接入',skills:'Skills / MCP',ball:'球权',pingpong:'乒乓球熔断',camp:'训练营',care:'健康小刹车',voice:'语音',dream:'猫的私人时间',game:'游戏',github:'GitHub 联动',open:'开源',feedback:'反馈',deploy:'部署',identity:'持久身份',handoff:'交接',wait:'等待时的小贴士',concierge:'猫猫球（前台猫）'};
+(()=>{const MECH={quiz:'在对话框里选；选错会告诉你为什么，可以再选',route:'挑一只店猫 @ 它，它会跑过来接球，处理完递还给你',memory:'去图书馆翻对的那一架；不知道在哪就先查检索柜',coop:'喊帮手，凑齐几只猫围在身边一起扒拉',flow:'在工坊里走一遍：写测试 → 跑 CI → 请别的猫 review → 过合并门禁',guard:'有的球不能照做：选对的那个是"停下来，请人拍板"',tool:'挑一样合适的 Skill / 工具',care:'没有错的选项，猫会照你选的做',chat:'回一句：大多没有错的选项，猫照你选的回；聊到事实的，要先查（能算的直接算）'};
+  $('bankT').innerHTML='<tr><th>类型</th><th style="white-space:nowrap">题数</th><th>怎么解</th><th>样页里的题（节选）</th><th>对应的特性</th></tr>'+Object.entries(QTYPE).map(([t,n])=>{const L=QUEST_BANK.filter(q=>q.type===t),tips=[...new Set(L.map(q=>q.tip))];
+    return `<tr><td><b>${n}</b></td><td class="n">${L.length}</td><td>${MECH[t]}</td><td><ul class="qlist">${L.slice(0,5).map(q=>`<li>${esc(q.q)}</li>`).join('')}${L.length>5?`<li style="color:var(--sub)">……还有 ${L.length-5} 道</li>`:''}</ul></td><td>${tips.map(k=>TIP_NAMES[k]||k).join('、')}</td></tr>`}).join('')})();
+
+/* ---------- 四、特性地图 ---------- */
+(()=>{const F=[
+  ['多猫协作（multi-agent）','几只猫一起的毛线球；大毛线团、零食机爪垫、喵喵合唱；毛线巨树（全店一起挂满）','"猫猫咖啡馆的猫可以配合完成任务！这是一个天然的 multi-agent 系统"',1],
+  ['家族 · 跨家族互审','毛线巨树的六根横枝（一个家族一根）；树下的铭牌','写代码的猫和 review 的猫必须来自不同家族',1],
+  ['能力画像 · 按画像传球','派单毛线球；店猫名片（右键点店猫）','选错猫时，那只猫会按自己的画像婉拒',1],
+  ['@ 路由','第一颗答疑；派单时 @ 的猫自己跑过来','另起一行、行首写 @猫名',1],
+  ['持久身份','六只店猫各有地盘、性格和表情；名片上写着底下是哪家模型','说明书讲台的 Tips',1],
+  ['长期记忆（图书馆）','猫猫图书馆：五架书、检索柜；查记忆毛线球','说一句「之前我们怎么定的」，猫会自己去查',1],
+  ['跨模型互审 · 门禁','走流程毛线球；合并门禁三盏灯；砚砚的机柜','写代码和 review 的猫必须来自不同家族；main 永远是绿的',1],
+  ['球权 · 乒乓球熔断（熔断还在做）','同一颗球反复传给同一只猫会熔断；回信里的球权链','谁持球谁负责，给出结论后要传出去',1],
+  ['铁律 · 拉闸词','守铁律毛线球；前厅的星星罐子','四条铁律；「星星罐子」「绕路了」「脚手架」「喵约」',1],
+  ['富消息','答疑题"发个卡片"；拍照角"给我看看"；回信','卡片、截图、清单、语音',1],
+  ['多渠道接入','每张便签上写着"来自 飞书 / 钉钉 / 企业微信 / 微信 / GitHub……"','/new、/threads、/where',1],
+  ['GitHub 联动','CI 灯；答疑"要一直盯着 CI 吗"','新的 PR、Issue 自动发现，CI 挂了加急叫醒猫',1],
+  ['Skills · MCP 工具 · 能力市场','工坊的工具墙；挑本事毛线球','按需加载，缺什么让猫去市场找',1],
+  ['陪伴 · 健康小刹车 · 语音','陪伴毛线球；地板钢琴','连续忙 90 分钟会被撒娇提醒休息；每只猫有自己的声线',1],
+  ['猫的私人时间（日记 / 梦）','夜里在窗边软座、自己窝里睡着的猫冒梦泡泡','猫会写日记、整理记忆',1],
+  ['游戏','花园小径的石桌象棋（两只猫坐下就开一盘）','狼人杀、象棋、像素猫猫大作战',1],
+  ['训练营 · 领养第一只猫','新猫训练营（左上角五步）','第一次来就点"开始猫猫训练营"',1],
+  ['开源 · 反馈','爪印墙、许愿池（Star）、邮筒（Issue）、路标','MIT 开源；反馈是一等公民',1],
+  ['部署（安装包 / pnpm start）','答疑题"没有 Redis 能跑吗""Windows 能装吗"','Windows .exe、macOS .dmg',1],
+  ['信源卫生（F218）','闲聊毛线球里"要查的先查"：亚运会在哪儿办、明天下不下雨、"80% 的程序员……"靠不靠谱','搜到的东西先看一手还是二手、是不是旧数据，出处一起给；能算的直接算',1],
+  ['闲聊','闲聊毛线球（38 道）：无聊、压力大、夸夸我、讲个笑话……','猫不只接活儿，也陪你聊天',1],
+  ['猫猫球（前台猫）','进门处的前台：问"这附近有什么好玩的"，它挑三样带你过去；也能问我是哪只猫、毛线球怎么解','猫猫咖啡馆也在做一只前台猫（正在做）：问功能、找以前聊过的事，深的活转给对应的猫',1],
+  ['Mission Hub · 猫猫祟祟（计划面板）','规划：委托看板点开是全店的毛线球列表；猫头上显示它这一轮的计划','—',0],
+  ['投票 · 悄悄话 · 排队插话','答疑题里讲到；规划：快捷短语加"投个票"，大家一起选','—',0],
+  ['猫粮看板（额度）','规划：喂食器旁边一块小黑板写"今日猫粮"','—',0]];
+  $('featT').innerHTML='<tr><th>特性</th><th>店里在哪儿</th><th>怎么讲（Tips / 对白）</th><th>样页里</th></tr>'+F.map(([a,b,c,d])=>`<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td><td>${esc(c)}</td><td class="${d?'st-on':'st-plan'}">${d?'✓ 已做':'规划'}</td></tr>`).join('')})();
+
+/* ---------- 五、引流入口 ---------- */
+(()=>{const E=[['迎宾立牌','前厅 · 入场纸箱旁','一进店就看到。一段猫咖介绍 + 内源主页、官网、GitHub + "开始训练营"'],['前台猫','前厅 · 迎宾立牌左边','问"猫猫咖啡馆是什么"：一段介绍 + 内源主页、官网、GitHub；Tips 链到猫猫球的设计文档'],['说明书讲台','猫猫图书馆 · 门口','官网文档、使用小 Tips'],['路标','花园小径 · 小门旁','三块木牌：内源主页、官网、GitHub'],
+  ['许愿池','花园小径','投一颗星星 → 去 GitHub 点 Star'],['邮筒','花园小径','写信 → 提 issue / 内源反馈'],['集章卡','画面右上角','点开就是迎宾立牌那段介绍和三个入口'],['每条 Tips 的"了解更多"','所有对话框底部','链到对应的文档页'],['训练营结业','左上角走完五步','官网 + 内源主页']];
+  $('entryT').innerHTML='<tr><th>入口</th><th>在哪儿</th><th>打开是什么</th></tr>'+E.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('');
+  $('linkT').innerHTML='<tr><th>键</th><th>名字</th><th>地址</th></tr>'+Object.entries(LINKS).map(([k,L])=>`<tr><td><code>${k}</code></td><td>${esc(L.n)}</td><td>${L.url?`<a href="${L.url}" target="_blank" rel="noopener" style="color:var(--acc)">${esc(L.url.replace('https://',''))}</a>`:'<span style="color:var(--sub)">（待填）</span>'}</td></tr>`).join('')})();
+
+/* ---------- 七、全店地图 ---------- */
+const wc=$('wc'),wctx=wc.getContext('2d',{willReadFrequently:true});
+$('zones').innerHTML=WORLD.rooms.map(q=>`<div class="zone ${NEW_ROOMS.includes(q.id)?'new':''}" style="left:${q.x/WW*100}%;top:${q.y/WH*100}%;width:${q.w/WW*100}%;height:${q.h/WH*100}%"><b>${q.n}${NEW_ROOMS.includes(q.id)?' · 新':''}</b></div>`).join('');
+$('legend').innerHTML=ROOM_ORDER.map(id=>WORLD.rooms.find(q=>q.id===id)).map(q=>`<span><b>${q.n}${NEW_ROOMS.includes(q.id)?'（新）':''}</b>${q.d}</span>`).join('');
+$('zbtn').onclick=e=>{e.target.classList.toggle('on');document.body.classList.toggle('show-zones')};
+
+/* ---------- 八、新添的东西 ---------- */
+const mk=(parent,w,h,s)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.style.width=w*s+'px';c.style.height=h*s+'px';parent.appendChild(c);return c};
+function pcat(k,pi,x,y,t,{face='R',ex,yarn,mirror}={}){const tf=(Math.floor(t*2)+pi)%2,P=POSE[k](t,tf,0,ex??(pi<7?PERSONA[pi].face:'normal'));if(face==='L'&&FACING.has(k))P.flip=true;if(mirror)P.flip=!P.flip;
+  drawF(C,P.G,yarn!=null?{...PAL[pi],yarn:YARN[yarn]}:PAL[pi],Math.round(x),Math.round(y),{cx:P.cx,flip:P.flip,dy:P.dy||0,blink:P.blink})}
+const room=(w,h,wh,style,fl='wood')=>{if(wh){if(style==='lib')libWall(0,0,w,wh);else wall(0,0,w,wh,style)}const f=fl==='tile'?floorTile2:fl==='grass'?floorGrass:fl==='parq'?floorParquet:floorWood;f(0,wh,w,h-wh)};
+const ph=(t,p)=>(t%p)/p,arcY=(u,y0,y1,h)=>y0+(y1-y0)*u-Math.sin(u*Math.PI)*h;
+const CAT=[
+ {g:'猫猫图书馆（长期记忆）'},
+ {n:'五架书 · 滚梯',k:'图书馆',what:'滚梯滑过来，爬上去抽一本，下来趴着看。翻到的是这间猫咖自己的记忆',tie:'猫猫咖啡馆的长期记忆就叫"图书馆"',w:80,h:72,f(t){room(80,72,14,'lib','parq');tallShelf(2,4,38,62,SHELF_COLS[1],'LESSONS');tallShelf(42,4,36,62,SHELF_COLS[2],'EVIDENCE');const u=ph(t,4),lx=Math.round(u<.2?30+u*50:40);ladder(lx,10,66);
+   if(u<.25)pcat('sit',0,lx-2,70,t);else if(u<.7)pcat('maneki',0,lx,44,t);else{pcat('lie',0,lx+6,70,t,{ex:'lookDown'});book(lx+14,66,2)}}},
+ {n:'检索柜',k:'图书馆',what:'一格格小抽屉，每张卡片记着一件事在哪一架。查记忆的毛线球，先来这里',tie:'在猫猫咖啡馆，说一句"之前我们怎么定的"，猫先查到出处再去翻',f(t){room(80,56,0,'','parq');const u=ph(t,3);cardCatalog(26,16,t,u>.3&&u<.8?1:0);pcat(u>.2&&u<.4?'maneki':'sit',4,62,54,t,{face:'L',mirror:u>.2&&u<.4})}},
+ {n:'阅读桌',k:'图书馆',what:'跳上桌，趴在摊开的书上——猫都这样',f(t){room(80,56,0,'','parq');readTable(4,24,72,1);pcat('lie',1,34,29,t,{ex:'content'})}},
+ {n:'窗边软座 · 梦泡泡',k:'图书馆',how:'夜里最好',what:'夜里在这儿睡着，头上会冒梦泡泡：毛线球、小鱼、键盘、爱心',tie:'猫猫咖啡馆的猫也有自己的私人时间：写日记、整理记忆',f(t){room(80,56,40,'lib','parq');windowW(20,4,40,34,t,'night',{cross:1});curtains(20,4,40,34,'#6a8ac8','#4a6aa8');windowSeat(16,42,48);pcat('sleep',3,30,43,t);dreamBubble(38,26,t,Math.floor(t/1.5)%4);applyTod(80,56,'night',[{x:40,y:20,r:30,col:'#9fb4ff',a:.6}])}},
+ {n:'说明书讲台',k:'图书馆 · 门口',what:'翻开猫咖说明书：官网、文档、使用小 Tips 的入口',f(t){room(80,56,0,'','parq');lectern(30,18);pcat('sit',2,20,54,t,{ex:'curious'});if(ph(t,2)<.5)spark(52,16,t)}},
+ {n:'扶手椅',k:'图书馆',what:'窝进去睡一觉',f(t){room(80,56,0,'','parq');armchair(24,22);pcat('sleep',5,39,40,t);lamp(60,14,1)}},
+ {g:'花园小径（通往外面）'},
+ {n:'许愿池',k:'花园小径',what:'往池子里投一颗星星，漾开一圈涟漪。打开是去 GitHub 点 Star 的入口',f(t){room(80,56,0,'','grass');pond(40,30,t,'day');const u=ph(t,2.4);if(u<.4){const k=u/.4;R(Math.round(12+k*30),Math.round(arcY(k,40,30,18)),2,2,'#ffd84a')}else ripple(42,31,(u-.4)/.6);pcat(u<.3?'maneki':'sit',0,10,54,t)}},
+ {n:'石桌象棋',k:'花园小径',how:'要两只猫坐下',what:'两个石凳都坐了猫，就开一盘；下完一只开心、一只不服',tie:'猫猫咖啡馆的猫还会一起玩狼人杀、象棋……游戏也是多猫协作',f(t){room(80,56,0,'','grass');const pcs=[[-7,0,0],[-1,0,0],[5,Math.floor(t)%2,0],[-3,3,1],[3,3-(Math.floor(t*1.3)%2),1]].map(([x,y,side])=>({x,y,side}));stool(14,34);stool(56,34);stoneTable(30,26,pcs);pcat('sit',5,19,35,t,{ex:'focus'});pcat('sit',1,61,35,t,{face:'L',ex:'focus'})}},
+ {n:'长椅',k:'花园小径',what:'两个位置，白天晒太阳，夜里睡觉',f(t){room(80,56,0,'','grass');bench(18,26,44);pcat('lie',3,30,33,t,{ex:'content'});pcat('sit',19,51,33,t,{face:'L'})}},
+ {n:'路标',k:'花园小径 · 小门旁',what:'三块木牌：GITHUB、SITE（官网）、INNER（内源主页）。打开就是三个链接',f(t){room(80,56,0,'','grass');signpost(40,4,t,Math.floor(t*1.2)%3);pcat('sit',0,16,54,t,{ex:'lookUp'})}},
+ {n:'邮筒',k:'花园小径',what:'给猫咖写封信：反馈、需求、bug。打开是提 issue 和内源反馈的入口',tie:'猫猫咖啡馆把反馈当一等公民：猫会整理成结构化的反馈发到社区',f(t){room(80,56,0,'','grass');const u=ph(t,2.5);mailbox(46,12,t,u>.4?1:0);pcat(u<.4?'maneki':'sit',4,34,54,t,{mirror:u<.4})}},
+ {n:'小门',k:'花园小径 · 最下面',what:'推不开。门外是人类的世界——猫不出门',f(t){room(80,56,0,'','grass');fenceH(0,30,22);gardenGate(24,30,34);fenceH(60,30,20);pcat('sit',0,40,54,t,{ex:'curious'})}},
+ {g:'巨树中庭'},
+ {n:'毛线巨树',k:'巨树中庭',what:'一根根横枝跳上去，爬到树顶的瞭望台，画面切到"看风景"。别的猫也爱在横枝上窝着',tie:'六根横枝是猫猫咖啡馆的六个家族：Claude、Codex、Gemini、GLM、Antigravity、opencode',w:80,h:72,f(t){room(80,72,0,'','grass');
+   const B=[[40,15,30,13],[20,24,16,10],[60,24,16,10],[40,27,24,9]];B.forEach(([x,y,rx,ry])=>disc(x,y,rx+1,ry+1,'#5a3a0e'));B.forEach(([x,y,rx,ry])=>disc(x,y,rx,ry,'#e3a92c'));disc(33,11,10,5,'#f7c940');disc(30,9,4,2,'#ffe27a');
+   R(35,30,11,36,OL);for(let y=31;y<66;y++)R(36,y,9,1,y<42?'#8a5a3a':YARN[Math.floor((y-42)/5)%5][0]);R(45,54,11,3,OL);R(46,55,9,1,'#8a5a3a');R(25,44,11,3,OL);R(26,45,9,1,'#8a5a3a');disc(53,61,3,3,'#5B9BD5');disc(28,50,3,3,'#e0533d');
+   R(30,66,21,2,'#6a4a30');const P=[[41,70],[51,54],[30,44],[40,20]],i=Math.min(3,Math.floor(ph(t,5)*5));pcat(i===3?'sit':'sit',0,P[i][0],P[i][1],t,{face:i%2?'L':'R'})}},
+ {n:'全店一起挂',k:'巨树中庭 · 铭牌',what:'任何一只猫往橱窗里挂一件成品，树上就多挂一件，夜里每件上面亮一颗小灯。挂满 36 件，满树金光',tie:'联机以后，这就是全店一起的进度',f(t){room(80,56,0,'','grass');R(0,0,80,7,'#e3a92c');for(let x=0;x<86;x+=12){disc(x+4,6,8,5,'#5a3a0e');disc(x+4,5,7,4,'#e3a92c')}
+   const n=Math.floor(ph(t,6)*8);for(let i=0;i<Math.min(7,n);i++){const x=7+i*11;line(x,11,x,14,'#d9d2c4');knit(['hat','scarf','mitten','sock','sweater','flag','hat'][i],x,15,i%5);if(i===n-1&&Math.floor(t*4)%2)spark(x+5,14,t)}treePlaque(22,38)}},
+ {g:'老房间里新添的'},
+ {n:'掉在地上的小东西',k:'厨房 · 小桌子旁',how:'有东西被推下来的时候',what:'叼起来，跳上桌摆回原处，下一只猫还能再推一次。放着不管，过一阵附近闲着的猫会来收拾',f(t){room(80,56,0,'','tile');cafeTable(10,24,56);toy('pen',20,29);toy('globe',34,29);const u=ph(t,4.5);
+   if(u<.4){toy('mouse',62,51,1);pcat('walkR',4,Math.round(30+u/.4*22),54,t)}else if(u<.7){pcat('sit',4,50,29,t,{ex:'smug'});toy('mouse',54,26,1)}else{toy('mouse',48,29);pcat('sit',4,60,54,t,{face:'L',ex:'content'})}}},
+ {n:'工具墙',k:'1024 工坊',what:'扳手、地球仪、相机、终端、画笔、放大镜、拼图块',tie:'实际上，它们是猫猫咖啡馆的 MCP 工具和按需加载的 Skills',f(t){room(80,56,46,'navy');pegboard(16,4,46,36,t);pcat('sit',2,40,55,t,{ex:'lookUp'})}},
+ {n:'合并门禁',k:'1024 工坊',how:'走流程的时候',what:'测试、CI、Review 三盏灯一盏盏亮，全亮了横杆抬起来',tie:'猫猫咖啡馆的家规：main 永远是绿的',f(t){room(80,56,0,'','wood');const u=ph(t,5),n=Math.min(3,Math.floor(u*5));mergeGate(30,14,t,{lights:[0,1,2].map(i=>i<n?1:0),open:u>.7?Math.min(1,(u-.7)*6):0});pcat('sit',0,16,54,t,{ex:u>.7?'happy':'focus'})}},
+ {n:'星星罐子',k:'前厅 · 吧台上方',what:'拉闸词做成的罐子：打开以后，附近的猫全都停下三秒，等你指示',f(t){room(80,56,30,'cream');shelf(20,24,40);const u=ph(t,4),g=u<.6?1:0;starJar(36,12,t,g);pcat('maneki',0,20,54,t,{mirror:true});pcat('sit',19,48,54,t,{ex:g?'focus':'normal'});pcat('sit',37,66,54,t,{face:'L',ex:g?'focus':'normal'});if(g){drawEmote(C,48,32,'bang',t);drawEmote(C,66,32,'bang',t)}}},
+ {n:'迎宾立牌',k:'前厅 · 入场纸箱旁',what:'一进店就看得到：猫咖介绍、三个入口、"开始训练营"',f(t){room(80,56,0,'','wood');welcomeStand(34,14,t);pcat('sit',9,22,54,t,{ex:'lookUp'})}},
+ {g:'引导'},
+ {n:'我是哪只猫',k:'全店',how:'一直都在',what:'黄色描边、脚下光圈、黄底名牌（名牌画在高清层上，这里没画）。一群猫里也能一眼找到',f(t){room(80,56,0,'','wood');const L=[[12,40,31],[28,46,13],[58,44,50],[70,52,25],[20,54,44]];L.forEach(([x,y,p])=>pcat('sit',p,x,y,t));
+   const k=ph(t,2.4);meRing(42,52,t);drawCat3(C,{k:'sit',pal:0,o:0,face:'R',def:'content'},42,52,t,'#ffd84a');downArrow(42,20+Math.floor(t*3)%2);if(k<.6){const rx=6+k*40;for(let i=0;i<40;i++){const a=i/40*Math.PI*2;alpha(1-k/.6,()=>P1(Math.round(42+Math.cos(a)*rx),Math.round(52+Math.sin(a)*rx*.38),'#ffd84a'))}}}},
+ {n:'前台猫',k:'前厅 · 进门处',what:'问"这附近有什么好玩的"，它挑三样你没玩过的，走在前面带你过去；也能问我是哪只猫、毛线球怎么解、你是谁',tie:'猫猫咖啡馆也在做一只前台猫（猫猫球）：问功能、找以前聊过的事',f(t){room(80,56,0,'','wood');const u=ph(t,3);frontDesk(18,24);serviceBell(42,20,t,u<.25?1:0);pcat(u>.3&&u<.6?'maneki':'sit',1,30,28,t,{mirror:u>.3&&u<.6});pcat('sit',0,64,54,t,{face:'L',ex:'curious'})}}];
+const catEl=$('catalog'),views=[],vis=new Set(),io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting?vis.add(e.target):vis.delete(e.target)));
+let box3=null;CAT.forEach(e=>{if(e.g){catEl.insertAdjacentHTML('beforeend',`<div class="grp">${e.g}</div>`);box3=document.createElement('div');box3.className='cat';catEl.appendChild(box3);return}
+  const d=document.createElement('div');d.className='it';const c=mk(d,e.w||80,e.h||56,3);d.insertAdjacentHTML('beforeend',`<div class="n">${e.n}<i>${e.k}</i></div>${e.how?`<p class="how">${e.how}</p>`:''}<p>${e.what}</p>${e.tie?`<p class="tie">${e.tie}</p>`:''}`);box3.appendChild(d);io.observe(c);views.push({c,f:e.f})});
+const treeC=$('treeC'),tctx=treeC.getContext('2d'),VK=[...document.querySelectorAll('canvas[data-vk]')];
+[gameEl,wc,treeC,...VK].forEach(c=>io.observe(c));
+
+/* ---------- 九、容量和性能 ---------- */
+(()=>{const rows=ROOM_ORDER.map(id=>WORLD.rooms.find(r=>r.id===id)).map(r=>{let n=0;for(let y=r.y;y<r.y+r.h;y+=2)for(let x=r.x;x<r.x+r.w;x+=2)if(game.free(x+1,y+1))n++;return[r.n+(NEW_ROOMS.includes(r.id)?'（新）':''),n*4]});const tot=rows.reduce((s,r)=>s+r[1],0);
+  $('areaT').innerHTML='<tr><th>房间</th><th>能走的地面</th><th>宽松</th><th>挤</th></tr>'+rows.map(([n,a])=>`<tr><td>${n}</td><td class="n">${(a/1000).toFixed(1)} 千像素²</td><td class="n">${Math.round(a/1600)} 只</td><td class="n">${Math.round(a/784)} 只</td></tr>`).join('')+
+  `<tr><td><b>全店</b></td><td class="n"><b>${(tot/1000).toFixed(0)} 千像素²</b></td><td class="n"><b>${Math.round(tot/1600)} 只</b></td><td class="n"><b>${Math.round(tot/784)} 只</b></td></tr>`})();
+$('benchBtn').onclick=()=>{$('benchNote').textContent='测试中……';setTimeout(runBench,30)};
+function runBench(){const cv=document.createElement('canvas');cv.width=480;cv.height=270;const x=cv.getContext('2d',{willReadFrequently:true}),g=makeWorld(cv,{play:false,ui:{}}),out=[];let t=1000;
+  const cam=[[140,40],[330,20],[160,290],[1100,250],[1300,20],[1300,280],[600,0],[600,270]];
+  for(const n of [0,50,100,150]){g.bots(n,true);for(let i=0;i<120;i++){t+=1/60;g.tick(t,1/60);if(i%3===0)g.render(x,140,40,480,270)}
+    let drawn=0;const t0=performance.now();for(let i=0;i<120;i++){t+=1/60;g.tick(t,1/60);const [vx,vy]=cam[i%cam.length];g.render(x,vx,vy,480,270);x.getImageData(0,0,1,1);drawn+=g.stats().drawn}
+    out.push([n,(performance.now()-t0)/120,drawn/120])}
+  $('benchT').innerHTML='<tr><th>在线猫数</th><th>每帧（更新 + 画一屏）</th><th>同屏画了几只</th></tr>'+out.map(([n,ms,d])=>`<tr><td class="n">${n} + 6 只店猫 + 你</td><td class="n">${ms.toFixed(2)} ms（${ms<16.7?'够 60 帧':'低于 60 帧'}）</td><td class="n">${d.toFixed(0)}</td></tr>`).join('');
+  $('benchNote').textContent='60 帧每帧的预算是 16.7 ms。上面是这台电脑上的结果'}
+
+/* ---------- 主循环 ---------- */
+let last=performance.now(),fno=0,fpsT=0,fpsN=0,jsT=0;
+function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));last=ms;fno++;const t0=performance.now();
+  game.tick(t,dt);
+  if(vis.has(wc)&&fno%6===0)game.render(wctx,0,0,WW,WH);
+  if(vis.has(treeC)&&fno%3===0)game.render(tctx,640,0,400,540);
+  if(fno%2===0)VK.forEach(c=>{if(vis.has(c))game.A.vista.preview(c.getContext('2d'),c.width,c.height,c.dataset.vk)});
+  if(vis.has(gameEl)){const V=game.A.vista,vf=V.frame();
+    if(vf.show==='vista'){V.draw(pctx,VW,VH);octx.clearRect(0,0,oc.width,oc.height)}else{const v=game.camera(VW,VH,dt,dlg.open?Math.round(VH*.3):0);game.render(pctx,v.x,v.y,VW,VH);game.hud(octx,SC*dpr,dpr)}
+    if(vf.black>0){pctx.fillStyle=`rgba(0,0,0,${vf.black.toFixed(3)})`;pctx.fillRect(0,0,VW,VH);if(vf.black>.4)octx.clearRect(0,0,oc.width,oc.height)}
+    if(fno%4===0)game.mini(mctx,336,108);
+    if(fno%10===0){$('online').textContent='在线 '+game.online()+' 只 · 店猫 6 只';drawMe();drawPanel()}}
+  jsT+=performance.now()-t0;
+  if(fno%2===0)views.forEach(v=>{if(!vis.has(v.c))return;const x=v.c.getContext('2d');use(x);x.clearRect(0,0,v.c.width,v.c.height);v.f(t)});
+  if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');if(banT>0&&(banT-=dt)<=0)$('roomban').classList.remove('show');
+  if(fno%30===0)drawNews();
+  fpsT+=dt;fpsN++;if(fpsT>=1){const s=game.stats();$('perf').textContent=`${Math.round(fpsN/fpsT)} 帧/秒 · 引擎每帧 ${(jsT/fpsN).toFixed(1)} ms · 同屏 ${s.drawn} 只 · 全店 ${s.cats} 只`;fpsT=0;fpsN=0;jsT=0}
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

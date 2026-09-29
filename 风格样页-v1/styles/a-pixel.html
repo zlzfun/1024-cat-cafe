@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A · 像素猫咖</title>
+<style>
+  html,body{margin:0;height:100%;background:#241a2e;color:#fff4dc;font-family:"PingFang SC","Microsoft YaHei",monospace;overflow:hidden;user-select:none}
+  #stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+  canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+  #layer{position:absolute;inset:0;pointer-events:none}
+  .tag{position:absolute;transform:translate(-50%,-100%);font-size:11px;white-space:nowrap;padding:1px 5px;background:#241a2ecc;border:2px solid #241a2e;color:#fff4dc}
+  .tag.me{background:#e0533d;color:#fff}
+  .tag.npc b{color:#9fd8f0;font-weight:normal}
+  .tag.at{background:#ffd84a;color:#241a2e}
+  .say{position:absolute;transform:translate(-50%,-100%);font-size:12px;max-width:180px;padding:4px 7px;background:#fff4dc;color:#3b2430;border:2px solid #3b2430}
+  .hud{position:absolute;top:10px;right:12px;font-size:12px;text-align:right;line-height:1.7}
+  .hud span{background:#241a2ecc;padding:2px 6px;border:2px solid #fff4dc}
+  .hint{position:absolute;top:10px;left:12px;font-size:12px;opacity:.85;background:#241a2ecc;padding:3px 6px}
+  #box{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(540px,90%);background:#fff4dc;color:#3b2430;border:4px solid #3b2430;box-shadow:0 0 0 4px #fff4dc,0 0 0 8px #3b2430;padding:12px 16px;font-size:14px;line-height:1.65;display:none}
+  #box .who{font-size:12px;color:#8a5a6a;margin-bottom:4px}
+  #box .note{font-size:12px;color:#e0533d;margin-top:6px}
+  #box .opts{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  #box button{font:inherit;font-size:13px;text-align:left;background:#fff;border:3px solid #3b2430;padding:5px 10px;cursor:pointer;color:#3b2430}
+  #box button:hover{background:#ffd84a}
+  #box button::before{content:"▶ ";color:#e0533d}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas><div id="layer"></div></div>
+<div class="hint">点一下画面 · 方向键/WASD 走动，或直接点地板 · 走到沙发上会躺下</div>
+<div class="hud"><span id="count">🧶 已解开 0</span><br><span>在线：你 + 2 只 NPC 猫</span></div>
+<div id="box"></div>
+<script>
+const W=240,H=152;
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const layer=document.getElementById('layer'),box=document.getElementById('box');
+cv.width=W;cv.height=H;
+let S=3;
+function fit(){S=Math.max(1,Math.floor(Math.min(innerWidth/W,innerHeight/H)));cv.style.width=W*S+'px';cv.style.height=H*S+'px'}
+fit();addEventListener('resize',fit);
+
+/* ---------- 像素工具 ---------- */
+function R(c,x,y,w,h,col){c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)}
+function disc(c,cx,cy,rx,ry,col){c.fillStyle=col;cx=Math.round(cx);cy=Math.round(cy);
+  for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++)if(x*x/(rx*rx+.6)+y*y/(ry*ry+.6)<=1)c.fillRect(cx+x,cy+y,1,1)}
+const FONT={C:["111","100","100","100","111"],A:["010","101","111","101","101"],T:["111","010","010","010","010"],F:["111","100","110","100","100"],E:["111","100","110","100","111"],"1":["010","110","010","010","111"],"0":["111","101","101","101","111"],"2":["111","001","111","100","111"],"4":["101","101","111","001","001"]," ":["000","000","000","000","000"]};
+function txt(c,s,x,y,col){[...s].forEach((ch,i)=>FONT[ch].forEach((row,ry)=>[...row].forEach((v,rx)=>{if(v==="1")R(c,x+i*4+rx,y+ry,1,1,col)})))}
+
+/* ---------- 静态背景 ---------- */
+const bg=document.createElement('canvas');bg.width=W;bg.height=H;const b=bg.getContext('2d');
+(function paint(){
+  R(b,0,0,W,34,'#6b4a6e');for(let x=0;x<W;x+=8)R(b,x,0,4,30,'#744f78');R(b,0,30,W,4,'#4a3150');
+  for(let r=0,y=34;y<H;y+=6,r++){R(b,0,y,W,6,r%2?'#c48a58':'#bb8150');R(b,0,y+5,W,1,'#a56f43');for(let x=(r*13)%24;x<W;x+=24)R(b,x,y,1,5,'#a56f43')}
+  // 窗
+  R(b,16,5,42,22,'#3b2a40');R(b,18,7,38,18,'#9fd8f0');disc(b,26,12,3,3,'#fff1a8');disc(b,44,17,5,2,'#fff');disc(b,48,16,3,2,'#fff');R(b,36,7,2,18,'#3b2a40');R(b,18,15,38,2,'#3b2a40');R(b,14,26,46,2,'#8a5634');
+  // 黑板
+  R(b,90,4,44,24,'#8a6a4a');R(b,92,6,40,20,'#2e3b33');txt(b,"CAT CAFE",94,8,'#f4efe0');txt(b,"1024",100,16,'#ffd84a');
+  // 吧台
+  R(b,156,16,28,10,'#bfe6ef');disc(b,162,22,2,2,'#e8a86a');disc(b,170,22,2,2,'#d86f88');disc(b,178,22,2,2,'#e8a86a');
+  R(b,204,12,16,14,'#c0c6cc');R(b,207,18,10,5,'#333');R(b,210,23,4,3,'#fff');
+  R(b,150,26,84,5,'#e8c9a0');R(b,150,31,84,22,'#8a5634');for(let x=156;x<232;x+=16)R(b,x,34,12,16,'#7a4a2c');
+  // 猫爬架
+  R(b,78,18,4,54,'#d9b98a');for(let y=20;y<70;y+=4)R(b,78,y,4,1,'#b8956a');R(b,70,32,20,4,'#a0674b');R(b,70,52,20,4,'#a0674b');R(b,68,68,24,6,'#a0674b');disc(b,74,30,4,2,'#e89aa9');
+  // 地毯 + 沙发
+  disc(b,44,112,34,15,'#c25a73');disc(b,44,112,30,12,'#e89aa9');
+  R(b,18,93,52,11,'#c25a73');R(b,18,103,52,13,'#d86f88');R(b,35,104,1,12,'#b65770');R(b,52,104,1,12,'#b65770');
+  R(b,13,95,7,23,'#a84860');R(b,68,95,7,23,'#a84860');R(b,15,118,2,2,'#3b2430');R(b,71,118,2,2,'#3b2430');
+  // 桌 1 + 人类
+  R(b,136,88,10,12,'#4d7cc9');disc(b,141,83,4,4,'#f2c9a0');R(b,137,78,9,3,'#3a2a2a');R(b,145,96,4,8,'#8a5634');
+  disc(b,124,93,12,6,'#caa57a');disc(b,124,92,11,5,'#e9d3b0');R(b,123,98,3,8,'#6b4a3a');R(b,127,86,8,5,'#9aa3ad');R(b,128,87,6,3,'#d6f0ff');R(b,114,89,3,3,'#fff');
+  // 桌 2
+  disc(b,192,117,11,5,'#caa57a');disc(b,192,116,10,4,'#e9d3b0');R(b,191,121,3,8,'#6b4a3a');R(b,188,113,3,3,'#fff');
+  // 植物
+  R(b,4,40,8,8,'#b0613e');disc(b,8,36,6,5,'#5b8c5a');disc(b,6,33,3,3,'#79ad6f');
+  R(b,226,62,8,8,'#b0613e');disc(b,230,58,6,5,'#5b8c5a');disc(b,232,55,3,3,'#79ad6f');
+})();
+
+/* ---------- 碰撞 ---------- */
+const BLOCK=[[0,0,W,40],[146,0,W,57],[64,60,96,78],[10,88,78,100],[10,88,21,122],[64,88,78,122],[108,80,150,106],[178,108,206,128],[0,40,14,52],[220,52,W,72]];
+const SEAT=[22,100,64,118];
+function blocked(x,y){if(x<6||x>W-6||y>H-6)return true;return BLOCK.some(([a,b2,c,d])=>x>a&&x<c&&y>b2&&y<d)}
+const inSeat=(p)=>p.x>SEAT[0]&&p.x<SEAT[2]&&p.y>SEAT[1]&&p.y<SEAT[3];
+
+/* ---------- 实体 ---------- */
+const me={x:104,y:128,dir:1,moving:false,lying:false,tx:null,ty:null,body:'#fff3e0',dark:'#5a3a4a',scarf:'#e0533d',name:'你',t:0,still:0};
+const npcs=[
+  {name:'砚砚',x:190,y:74,dir:-1,body:'#9aa58a',dark:'#3d4a36',stripe:'#6f7d62',tx:null,ty:null,wait:1,t:0},
+  {name:'烁烁',x:40,y:70,dir:1,body:'#f3e6cf',dark:'#4a3a30',mask:'#c9ab92',tx:null,ty:null,wait:2,t:0}
+];
+const yarns=[{id:1,x:124,y:86,on:true}];
+let solved=0,pendingOpen=null,dialog=false,flying=null;
+const keys={};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '&&!dialog){const y=near();if(y)openYarn(y)}if(/^arrow/.test(e.key.toLowerCase())||e.key===' ')e.preventDefault()});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+cv.addEventListener('click',e=>{if(dialog)return;const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)/S,y=(e.clientY-r.top)/S;
+  const y0=yarns.find(v=>v.on&&Math.hypot(v.x-x,v.y-y)<9);
+  if(y0){pendingOpen=y0;setTarget(y0.x,y0.y+ (y0.id===1?22:10));return}
+  if(x>SEAT[0]&&x<SEAT[2]&&y>90&&y<SEAT[3]){setTarget(43,110);return}
+  setTarget(x,y)});
+function setTarget(x,y){me.tx=x;me.ty=y;me.lying=false}
+const near=()=>yarns.find(v=>v.on&&Math.hypot(v.x-me.x,v.y-me.y)<24);
+
+/* ---------- 画猫：无脚圆团 ---------- */
+function ear(x,top,col){for(let i=0;i<3;i++)R(ctx,x-i,top+i,2*i+1,1,col)}
+function drawCat(c,time){
+  const x=Math.round(c.x),d=c.dir;
+  ctx.globalAlpha=.22;disc(ctx,x,c.y+6,7,2,'#000');ctx.globalAlpha=1;
+  if(c.lying){const y=Math.round(c.y)+3;disc(ctx,x,y,10,5,c.dark);ear(x-6,y-7,c.dark);ear(x+2,y-7,c.dark);disc(ctx,x,y,9,4,c.body);
+    R(ctx,x-4,y-1,2,1,c.dark);R(ctx,x+1,y-1,2,1,c.dark);if(c.scarf)R(ctx,x-7,y+2,14,1,c.scarf);return}
+  const bob=c.moving?Math.round(Math.abs(Math.sin(time*12))*-2):Math.round(Math.sin(time*2.4)*.6);
+  const y=Math.round(c.y)+bob;
+  R(ctx,x-8*d,y+1,2,2,c.dark);R(ctx,x-9*d,y-2,2,3,c.dark);R(ctx,x-9*d+ (d>0?0:1),y-2,1,4,c.body);
+  disc(ctx,x,y,7,7,c.dark);ear(x-4,y-9,c.dark);ear(x+4,y-9,c.dark);disc(ctx,x,y,6,6,c.body);
+  R(ctx,x-4,y-7,1,1,'#f4a6b8');R(ctx,x+4,y-7,1,1,'#f4a6b8');
+  if(c.mask)disc(ctx,x+d,y,3,2,c.mask);
+  if(c.stripe){R(ctx,x-2,y-6,1,3,c.stripe);R(ctx,x,y-6,1,4,c.stripe);R(ctx,x+2,y-6,1,3,c.stripe)}
+  const blink=(time*1000%3200)<140;
+  R(ctx,x-2+d,y-1,1,blink?1:2,'#241a2e');R(ctx,x+2+d,y-1,1,blink?1:2,'#241a2e');
+  R(ctx,x-4+d,y+2,1,1,'#f4a6b8');R(ctx,x+4+d,y+2,1,1,'#f4a6b8');
+  if(c.scarf){R(ctx,x-5,y+4,11,2,c.scarf);R(ctx,x+2*d,y+6,2,2,c.scarf)}
+}
+function drawYarn(v,time){const y=Math.round(v.y+Math.sin(time*3)*1.2);
+  disc(ctx,v.x,y,4,4,'#9e2f2a');disc(ctx,v.x,y,3,3,'#e0533d');R(ctx,v.x-2,y-1,4,1,'#f28a6f');R(ctx,v.x-1,y+1,3,1,'#f28a6f');R(ctx,v.x+3,y+3,3,1,'#e0533d');
+  if(Math.floor(time*2)%2===0){R(ctx,v.x,y-12,1,4,'#ffd84a');R(ctx,v.x,y-7,1,1,'#ffd84a')}}
+
+/* ---------- HTML 标签层 ---------- */
+const tags=new Map();
+function tag(key,cls,html,x,y){let el=tags.get(key);if(!el){el=document.createElement('div');layer.appendChild(el);tags.set(key,el)}
+  el.className=cls;if(el._h!==html){el.innerHTML=html;el._h=html}el.style.left=x*S+'px';el.style.top=y*S+'px';el.style.display='';return el}
+function hide(key){const el=tags.get(key);if(el)el.style.display='none'}
+const says={};function say(key,text,ms){says[key]={text,until:performance.now()+ms}}
+
+/* ---------- 对话框 ---------- */
+function openYarn(v){dialog=true;me.tx=null;pendingOpen=null;box.style.display='block';
+  if(v.id===1){box.innerHTML=`<div class="who">🧶 毛线球 · 来自人类「工位 3 号的阿杰」</div>周五 16:50，产品说「就改一个小地方」。<br>帮我回一句既体面又有态度的话……<div class="opts">
+    <button data-r="阿杰：……行吧，周末算是保住了。">好的收到，下周一第一件事就改～</button>
+    <button data-r="阿杰：专业！产品已经开始心虚了。">「小地方」具体是哪里？我先评估下影响面。</button>
+    <button data-r="阿杰：？？？猫猫你怎么也下班了">（叼起毛线球，假装下班）</button></div>`;
+    box.querySelectorAll('button').forEach(bt=>bt.onclick=()=>{v.on=false;solved++;done(bt.dataset.r);
+      yarns.push({id:2,x:160,y:128,on:true,at:'砚砚'});say('阿杰','谢谢猫猫！',2500)})}
+  else{box.innerHTML=`<div class="who">🧶 毛线球 · 来自人类「运维小周」</div><b>@砚砚</b> 这个正则 <code>^\\w+@\\w+\\.com$</code> 为什么匹配不到 a.b@corp.com.cn？<div class="note">这颗毛线球 @ 了砚砚，只能由它来接 —— 把球传给它吧。</div><div class="opts">
+    <button id="pass">把毛线球传给砚砚</button><button id="later">先放着</button></div>`;
+    box.querySelector('#pass').onclick=()=>{v.on=false;close();flying={x:me.x,y:me.y-6,to:npcs[0],t:0}};
+    box.querySelector('#later').onclick=close}}
+function done(r){box.innerHTML=`<div class="who">✨ 毛线球解开啦</div>${r}<div class="opts"><button id="ok">继续逛逛</button></div>`;box.querySelector('#ok').onclick=close;
+  document.getElementById('count').textContent='🧶 已解开 '+solved}
+function close(){box.style.display='none';dialog=false}
+
+/* ---------- 主循环 ---------- */
+function step(c,sp,dt){let dx=0,dy=0;
+  if(c===me&&!dialog){if(keys.arrowleft||keys.a)dx--;if(keys.arrowright||keys.d)dx++;if(keys.arrowup||keys.w)dy--;if(keys.arrowdown||keys.s)dy++;if(dx||dy){me.tx=null;pendingOpen=null;me.lying=false}}
+  if(!dx&&!dy&&c.tx!=null){const ex=c.tx-c.x,ey=c.ty-c.y,l=Math.hypot(ex,ey);if(l<1.5){c.tx=null}else{dx=ex/l;dy=ey/l}}
+  const l=Math.hypot(dx,dy);c.moving=l>0;if(!l)return false;dx/=l;dy/=l;if(dx)c.dir=dx>0?1:-1;
+  const ox=c.x,oy=c.y,nx=c.x+dx*sp*dt,ny=c.y+dy*sp*dt;
+  if(!blocked(nx,c.y))c.x=nx;if(!blocked(c.x,ny))c.y=ny;
+  if(Math.abs(c.x-ox)+Math.abs(c.y-oy)<.01){c.tx=null;c.moving=false}return true}
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  step(me,55,dt);
+  if(!me.moving&&!dialog&&inSeat(me)&&!me.lying){me.lying=true;say('me','Zz… 沙发好软',2200)}
+  if(pendingOpen&&Math.hypot(pendingOpen.x-me.x,pendingOpen.y-me.y)<26&&!dialog)openYarn(pendingOpen);
+  npcs.forEach(n=>{if(n.busy)return;if(n.tx==null){n.wait-=dt;if(n.wait<=0){let x,y,k=0;do{x=20+Math.random()*200;y=44+Math.random()*100;k++}while(blocked(x,y)&&k<40);n.tx=x;n.ty=y;n.wait=1.5+Math.random()*3}}step(n,24,dt)});
+  if(flying){flying.t+=dt*1.4;const p=Math.min(1,flying.t),to=flying.to;flying.x+=(to.x-flying.x)*p*.25;flying.y+=(to.y-8-flying.y)*p*.25;
+    if(p>=1){to.busy=true;to.tx=null;say('砚砚','接到！\\w 不含「.」，改成 [\\w.]+ 就好～',3600);
+      setTimeout(()=>{to.busy=false;solved++;document.getElementById('count').textContent='🧶 已解开 '+solved;say('砚砚','已交付给小周 ✓',2400)},3600);flying=null}}
+  ctx.drawImage(bg,0,0);
+  yarns.filter(v=>v.on).forEach(v=>drawYarn(v,t));
+  [...npcs,me].sort((a,b2)=>a.y-b2.y).forEach(c=>drawCat(c,t));
+  if(flying){disc(ctx,flying.x,flying.y,3,3,'#e0533d')}
+  // 标签
+  tag('me','tag me','你',me.x,me.y-(me.lying?6:11));
+  npcs.forEach(n=>tag(n.name,'tag npc',`${n.name} <b>NPC</b>`,n.x,n.y-11));
+  tag('人','tag','人类 · 阿杰',141,76);
+  yarns.forEach(v=>{if(v.on&&v.at)tag('at'+v.id,'tag at','@'+v.at,v.x,v.y-14);else hide('at'+v.id)});
+  const nv=!dialog&&near();if(nv)tag('hint','say','按 空格 解开毛线球',me.x,me.y-18);else hide('hint');
+  const pos={me:[me.x,me.y-(nv?30:18)],'砚砚':[npcs[0].x,npcs[0].y-18],'烁烁':[npcs[1].x,npcs[1].y-18],'阿杰':[141,70]};
+  for(const k in pos){const s=says[k];if(s&&s.until>now)tag('say'+k,'say',s.text,...pos[k]);else hide('say'+k)}
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+setTimeout(()=>say('烁烁','新来的？桌上那颗毛线球还没人接哦',3200),800);
+</script>
+</body>
+</html>

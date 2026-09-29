@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D · 终端字符</title>
+<style>
+  html,body{margin:0;height:100%;background:#1c1510;color:#e8d5b5;font-family:"SF Mono",Menlo,Consolas,"PingFang SC",monospace;overflow:hidden;user-select:none}
+  .wrap{display:flex;height:100%;box-sizing:border-box;padding:16px;gap:16px}
+  .term{flex:1;min-width:0;border:1px solid #4a3a2c;border-radius:8px;display:flex;flex-direction:column;background:#211912}
+  .bar{padding:6px 12px;font-size:12px;color:#8a7560;border-bottom:1px solid #4a3a2c;display:flex;gap:6px;align-items:center}
+  .bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .mapbox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  pre{margin:0;font-size:14px;line-height:1.18;cursor:pointer;font-family:inherit}
+  .side{width:300px;flex:none}
+  #log{flex:1;padding:10px 14px;font-size:12.5px;line-height:1.7;overflow:hidden;white-space:pre-wrap}
+  .opt{display:block;color:#f2a93b;cursor:pointer}
+  .opt:hover{background:#f2a93b;color:#1c1510}
+  .dim{color:#7d6a56}.amb{color:#f2a93b}.grn{color:#9cc98a}.blu{color:#8fb8e8}.red{color:#e8806a}.pnk{color:#e89aa9}.wht{color:#fff4e0}.bold{font-weight:700}
+  .blink{animation:b 1s steps(1) infinite}@keyframes b{50%{opacity:0}}
+  .legend{padding:8px 14px;border-top:1px solid #4a3a2c;font-size:12px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="term"><div class="bar"><i style="background:#e8806a"></i><i style="background:#f2a93b"></i><i style="background:#9cc98a"></i>&nbsp; ~/cat-cafe — map</div><div class="mapbox" id="mbox"><pre id="map"></pre></div></div>
+  <div class="term side"><div class="bar">cat@cafe:~$ tail -f events.log</div><div id="log"></div>
+    <div class="legend"><span class="amb bold">@</span> 你 &nbsp;<span class="grn">Y</span> 砚砚·NPC &nbsp;<span class="blu">S</span> 烁烁·NPC<br><span class="wht">h</span> 人类 &nbsp;<span class="red">*</span> 毛线球 &nbsp;<span class="pnk">░</span> 沙发<br><span class="dim">方向键 / WASD / hjkl 移动 · 点地图寻路</span></div></div>
+</div>
+<script>
+const W=58,H=17,G=[],C=[],SOLID=[];
+for(let y=0;y<H;y++){G.push(Array(W).fill(' '));C.push(Array(W).fill(''));SOLID.push(Array(W).fill(false))}
+function put(x,y,lines,cls='dim',solid=true){lines.forEach((l,dy)=>[...l].forEach((ch,dx)=>{G[y+dy][x+dx]=ch;C[y+dy][x+dx]=cls;SOLID[y+dy][x+dx]=solid&&ch!==' '}))}
+for(let x=0;x<W;x++){put(x,0,['═']);put(x,H-1,['═'])}for(let y=0;y<H;y++){put(0,y,['║']);put(W-1,y,['║'])}
+put(0,0,['╔']);put(W-1,0,['╗']);put(0,H-1,['╚']);put(W-1,H-1,['╝']);
+put(3,1,['┌────────────┐','│ CAT  CAFE  │','│    1024    │','└────────────┘'],'amb');
+put(22,1,['┌─────────┐','│         │','│         │','└─────────┘'],'blu');
+put(39,1,['╔══════════════╗','║   COUNTER    ║','║  c[_]  c[_]  ║','╚══════════════╝'],'wht');
+put(4,6,['▲','║','║','╩'],'amb');
+put(19,8,['╭───╮','│   │','╰───╯'],'wht');put(24,9,['h'],'wht');
+put(36,11,['╭───╮','│   │','╰───╯'],'wht');put(41,12,['h'],'wht');
+put(3,12,['┌──────────┐','│','└──────────┘'],'pnk');put(14,13,['│'],'pnk');
+for(let x=4;x<14;x++){G[13][x]='░';C[13][x]='pnk'}
+put(54,5,['%'],'grn');put(2,15,['%'],'grn');put(54,15,['%'],'grn');
+const SOFA=(x,y)=>y===13&&x>=4&&x<14;
+
+const me={x:28,y:13,ch:'@',cls:'amb bold'};
+const npcs=[{x:46,y:7,ch:'Y',cls:'grn',name:'砚砚'},{x:10,y:9,ch:'S',cls:'blu',name:'烁烁'}];
+const yarns=[{x:21,y:9,on:true,id:1}];
+let lying=false,dialog=null,solved=0,path=[],t0=performance.now();
+
+const logEl=document.getElementById('log');const lines=[];
+function log(html){lines.push(html);while(lines.length>13)lines.shift();renderLog()}
+let opts='';function renderLog(){logEl.innerHTML=lines.join('\n')+(opts?'\n'+opts:'')}
+
+function free(x,y){return x>0&&y>0&&x<W-1&&y<H-1&&!SOLID[y][x]&&!npcs.some(n=>n.x===x&&n.y===y)&&!yarns.some(v=>v.on&&v.x===x&&v.y===y)}
+function move(dx,dy){if(dialog)return;const nx=me.x+dx,ny=me.y+dy;
+  const v=yarns.find(v=>v.on&&v.x===nx&&v.y===ny);if(v){open(v);return}
+  if(!free(nx,ny))return;me.x=nx;me.y=ny;
+  if(SOFA(me.x,me.y)&&!lying){lying=true;log('<span class="pnk">&gt; 你在沙发上躺平了 (zzZ)</span>')}else if(!SOFA(me.x,me.y)&&lying){lying=false;log('<span class="dim">&gt; 你伸了个懒腰，从沙发上下来</span>')}}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();const d={arrowup:[0,-1],w:[0,-1],k:[0,-1],arrowdown:[0,1],s:[0,1],j:[0,1],arrowleft:[-1,0],a:[-1,0],h:[-1,0],arrowright:[1,0],d:[1,0],l:[1,0]}[k];
+  if(d){e.preventDefault();path=[];move(...d)}if(dialog&&/^[1-3]$/.test(k))choose(+k)});
+
+/* 点击寻路 */
+const mapEl=document.getElementById('map');
+mapEl.addEventListener('click',e=>{if(dialog)return;const span=e.target.closest('[data-p]');if(!span)return;const [x,y]=span.dataset.p.split(',').map(Number);
+  const v=yarns.find(v=>v.on&&v.x===x&&v.y===y);path=bfs(x,y,!!v)});
+function bfs(tx,ty,adj){const prev=new Map([[me.x+','+me.y,null]]),q=[[me.x,me.y]];let end=null;
+  while(q.length){const [x,y]=q.shift();if(adj?Math.abs(x-tx)+Math.abs(y-ty)===1:(x===tx&&y===ty)){end=[x,y];break}
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const a=x+dx,b=y+dy,k=a+','+b;if(prev.has(k)||!free(a,b))continue;prev.set(k,[x,y]);q.push([a,b])}}
+  if(!end)return[];const out=[];let c=end;while(c){out.unshift(c);c=prev.get(c.join(','))}out.shift();if(adj)out.push([tx,ty]);return out}
+setInterval(()=>{if(path.length&&!dialog){const [x,y]=path.shift();move(x-me.x,y-me.y)}},70);
+
+/* 毛线球 */
+function open(v){dialog=v;path=[];
+  if(v.id===1){log('');log('<span class="red">┌ 🧶 yarn#1 · 来自 人类 h（后端 老郑）</span>');log('<span class="wht">│ 线上接口偶发 504，日志里全是</span>');log('<span class="wht">│ "upstream timed out"。先从哪查起？</span>');
+    opts=['<span class="opt" onclick="choose(1)">[1] 看 nginx 的 proxy_read_timeout 和上游耗时</span>','<span class="opt" onclick="choose(2)">[2] 先重启，重启解决 80% 的问题</span>','<span class="opt" onclick="choose(3)">[3] 在群里问「是不是网络又抖了」</span>'].join('\n')}
+  else{log('');log('<span class="red">┌ 🧶 yarn#2 · 来自 人类 h（架构 小于）</span>');log('<span class="wht">│ <span class="blu">@烁烁</span> 帮我把这张架构图画得好看点</span>');log('<span class="dim">│ 这颗球 @ 了烁烁，需要传给它</span>');
+    opts=['<span class="opt" onclick="choose(1)">[1] pass --to 烁烁</span>','<span class="opt" onclick="choose(2)">[2] 先放着</span>'].join('\n')}
+  renderLog()}
+function choose(n){const v=dialog;if(!v)return;opts='';
+  if(v.id===1){if(n>3)return;log('<span class="amb">&gt; '+['查超时配置 + 上游耗时','重启大法','问问网络'][n-1]+'</span>');
+    log('<span class="wht">'+['老郑：上游有条慢 SQL，破案了！','老郑：……好了，但半小时后又 504 了','老郑：网络组回了一个「？」'][n-1]+'</span>');
+    log('<span class="grn">✔ yarn#1 已解开并交付</span>');v.on=false;solved++;yarns.push({x:38,y:12,on:true,id:2});log('<span class="dim">&gt; 小于那桌冒出了一颗新毛线球 <span class="red">*</span></span>')}
+  else{if(n===2){log('<span class="dim">&gt; 你把毛线球放回了桌上</span>');dialog=null;return}
+    log('<span class="amb">&gt; pass --to 烁烁</span>');v.on=false;const s=npcs[1];path=[];s.goal=[v.x,v.y+2];
+    log('<span class="blu">烁烁：交给我！给你配个莫兰迪色～</span>');setTimeout(()=>{log('<span class="grn">✔ yarn#2 已由 烁烁 交付</span>');solved++;s.goal=null},4200)}
+  dialog=null;renderLog()}
+
+/* NPC 漫步 */
+setInterval(()=>npcs.forEach(n=>{let dx=0,dy=0;
+  if(n.goal){dx=Math.sign(n.goal[0]-n.x);dy=dx?0:Math.sign(n.goal[1]-n.y)}else if(Math.random()<.5){[dx,dy]=[[1,0],[-1,0],[0,1],[0,-1]][Math.floor(Math.random()*4)]}
+  if((dx||dy)&&free(n.x+dx,n.y+dy)&&!(me.x===n.x+dx&&me.y===n.y+dy)){n.x+=dx;n.y+=dy}else if(n.goal&&dx&&free(n.x,n.y+Math.sign(n.goal[1]-n.y))){n.y+=Math.sign(n.goal[1]-n.y)}}),420);
+
+/* 渲染 */
+const esc=c=>c==='<'?'&lt;':c==='>'?'&gt;':c==='&'?'&amp;':c;
+function render(){const t=(performance.now()-t0)/1000;let out='';
+  for(let y=0;y<H;y++){for(let x=0;x<W;x++){let ch=G[y][x],cls=C[y][x];
+      if(y>=2&&y<=3&&x>=23&&x<=31)ch=((x+y+Math.floor(t*6))%4===0)?'\'':' ',cls='blu';
+      const v=yarns.find(v=>v.on&&v.x===x&&v.y===y);if(v){ch='*';cls='red bold blink'}
+      const n=npcs.find(n=>n.x===x&&n.y===y);if(n){ch=n.ch;cls=n.cls+' bold'}
+      if(me.x===x&&me.y===y){ch=lying?'z':'@';cls='amb bold'}
+      out+=`<span data-p="${x},${y}"${cls?` class="${cls}"`:''}>${esc(ch)}</span>`}
+    out+='\n'}
+  out+=`\n<span class="dim"> 🧶 solved: ${solved}   online: you + 2 NPC   ${lying?'status: 躺平中':'status: 巡店中'}</span>`;
+  mapEl.innerHTML=out}
+setInterval(render,100);render();
+function fitMap(){const b=document.getElementById('mbox'),w=b.clientWidth-20,h=b.clientHeight-16;mapEl.style.fontSize=Math.max(8,Math.min(w/(W*.61),h/((H+2)*1.18)))+'px'}
+fitMap();addEventListener('resize',fitMap);
+
+['<span class="dim">[boot] cat-cafe v10.24 starting…</span>','<span class="dim">[boot] loading 2 NPC cats … ok</span>','<span class="dim">[boot] brewing coffee … ok</span>','<span class="grn">[ ok ] 你已作为一只猫登录</span>','<span class="amb">&gt; 桌上有一颗毛线球 <span class="red">*</span>，走过去撞它一下试试</span>'].forEach((l,i)=>setTimeout(()=>log(l),200+i*260));
+</script>
+</body>
+</html>

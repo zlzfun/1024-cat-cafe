@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · 等距小屋</title>
+<style>
+  html,body{margin:0;height:100%;background:#f3efe8;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#3a3f47;overflow:hidden;user-select:none}
+  svg{width:100%;height:100%;display:block}
+  .tile{cursor:pointer;transition:fill .15s}
+  .tile:hover{fill:#fde6c8}
+  .click{cursor:pointer}
+  .pill{font-size:12px}
+  .hud{position:absolute;left:16px;top:14px;display:flex;gap:8px;font-size:12px}
+  .hud span{background:#fff;border-radius:999px;padding:5px 12px;box-shadow:0 2px 8px #0001}
+  #card{position:absolute;right:18px;top:50%;transform:translateY(-50%) translateX(20px);width:300px;background:#fff;border-radius:18px;box-shadow:0 12px 40px #3a3f4722;padding:18px 20px;opacity:0;pointer-events:none;transition:.25s}
+  #card.on{opacity:1;pointer-events:auto;transform:translateY(-50%)}
+  #card .from{font-size:12px;color:#8a8f98;display:flex;align-items:center;gap:6px}
+  #card .from i{width:8px;height:8px;border-radius:50%;background:#f28a6f;display:inline-block}
+  #card .q{font-size:15px;line-height:1.7;margin:10px 0 12px}
+  #card .blank{display:inline-block;min-width:92px;border-bottom:2px solid #f28a6f;text-align:center;font-family:ui-monospace,Menlo,monospace;color:#f28a6f}
+  #card code{font-family:ui-monospace,Menlo,monospace;background:#f3efe8;padding:1px 6px;border-radius:6px}
+  #card .chips{display:flex;flex-wrap:wrap;gap:8px}
+  #card button{font:inherit;font-size:13px;border:0;border-radius:999px;padding:7px 14px;background:#eef6f2;color:#2f6b55;cursor:pointer}
+  #card button:hover{background:#d4ece1}
+  #card .fb{font-size:13px;color:#6b7078;margin-top:12px;line-height:1.6;min-height:1em}
+  .tip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:12px;color:#8a8f98}
+</style>
+</head>
+<body>
+<svg id="svg" viewBox="90 10 620 420"></svg>
+<div class="hud"><span id="count">🧶 已解开 0</span><span>在线 · 你 + 2 只 NPC 猫</span></div>
+<div id="card"></div>
+<div class="tip">点地板走过去 · 点沙发躺一会儿 · 点桌上的毛线球接活</div>
+<script>
+const NS='http://www.w3.org/2000/svg',svg=document.getElementById('svg');
+const N=8,OX=400,OY=130,TW=34,TH=17;
+const iso=(i,j,h=0)=>[OX+(i-j)*TW,OY+(i+j)*TH-h];
+const P=a=>a.map(p=>p.join(',')).join(' ');
+function el(tag,attr,parent=svg){const e=document.createElementNS(NS,tag);for(const k in attr)e.setAttribute(k,attr[k]);parent.appendChild(e);return e}
+function poly(points,fill,parent,extra={}){return el('polygon',{points:P(points),fill,...extra},parent)}
+
+/* 墙与地板 */
+const WH=150;
+poly([iso(0,0),iso(0,N),iso(0,N,WH),iso(0,0,WH)],'#cfe3dc');
+poly([iso(0,0),iso(N,0),iso(N,0,WH),iso(0,0,WH)],'#e2efe9');
+poly([iso(0,0,WH),iso(N,0,WH),iso(N,0,WH+8),iso(0,0,WH+8)],'#b9d4ca');
+poly([iso(0,0,WH),iso(0,N,WH),iso(0,N,WH+8),iso(0,0,WH+8)],'#a8c7bb');
+// 右墙窗
+poly([iso(3.4,0,125),iso(5.8,0,125),iso(5.8,0,62),iso(3.4,0,62)],'#fff');
+poly([iso(3.6,0,119),iso(5.6,0,119),iso(5.6,0,68),iso(3.6,0,68)],'#bfe3f2');
+poly([iso(4.55,0,119),iso(4.65,0,119),iso(4.65,0,68),iso(4.55,0,68)],'#fff');
+// 左墙招牌
+poly([iso(0,1.2,125),iso(0,3.6,125),iso(0,3.6,80),iso(0,1.2,80)],'#3a3f47');
+{const [x,y]=iso(0,2.4,102);const g=el('g',{transform:`translate(${x},${y}) skewY(-26.6)`});
+ const t=el('text',{x:0,y:0,'font-size':15,'font-weight':700,fill:'#fff','text-anchor':'middle'},g);t.textContent='CAT CAFE';
+ const t2=el('text',{x:0,y:18,'font-size':13,fill:'#f7b267','text-anchor':'middle'},g);t2.textContent='· 1024 ·'}
+
+const floor=el('g',{});
+const cells=[];
+for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+  const t=poly([iso(i,j),iso(i+1,j),iso(i+1,j+1),iso(i,j+1)],(i+j)%2?'#fbeee0':'#f6e2cf',floor,{class:'tile',stroke:'#efd6bf','stroke-width':.6});
+  t.onclick=()=>goto(i,j);cells.push(t)}
+poly([iso(0.2,3.6),iso(2.6,3.6),iso(2.6,7.4),iso(0.2,7.4)],'#f4b6a6',floor,{opacity:.55,'pointer-events':'none'});
+
+/* 家具：box(i,j,w,d,h,top,left,right,z=底高) */
+const world=el('g',{});
+const items=[];
+function box(g,i,j,w,d,h,top,lf,rt,z=0){
+  poly([iso(i,j+d,z),iso(i+w,j+d,z),iso(i+w,j+d,z+h),iso(i,j+d,z+h)],lf,g);
+  poly([iso(i+w,j,z),iso(i+w,j+d,z),iso(i+w,j+d,z+h),iso(i+w,j,z+h)],rt,g);
+  poly([iso(i,j,z+h),iso(i+w,j,z+h),iso(i+w,j+d,z+h),iso(i,j+d,z+h)],top,g)}
+function item(key,draw){const g=el('g',{},world);draw(g);items.push({g,key});return g}
+item(1.2,g=>{box(g,1,0.15,4,0.9,44,'#f1dcc0','#b98a62','#a57a55');box(g,3.8,0.3,0.8,0.6,34,'#dfe4ea','#aab3bd','#98a1ab',44);box(g,1.3,0.3,1.2,0.6,18,'#e6f6fb','#bfe3ee','#aad6e3',44)});
+item(6.8,g=>{box(g,6.3,0.3,1.2,1.2,10,'#c99a76','#a87a58','#946a4c');box(g,6.75,0.75,0.3,0.3,110,'#e8cfa8','#d7b98f','#c7a87e',10);box(g,6.2,0.2,1.2,1.2,8,'#c99a76','#a87a58','#946a4c',60);box(g,6.2,0.2,1.3,1.3,8,'#f4b6a6','#d98f7f','#c97f70',112)});
+const sofa=item(5.5,g=>{box(g,0.2,4,1.3,3,20,'#f28a6f','#d9705a','#c9624d');box(g,0.15,4,0.4,3,56,'#f39a82','#d9705a','#c9624d');box(g,0.2,3.8,1.4,0.35,34,'#e57b61','#c9624d','#bb5642');box(g,0.2,6.95,1.4,0.35,34,'#e57b61','#c9624d','#bb5642')});
+sofa.classList.add('click');sofa.onclick=()=>goto(1.8,5.4,'sofa');
+const table=item(8.5,g=>{const [x,y]=iso(4.5,4.5);el('rect',{x:x-3,y:y-36,width:6,height:36,fill:'#8a6a55'},g);el('ellipse',{cx:x,cy:y-36,rx:36,ry:18,fill:'#fff'},g);el('ellipse',{cx:x,cy:y-38,rx:36,ry:18,fill:'#f7f3ee'},g);
+  el('rect',{x:x+6,y:y-54,width:22,height:14,rx:2,fill:'#5d6570'},g);el('rect',{x:x+8,y:y-52,width:18,height:10,fill:'#bfe3f2'},g)});
+const human=item(10,g=>{const [x,y]=iso(5.5,4.6);el('ellipse',{cx:x,cy:y,rx:14,ry:6,fill:'#0001'},g);el('rect',{x:x-12,y:y-58,width:24,height:54,rx:12,fill:'#6c8ebf'},g);el('circle',{cx:x,cy:y-70,r:13,fill:'#f2c9a0'},g);el('path',{d:`M${x-13} ${y-72}a13 13 0 0 1 26 0z`,fill:'#3a3f47'},g);
+  const t=el('g',{transform:`translate(${x+4},${y-104})`},g);el('rect',{x:-30,y:-10,width:60,height:20,rx:10,fill:'#3a3f47'},t);const s=el('text',{y:4,'font-size':11,fill:'#fff','text-anchor':'middle'},t);s.textContent='人类 · 小林'});
+item(14,g=>{const [x,y]=iso(7.5,7.4);el('path',{d:`M${x-12} ${y-22}h24l-4 22h-16z`,fill:'#e8a07a'},g);el('circle',{cx:x,cy:y-40,r:18,fill:'#8fc1a2'},g);el('circle',{cx:x-9,cy:y-50,r:10,fill:'#a9d3b8'},g)});
+// 吧台后的店长
+const barista={i:2.9,j:-0.1,col:'#b9a3d6',dark:'#6d5a8a',name:'宪宪',tag:'店长 · NPC',static:true};
+
+/* 猫：无脚圆团 */
+function makeCat(o){const g=el('g',{class:'cat'},world);const s=el('g',{},g);
+  el('ellipse',{cx:0,cy:2,rx:22,ry:7,fill:'#0000001a'},s);
+  const body=el('g',{},s);
+  el('path',{d:'M18 -6 q16 -4 14 -22',stroke:o.dark,'stroke-width':6,fill:'none','stroke-linecap':'round',class:'tail'},body);
+  el('path',{d:'M-17 -30 L-13 -48 L-2 -36 Z M17 -30 L13 -48 L2 -36 Z',fill:o.col,stroke:o.dark,'stroke-width':2,'stroke-linejoin':'round'},body);
+  el('ellipse',{cx:0,cy:-17,rx:22,ry:19,fill:o.col,stroke:o.dark,'stroke-width':2},body);
+  if(o.mask)el('ellipse',{cx:0,cy:-16,rx:9,ry:7,fill:o.mask},body);
+  const eyes=el('g',{},body);el('circle',{cx:-7,cy:-19,r:2.4,fill:'#2b2f36'},eyes);el('circle',{cx:7,cy:-19,r:2.4,fill:'#2b2f36'},eyes);
+  el('circle',{cx:-12,cy:-12,r:3,fill:'#f4a6b8',opacity:.7},body);el('circle',{cx:12,cy:-12,r:3,fill:'#f4a6b8',opacity:.7},body);
+  if(o.scarf)el('path',{d:'M-17 -6 q17 7 34 0 l-2 5 q-15 6 -30 0z',fill:o.scarf},body);
+  const tg=el('g',{transform:'translate(0,-62)'},g);const tw=o.tag.length*12+16;
+  el('rect',{x:-tw/2,y:-10,width:tw,height:20,rx:10,fill:o.me?'#f28a6f':'#fff',stroke:o.me?'none':'#e2e2e2'},tg);
+  const tx=el('text',{y:4,'font-size':11,fill:o.me?'#fff':'#5d6570','text-anchor':'middle'},tg);tx.textContent=o.tag;
+  const bub=el('g',{transform:'translate(0,-88)',opacity:0},g);const br=el('rect',{x:-60,y:-14,width:120,height:26,rx:13,fill:'#fff',stroke:'#e6e0d8'},bub);const bt=el('text',{y:4,'font-size':12,'text-anchor':'middle',fill:'#3a3f47'},bub);
+  return Object.assign(o,{g,body,eyes,bub,bt,br})}
+function say(c,text,ms=2600){const w=Math.max(60,text.length*12.5+20);c.br.setAttribute('x',-w/2);c.br.setAttribute('width',w);c.bt.textContent=text;c.bub.setAttribute('opacity',1);clearTimeout(c._st);c._st=setTimeout(()=>c.bub.setAttribute('opacity',0),ms)}
+
+const me=makeCat({i:3.5,j:6.5,col:'#fffaf2',dark:'#6b5a52',scarf:'#f28a6f',tag:'你',me:true,path:[]});
+const npcs=[makeCat({i:6.5,j:3.5,col:'#e6c97a',dark:'#8a6d2a',tag:'金哥 · NPC',path:[],wait:2}),makeCat({i:barista.i,j:barista.j+1.3,col:barista.col,dark:barista.dark,tag:barista.tag,static:true,path:[]})];
+
+/* 网格寻路 */
+const blocked=new Set();const B=(i,j)=>blocked.add(i+','+j);
+for(let i=1;i<5;i++)B(i,0);B(6,0);B(7,0);B(6,1);B(7,1);for(let j=4;j<7;j++)B(0,j);B(4,4);B(5,4);B(7,7);
+function bfs(si,sj,ti,tj){const key=(i,j)=>i+','+j,prev=new Map([[key(si,sj),null]]),q=[[si,sj]];
+  while(q.length){const [i,j]=q.shift();if(i===ti&&j===tj)break;for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const a=i+di,c=j+dj,k=key(a,c);if(a<0||c<0||a>=N||c>=N||blocked.has(k)||prev.has(k))continue;prev.set(k,[i,j]);q.push([a,c])}}
+  if(!prev.has(key(ti,tj)))return[];const path=[];let cur=[ti,tj];while(cur){path.unshift(cur);cur=prev.get(key(...cur))}return path.slice(1).map(([i,j])=>[i+.5,j+.5])}
+let arrive=null;
+function goto(i,j,what){if(dialogOn)return;me.lying=false;const ti=Math.floor(i),tj=Math.floor(j);if(blocked.has(ti+','+tj))return;
+  me.path=bfs(Math.floor(me.i),Math.floor(me.j),ti,tj);arrive=what||null;if(!me.path.length&&what)onArrive()}
+function onArrive(){if(arrive==='sofa'){me.i=0.9;me.j=5.5;me.lying=true;say(me,'呼噜呼噜……')}if(arrive==='yarn')openCard();arrive=null}
+
+/* 毛线球 */
+const yarnG=el('g',{class:'click'},world);{const [x,y]=iso(4.5,4.5,56);yarnG.setAttribute('transform',`translate(${x-28},${y})`);
+  el('circle',{r:11,fill:'#f28a6f'},yarnG);el('path',{d:'M-9 -3q9 -6 18 4M-8 4q8 -5 16 2M-3 -10q6 8 3 20',stroke:'#fff',fill:'none','stroke-width':1.6,opacity:.8},yarnG);
+  el('path',{d:'M9 5q12 4 16 16',stroke:'#f28a6f','stroke-width':2,fill:'none'},yarnG);
+  const r=el('circle',{r:16,fill:'none',stroke:'#f28a6f','stroke-width':2,opacity:.5},yarnG);el('animate',{attributeName:'r',values:'12;22',dur:'1.4s',repeatCount:'indefinite'},r);el('animate',{attributeName:'opacity',values:'.6;0',dur:'1.4s',repeatCount:'indefinite'},r)}
+yarnG.onclick=()=>goto(3.5,4.5,'yarn');
+items.push({g:yarnG,key:9});
+
+/* 卡片 */
+const card=document.getElementById('card');let dialogOn=false,solved=0;
+function openCard(){dialogOn=true;card.classList.add('on');
+  card.innerHTML=`<div class="from"><i></i>毛线球 · 人类「小林」</div><div class="q">救命，我把改动提交到 main 上了，还没 push。<br>想撤回提交但保留代码，应该：<br><code>git reset <span class="blank" id="bl">____</span> HEAD~1</code></div>
+  <div class="chips"><button data-a="--soft" data-f="小林：撤回了，代码都还在！猫猫是神。">--soft</button><button data-a="--hard" data-f="小林：……我的代码呢？？（还好 reflog 能找回，吓死）">--hard</button><button data-a="--please" data-f="小林：git 表示它不吃这一套 😂 不过思路我懂了">--please</button></div><div class="fb" id="fb"></div>`;
+  card.querySelectorAll('button').forEach(b=>b.onclick=()=>{document.getElementById('bl').textContent=b.dataset.a;document.getElementById('fb').innerHTML=b.dataset.f+'<br><br>✨ 毛线球解开了！';
+    card.querySelectorAll('button').forEach(x=>x.disabled=true);yarnG.style.display='none';solved++;document.getElementById('count').textContent='🧶 已解开 '+solved;
+    setTimeout(()=>{card.classList.remove('on');dialogOn=false;say(npcs[1],'干得漂亮，新人！',2600)},2200)})}
+
+/* 循环 */
+function place(c,t){const [x,y]=iso(c.i,c.j);const f=c.face||1;c.g.setAttribute('transform',`translate(${x},${y})`);
+  const bob=c.moving?-Math.abs(Math.sin(t*10))*5:Math.sin(t*2)*1;
+  c.body.setAttribute('transform',c.lying?'translate(0,6) scale(1.25,.62)':`translate(0,${bob}) scale(${f},1)`);
+  const blink=(t*1000%3400)<130||c.lying;c.eyes.setAttribute('transform',blink?'translate(0,-19) scale(1,.15) translate(0,19)':'')}
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  for(const c of [me,...npcs]){if(c.path.length){const [ti,tj]=c.path[0],di=ti-c.i,dj=tj-c.j,l=Math.hypot(di,dj),sp=(c===me?3.2:1.4)*dt;c.moving=true;
+      const sx=(di-dj);if(Math.abs(sx)>.01)c.face=sx>0?1:-1;
+      if(l<=sp){c.i=ti;c.j=tj;c.path.shift();if(!c.path.length){c.moving=false;if(c===me)onArrive()}}else{c.i+=di/l*sp;c.j+=dj/l*sp}}
+    else{c.moving=false;if(c!==me&&!c.static){c.wait-=dt;if(c.wait<=0){let a,b,k=0;do{a=Math.floor(Math.random()*N);b=Math.floor(Math.random()*N);k++}while(blocked.has(a+','+b)&&k<30);c.path=bfs(Math.floor(c.i),Math.floor(c.j),a,b);c.wait=2+Math.random()*3}}}
+    place(c,t);c.key=c.i+c.j+.4}
+  const all=[...items,me,...npcs].sort((a,b)=>a.key-b.key);all.forEach(o=>world.appendChild(o.g));
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+setTimeout(()=>say(npcs[1],'欢迎！小林那桌有颗毛线球～',3200),700);
+</script>
+</body>
+</html>

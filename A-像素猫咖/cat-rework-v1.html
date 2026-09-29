@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>猫模型再审视</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:19px;margin:48px 0 4px;line-height:1.4}
+  h3{font-size:15px;margin:0;line-height:1.4}
+  p{margin:0}
+  .lead,.desc{color:var(--sub)}
+  .desc{font-size:13px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:flex-end}
+  .cell{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px 6px;text-align:center}
+  .cell b{color:var(--ink);font-weight:600;font-size:13px}
+  .cell .tag{font-size:11px;color:var(--acc)}
+  .cell.old{opacity:.72}
+  .cell.old .tag{color:var(--sub)}
+  .pts{margin:14px 0 0;padding-left:18px;color:var(--sub);font-size:13px}
+  .pts li{margin:2px 0}
+  .pts b{color:var(--ink)}
+  .item{display:grid;grid-template-columns:250px 1fr;gap:20px;padding:18px 0;border-top:1px solid var(--line)}
+  .item:first-of-type{border-top:0}
+  .item .desc{margin-top:4px}
+  .item .row{margin-top:0}
+  .arrow{align-self:center;color:var(--sub);font-size:18px;padding:0 2px}
+  table{border-collapse:collapse;margin-top:14px;background:var(--card);border:1px solid var(--line)}
+  th,td{padding:6px 12px;border-bottom:1px solid var(--line);text-align:center;font-size:12px;color:var(--sub);font-weight:normal;vertical-align:middle}
+  th{color:var(--ink)}
+  td.n{text-align:left;color:var(--ink);white-space:nowrap}
+  td.t{text-align:left;max-width:260px}
+  .strip{margin-top:14px;border-radius:4px;overflow:hidden;width:max-content;max-width:100%}
+  .spec{margin-top:14px;font-size:13px;color:var(--sub)}
+  .spec code{font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+  @media (max-width:820px){.item{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：猫模型再审视 v2 草案</h1>
+  <p class="lead">回应这次提的四点，外加几个新点子。所有新形态都叠加在已定稿的 V3 端坐猫和 3/4 转头上，定稿文件 <code>cat-sprites.js</code> 没动；新内容在 <code>cat-v2-draft.js</code>，你挑中的再并进去。</p>
+  <ul class="pts">
+    <li><b>侧身只有 80 分</b> → 一、换了身体造型：圆屁股、臀部比肩高、问号尾巴、带小脚掌的腿；按比例给了三个方向。</li>
+    <li><b>动作违和、手太长</b> → 二、统一了抬爪的画法：抬起的那条腿从身下去掉，爪子是短粗的圆"手套"，直接并进胸口；舔爪洗脸加上了闭眼、伸舌、低头看爪。</li>
+    <li><b>表情</b> → 三、做成可以叠加在任何正脸姿态上的"表情贴片"，一共 18 种，并给每只猫配了一套默认表情和小习惯。</li>
+    <li><b>趴和睡要脸贴地</b> → 四、改成头朝镜头、下巴搁在前爪上，身体往后方延伸；睡着时耳朵放松，有鼻涕泡和呼吸起伏。</li>
+  </ul>
+
+  <h2>一、侧身再探索</h2>
+  <p class="desc">头都是已定的 3/4 转头（近侧耳朵加回了粉色）。改动集中在身体：屁股圆、臀部比肩高、大腿有一道分界线、尾巴是问号形并且尾尖左右摆、腿带朝前的小脚掌、胸口是白的。A / B / C 只差比例。</p>
+  <div class="row" id="side"></div>
+  <p class="desc" style="margin-top:14px">在地板上走一走：从上到下依次是当前 S2、A 标准、B 长腿、C 短身。</p>
+  <div class="strip"><canvas id="floor"></canvas></div>
+  <table id="sideBreeds"></table>
+
+  <h2>二、动作重做</h2>
+  <p class="desc">左边半透明的是现在的版本，右边是新版本。</p>
+  <div id="acts"></div>
+
+  <h2>三、表情</h2>
+  <p class="desc">表情是贴在脸上的一层：换眼睛、嘴、腮红，再加一点符号（汗滴、青筋、眼泪）。正脸和 3/4 转头各有一套坐标，所以趴着、抱球、走路、伸懒腰时都能换表情。</p>
+  <div class="row" id="faces"></div>
+  <p class="desc" style="margin-top:18px">叠在其他姿态上：</p>
+  <div class="row" id="combos"></div>
+  <p class="desc" style="margin-top:18px">每只猫一套默认表情和小习惯（我先按品种性格拟的，可以改）：</p>
+  <table id="persona"></table>
+
+  <h2>四、脸贴地的趴与睡</h2>
+  <p class="desc">头朝镜头，下巴搁在两只前爪上；身体往右后方延伸，所以耳朵的轮廓始终衬在背景上，不会被背挡住。向左时整张图水平翻转。</p>
+  <div class="row" id="lie"></div>
+  <div class="row" id="sleepAll"></div>
+
+  <h2>五、新点子（可选）</h2>
+  <p class="desc">每个都对应一个玩法里的用途，觉得多余可以直接不要。</p>
+  <div class="row" id="ideas"></div>
+
+  <p class="spec">规格：正脸姿态沿用 V3 的锚点（头部中轴脚底，<code>cx = 9.5</code>）；侧身 A / B 的 <code>cx = 16</code>，C 的 <code>cx = 14</code>；趴姿的头和端坐时同一位置，切换时头不跳。表情接口：<code>face(网格, 头x, 头y, 表情名)</code>，转头用 <code>faceT</code>。</p>
+</main>
+<script src="cat-sprites-v1.js"></script>
+<script src="cat-v2-draft.js"></script>
+<script>
+const mk=(parent,w,h,s)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.style.width=w*s+'px';c.style.height=h*s+'px';parent.appendChild(c);return c};
+const blinkAt=(t,o=0)=>((t+o)*1000%3000)<150;
+const F=Math.floor;
+/* 所有形态：返回 {G, blink}；绘制时按网格宽度居中、脚底贴底 */
+const A={
+  s2:(t,tf,o)=>({G:sideWalk(F(t*8)+o,tf)}),
+  sideA:(t,tf,o)=>({G:walkW(SIDE_A,F(t*8)+o,tf),blink:blinkAt(t,o)}),
+  sideB:(t,tf,o)=>({G:walkW(SIDE_B,F(t*8)+o,tf),blink:blinkAt(t,o)}),
+  sideC:(t,tf,o)=>({G:walkW(SIDE_C,F(t*8)+o,tf),blink:blinkAt(t,o)}),
+  oldGroom:t=>({G:st_groom(F(t*4)%2)}), groom:(t,tf)=>({G:groom2(GROOM_SEQ[F(t*5)%GROOM_SEQ.length],tf)}),
+  oldSwing:t=>({G:p_swing(t)}), swing:t=>({G:swing2(t)}),
+  oldPaw:t=>({G:p_paw(t)}), pawBat:t=>({G:pawBat(t)}),
+  oldBelly:t=>({G:p_belly(F(t*4)%2)}), kick:t=>({G:kickBall(F(t*4)%2)}), belly:t=>({G:belly3(F(t*4)%2)}),
+  oldTangle:t=>({G:p_tangle(t)}), cocoon:t=>({G:cocoon(t)}), wrapped:t=>({G:wrapped(t)}),
+  oldLoaf:(t,tf,o=0)=>({G:st_loaf(tf),blink:blinkAt(t,o)}), lie:(t,tf,o=0)=>({G:lieDown({expr:'lookUp',tail:tf}),blink:blinkAt(t,o)}),
+  oldSleep:t=>({G:st_sleep(F(t*1.2)%2)}), sleep:(t,tf,o=0)=>({G:lieDown({expr:'sleepSnug',ears:1,bubble:F((t+o)*1.6)%4,breathe:F((t+o)*.9)%2,zz:F((t+o)*1.2)%2,tail:tf})}),
+  slow:(t,tf)=>({G:slowBlink(t,tf)}), maneki:(t,tf)=>({G:maneki(F(t*3)%2,tf)}), knead:(t,tf)=>({G:knead(F(t*2.5)%2,tf)}),
+  stretch:t=>({G:stretchCat(F(t*.8)%2)}), pounce:t=>({G:pounce(POUNCE_SEQ[F(t*5.5)%POUNCE_SEQ.length])}),
+};
+const cells=[];   // {c, W, H, f:(t,tf)=>P, b}
+function cell(host,{W,H,s=3,f,b=0,tag,name,note,old}){const d=document.createElement('div');d.className='cell'+(old?' old':'');const c=mk(d,W,H,s);
+  d.insertAdjacentHTML('beforeend',(tag?`<span class="tag">${tag}</span>`:'')+(name?`<b>${name}</b>`:'')+(note?`<span>${note}</span>`:''));host.appendChild(d);cells.push({c,W,H,f,b});return d}
+function drawCell({c,W,H,f,b},t,tf){const x=c.getContext('2d');x.clearRect(0,0,W,H);const P=f(t,tf),G=P.G,w=G[0].length;
+  drawF(x,G,BREEDS[b],F((W-w)/2)+9.5,H,{cx:9.5,blink:P.blink,dy:P.dy||0})}
+
+/* 一、侧身 */
+const S=document.getElementById('side');
+[['s2','当前 S2','对照',1],['sideA','A 标准','腿 3 格'],['sideB','B 长腿','腿 5 格、步幅大'],['sideC','C 短身','身体短 4 格，像团子']].forEach(([k,n,note,old])=>
+  cell(S,{W:32,H:24,s:4,f:(t,tf)=>A[k](t,tf,0),name:n,note,old,tag:old?'现在':'新'}));
+const sb=document.getElementById('sideBreeds');sb.innerHTML='<tr><th></th><th>当前 S2</th><th>A 标准</th><th>B 长腿</th><th>C 短身</th></tr>';
+BREEDS.forEach((b,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="n">${b.name}</td>`;sb.appendChild(tr);
+  ['s2','sideA','sideB','sideC'].forEach(k=>{const td=document.createElement('td');tr.appendChild(td);const c=mk(td,32,24,2.5);cells.push({c,W:32,H:24,f:(t,tf)=>A[k](t+i*.13,(tf+i)%2,i),b:i})})});
+// 地板上走
+const FW=400,FH=96,fl=document.getElementById('floor');fl.width=FW;fl.height=FH;fl.style.width=FW*2.5+'px';fl.style.height=FH*2.5+'px';
+const floorBg=document.createElement('canvas');floorBg.width=FW;floorBg.height=FH;{const c=floorBg.getContext('2d'),R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  for(let r=0,y=0;y<FH;y+=6,r++){R(0,y,FW,6,r%2?'#c98d5c':'#c28553');R(0,y+5,FW,1,'#a86e44');for(let x=(r*17)%29;x<FW;x+=29)R(x,y,1,5,'#a86e44')}}
+const walkers=[['s2',0],['sideA',0],['sideB',0],['sideC',0]].map(([k,b],i)=>({k,b,x:40+i*70,dir:i%2?-1:1,y:26+i*20,sp:26}));
+
+/* 二、动作 */
+const ACTS=[
+  {n:'洗脸 → 舔爪洗脸',d:'抬起的那条前腿从身下去掉，爪子是短粗的圆"手套"，只露两三格前臂。动作循环：伸舌舔、收舌、低头看爪子、爪子贴着脸抹（那一侧耳朵倒下），眼睛和嘴都在动。',
+    old:['oldGroom',24,24],new:[['groom','舔爪洗脸',24,24]]},
+  {n:'坐着拍吊球 → 眼睛追球',d:'球挂在脸旁边荡，眼珠一直跟着球左右转；球荡近了才抬爪，爪子从胸口斜着伸出去、露出粉色肉垫，不再是一根长棍。',
+    old:['oldSwing',30,32],new:[['swing','眼睛追球 + 拍',30,28]]},
+  {n:'趴着拨球 → 下巴贴地拨球',d:'用新的趴姿：下巴贴地、眼睛往下盯着球，爪子往前一伸把球拨出去，球再滚回来。',
+    old:['oldPaw',34,20],new:[['pawBat','下巴贴地拨球',30,24]]},
+  {n:'四脚朝天蹬球 → 两个方向',d:'A 侧躺抱球蹬：趴着把球抱在身前，前爪按住、后爪蹬，最容易看懂。B 翻肚皮：头侧过来朝镜头，肚皮朝上，四只爪子朝天抱着球，爪心的粉色肉垫都露出来。',
+    old:['oldBelly',34,22],new:[['kick','A 侧躺抱球蹬',30,21],['belly','B 翻肚皮',34,20]]},
+  {n:'被毛线缠住 → 两个方向',d:'A 毛线茧：整个身子裹成一团毛线，只露出头和尾巴尖，晕乎乎地左右晃，一眼就懂。B 线绕在身上：几圈线顺着身体的弧度绕，耳朵根也挂着线，线头拖到地上的毛线团，更写实。',
+    old:['oldTangle',28,24],new:[['cocoon','A 毛线茧',30,24],['wrapped','B 线绕在身上',30,24]]},
+];
+const AH=document.getElementById('acts');
+ACTS.forEach(a=>{const it=document.createElement('div');it.className='item';it.innerHTML=`<div><h3>${a.n}</h3><p class="desc">${a.d}</p></div><div class="row"></div>`;AH.appendChild(it);
+  const r=it.querySelector('.row');cell(r,{W:a.old[1],H:a.old[2],s:4,f:A[a.old[0]],tag:'现在',old:1});r.insertAdjacentHTML('beforeend','<span class="arrow">→</span>');
+  a.new.forEach(([k,n,W,H])=>cell(r,{W,H,s:4,f:A[k],tag:'新',name:n}))});
+
+/* 三、表情 */
+const FN={normal:'正常',happy:'开心',content:'满足',sleepy:'犯困',curious:'好奇',surprise:'惊讶',sparkle:'星星眼',love:'爱心眼',angry:'生气',meh:'无语',
+  shy:'害羞',wink:'眨眼',cry:'哭',dizzy:'晕',meow:'喵',smug:'得意',laugh:'大笑',blep:'吐舌'};
+const FH_=document.getElementById('faces');
+Object.keys(FN).forEach((k,i)=>cell(FH_,{W:22,H:22,s:3,f:(t,tf)=>({G:sitFace(k,tf),blink:blinkAt(t,i*.3)}),name:FN[k]}));
+const CO=document.getElementById('combos');
+[['趴着 · 爱心眼',30,17,(t,tf)=>({G:lieDown({expr:'love',tail:tf})})],['趴着 · 生气',30,17,(t,tf)=>({G:lieDown({expr:'angry',tail:tf})})],
+ ['趴着 · 哭',30,17,(t,tf)=>({G:lieDown({expr:'cry',tail:tf})})],['抱球 · 星星眼',24,24,(t,tf)=>{const G=st_hold(F(t*2.5)%2);face(G,0,0,'sparkle');return{G}}],
+ ['侧走 · 开心',32,24,(t,tf)=>({G:walkW(SIDE_A,F(t*8),tf,{expr:'happy'})})],['侧走 · 好奇',32,24,(t,tf)=>({G:walkW(SIDE_A,F(t*8),tf,{expr:'focus'})})]
+].forEach(([n,W,H,f],i)=>cell(CO,{W,H,s:3,f,b:[1,4,6,5,0,3][i],name:n}));
+const PER=[['normal',['happy','wink'],'玩家自己。可以随时换表情，比如按数字键发一个'],['content',['love','meow'],'温柔。最爱翻肚皮和踩奶，看到人会慢眨眼'],
+  ['meh',['smug','angry'],'高冷认真。坐得最端正、舔爪最勤，被打扰会不爽'],['curious',['meow','surprise'],'话多、好奇。常张嘴喵，什么都要凑过去看'],
+  ['blep',['wink','laugh'],'调皮。爱推杯子、钻纸箱'],['sparkle',['laugh','dizzy'],'精力最旺。扑球最多，也最常把自己缠成茧'],['sleepy',['content','cry'],'懒。总趴在饭碗边睡，饿了会哭唧唧']];
+const pt=document.getElementById('persona');pt.innerHTML='<tr><th></th><th>默认</th><th colspan="2">招牌表情</th><th>小习惯</th></tr>';
+PER.forEach(([d,sig,txt],i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="n">${BREEDS[i].name}</td>`;pt.appendChild(tr);
+  [d,...sig].forEach((k,j)=>{const td=document.createElement('td');tr.appendChild(td);const c=mk(td,22,22,2.5);cells.push({c,W:22,H:22,b:i,f:(t,tf)=>({G:sitFace(k,(tf+i)%2),blink:j?0:blinkAt(t,i*.4)})});
+    td.insertAdjacentHTML('beforeend',`<div>${FN[k]}</div>`)});tr.insertAdjacentHTML('beforeend',`<td class="t">${txt}</td>`)});
+
+/* 四、趴与睡 */
+const LI=document.getElementById('lie');
+cell(LI,{W:22,H:20,s:4,f:A.oldLoaf,tag:'现在',name:'猫饼',old:1});LI.insertAdjacentHTML('beforeend','<span class="arrow">→</span>');
+cell(LI,{W:30,H:17,s:4,f:A.lie,tag:'新',name:'趴着',note:'下巴搁爪子上，眼睛往上看'});
+cell(LI,{W:22,H:28,s:4,f:A.oldSleep,tag:'现在',name:'睡觉',old:1});LI.insertAdjacentHTML('beforeend','<span class="arrow">→</span>');
+cell(LI,{W:30,H:17,s:4,f:A.sleep,tag:'新',name:'脸贴地睡',note:'耳朵放松、鼻涕泡、呼吸起伏'});
+const SA=document.getElementById('sleepAll');
+BREEDS.forEach((b,i)=>cell(SA,{W:30,H:17,s:2,b:i,f:(t,tf)=>A.sleep(t,(tf+i)%2,i*.37),name:b.name}));
+
+/* 五、新点子 */
+const ID=document.getElementById('ideas');
+[['slow','慢眨眼','猫的"我喜欢你"。玩家靠近别的猫时，对方慢慢眨一下',22,22,1],['maneki','招财猫招手','门口那只猫迎客：有新毛线球投递时招手',22,22,4],
+ ['knead','踩奶','在沙发、坐垫上的待机，舒服到踩奶',22,24,1],['stretch','伸懒腰','睡醒后、开始走路前的过渡',32,20,6],
+ ['pounce','屁股扭扭 → 扑','代替"发现毛线球"时的感叹号：伏低、扭屁股、扑出去',32,19,5]
+].forEach(([k,n,note,W,H,b])=>cell(ID,{W,H,s:4,f:A[k],b,name:n,note}).style.width='196px');
+
+/* 主循环 */
+let last=performance.now();
+function loop(now){const t=now/1000,dt=Math.min(.05,(now-last)/1000);last=now;const tf=F(t*2)%2;
+  cells.forEach(c=>drawCell(c,t,tf));
+  const x=fl.getContext('2d');x.drawImage(floorBg,0,0);
+  walkers.forEach((w,i)=>{w.x+=w.dir*w.sp*dt;if(w.x>FW-24){w.dir=-1}if(w.x<24){w.dir=1}const G=A[w.k](t+i*.2,(tf+i)%2,i).G;
+    drawF(x,G,BREEDS[w.b],w.x,w.y,{cx:G.cx,flip:w.dir<0,blink:blinkAt(t,i)})});
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

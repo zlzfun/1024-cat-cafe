@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>像素猫定稿 v2</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:19px;margin:44px 0 4px;line-height:1.4}
+  p{margin:0}
+  .lead,.desc{color:var(--sub)}
+  .desc{font-size:13px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .grp{margin-top:18px;font-size:12px;letter-spacing:1px;color:var(--acc);font-weight:700}
+  .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:flex-end}
+  .cell{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px 6px;text-align:center}
+  .cell b{color:var(--ink);font-weight:600;font-size:13px}
+  table{border-collapse:collapse;margin-top:14px;background:var(--card);border:1px solid var(--line)}
+  th,td{padding:6px 12px;border-bottom:1px solid var(--line);text-align:center;font-size:12px;color:var(--sub);font-weight:normal;vertical-align:middle}
+  th{color:var(--ink)}
+  td.n{text-align:left;color:var(--ink);white-space:nowrap}
+  td.t{text-align:left;max-width:280px}
+  .play{position:relative;border-radius:4px;overflow:hidden;outline:none;cursor:pointer;margin-top:12px;width:max-content;max-width:100%}
+  .play .tip{position:absolute;left:10px;top:8px;font-size:12px;background:#241a2ecc;padding:1px 8px;border-radius:3px}
+  .play:focus .tip{background:var(--acc);color:var(--bg)}
+  .play .log{position:absolute;right:10px;top:8px;font-size:12px;background:#241a2ecc;padding:1px 8px;border-radius:3px;color:var(--ink)}
+  .btns{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .btns button{font:inherit;font-size:13px;color:var(--bg);background:var(--acc);border:0;border-radius:3px;padding:3px 12px;cursor:pointer}
+  .btns button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .spec{margin-top:14px;font-size:13px;color:var(--sub)}
+  .spec code{font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+  .spec li{margin:2px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：猫猫定稿 v2</h1>
+  <p class="lead">在 v1 的基础上：侧身换成 <b>A 标准</b>（比草案再收窄 2px），趴和睡改成<b>脸贴地</b>，动作按新画法重做，加入 <b>18 种表情</b>、<b>每只猫的性格</b>和 <b>5 个新点子</b>。解毛线球的 6 种玩法随机触发。精灵数据都在 <code>cat-sprites.js</code>（v2）里，场景页已经改用它。</p>
+
+  <h2>一、动作表</h2>
+  <div id="sheet"></div>
+
+  <h2>二、表情与性格</h2>
+  <p class="desc">18 种表情可以叠在任何正脸姿态上（转头时也有对应的一套）。每只猫有自己的默认表情，待机时按性格挑动作。</p>
+  <div class="row" id="faces"></div>
+  <table id="persona"></table>
+
+  <h2>三、7 种毛色 × 关键形态</h2>
+  <table id="breeds"></table>
+
+  <h2>四、试玩：猫咖里的一天</h2>
+  <p class="desc">方向键操控白猫。其他猫按各自的性格待机、闲逛；靠近它们时，有的会慢眨眼（冒爱心），砚砚舔爪时被打扰会不爽。睡醒会先伸懒腰。</p>
+  <div class="btns"><button id="solve">演示：解一颗毛线球</button><button id="drop" class="ghost">来了新毛线球</button><button class="ghost" data-act="sleep">睡一觉</button><button class="ghost" data-act="lick">洗个脸</button><button class="ghost" data-act="knead">踩奶</button><button class="ghost" id="faceBtn">换个表情</button></div>
+  <div class="play" tabindex="0"><canvas id="pc"></canvas><div class="tip">点我 · 方向键移动</div><div class="log" id="log"></div></div>
+
+  <ul class="spec">
+    <li>尺寸：端坐 <code>20×21</code>；侧走 <code>24×19</code>；趴 / 睡 <code>27×15</code>；各玩球动作 26–32 宽。锚点都在头部中轴的脚底，端坐和趴下时头在同一位置，不会跳。</li>
+    <li>帧率：行走 4 帧、每秒 8 帧；尾巴 2 帧、每秒 2 帧；每 3 秒眨一次眼。舔爪洗脸、伸懒腰、屁股扭扭扑、慢眨眼是一次性动作，时长见 <code>DUR</code>。</li>
+    <li>朝向：向左走时整张图水平翻转；趴、睡、玩球、伸懒腰、扑这些姿态也跟着猫的朝向翻转（<code>FACING</code>）。</li>
+    <li>接口：<code>drawCat(ctx, 姿态, 毛色序号, x, y, t, {face, ex})</code>；姿态表 <code>POSE</code>，表情 <code>face()</code> / <code>faceT()</code>，性格 <code>PERSONA</code>，解球玩法 <code>PLAYS</code>，头顶符号 <code>drawEmote()</code>。</li>
+  </ul>
+</main>
+<script src="cat-sprites.js"></script>
+<script>
+const F=Math.floor;
+const mk=(parent,w,h,s)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.style.width=w*s+'px';c.style.height=h*s+'px';parent.appendChild(c);return c};
+const cells=[];   // {c, W, H, draw(ctx, t)}
+function cell(host,{W,H,s=3,name,draw}){const d=document.createElement('div');d.className='cell';const c=mk(d,W,H,s);if(name)d.insertAdjacentHTML('beforeend',`<b>${name}</b>`);host.appendChild(d);cells.push({c,W,H,draw});return d}
+// 一次性动作从 0 帧开始循环播放
+const LOCAL=new Set(['pounce','stretch','lick','slowBlink']);
+function poseCell(host,k,name,{b=0,W=32,H=26,s=3,ex}={}){
+  cell(host,{W,H,s,name,draw:(x,t)=>{const P=POSE[k](LOCAL.has(k)?t%(DUR[k]+.6):t,(F(t*2)+b)%2,0,ex??PERSONA[b].face),w=P.G[0].length;
+    const L=F((W-w)/2);drawF(x,P.G,BREEDS[b],P.flip?L+w-P.cx:L+P.cx,H,{cx:P.cx,flip:P.flip,dy:P.dy||0,blink:P.blink})}})}
+
+/* 一、动作表 */
+const GROUPS=[['静止 / 移动',[['sit','待机'],['walkR','侧走 →'],['walkL','侧走 ←']]],
+  ['闲置',[['lick','舔爪洗脸'],['lie','趴着（下巴贴地）'],['sleep','睡觉（脸贴地）'],['meow','喵'],['slowBlink','慢眨眼'],['knead','踩奶'],['stretch','伸懒腰'],['maneki','招财猫招手']]],
+  ['解毛线球（发现 → 随机一种玩法 → 开心）',[['pounce','发现：屁股扭扭 → 扑'],['alert','叼到毛线球'],['hold','抱毛线球'],['swing','拍吊球'],['bat','下巴贴地拨球'],['kick','侧躺抱球蹬'],['belly','翻肚皮'],['cocoon','毛线茧'],['wrapped','线绕在身上'],['happy','开心']]]];
+const SH=document.getElementById('sheet');
+GROUPS.forEach(([g,list])=>{SH.insertAdjacentHTML('beforeend',`<div class="grp">${g}</div>`);const r=document.createElement('div');r.className='row';SH.appendChild(r);
+  list.forEach(([k,n])=>poseCell(r,k,n,{W:k==='alert'?24:34,H:k==='alert'?32:k==='swing'?28:26}))});
+
+/* 二、表情与性格 */
+const FC=document.getElementById('faces');
+Object.keys(FACE_NAMES).forEach((k,i)=>cell(FC,{W:22,H:22,s:3,name:FACE_NAMES[k],draw:(x,t)=>drawF(x,sitFace(k,F(t*2)%2),BREEDS[0],1+9.5,22,{cx:9.5,blink:blinkAt(t,i*.3)})}));
+const pt=document.getElementById('persona');pt.innerHTML='<tr><th></th><th>默认</th><th colspan="2">招牌表情</th><th>小习惯</th><th>待机最常做</th></tr>';
+const IDLE_NAMES={walk:'闲逛',sit:'端坐',lick:'舔爪',lie:'趴着',sleep:'睡觉',knead:'踩奶',belly:'翻肚皮',meow:'喵',pounce:'扑',bat:'拨球',kick:'抱球蹬',cocoon:'缠成茧'};
+PERSONA.forEach((p,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="n">${BREEDS[i].name}</td>`;pt.appendChild(tr);
+  [p.face,...p.sig].forEach((k,j)=>{const td=document.createElement('td');tr.appendChild(td);const c=mk(td,22,22,2.5);cells.push({c,W:22,H:22,draw:(x,t)=>drawF(x,sitFace(k,(F(t*2)+i)%2),BREEDS[i],1+9.5,22,{cx:9.5,blink:j?0:blinkAt(t,i*.4)})});
+    td.insertAdjacentHTML('beforeend',`<div>${FACE_NAMES[k]}</div>`)});
+  const top=Object.entries(p.idle).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>IDLE_NAMES[k]).join('、')||'由玩家操控';
+  tr.insertAdjacentHTML('beforeend',`<td class="t">${p.text}</td><td class="t">${top}</td>`)});
+
+/* 三、毛色表 */
+const COLS=[['sit','待机'],['walkR','侧走'],['lie','趴着'],['sleep','睡觉'],['kick','抱球蹬'],['happy','开心']];
+const tb=document.getElementById('breeds');tb.innerHTML='<tr><th></th>'+COLS.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
+BREEDS.forEach((b,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="n">${b.name}</td>`;tb.appendChild(tr);
+  COLS.forEach(([k])=>{const td=document.createElement('td');tr.appendChild(td);const c=mk(td,32,22,2.5);
+    cells.push({c,W:32,H:22,draw:(x,t)=>{const P=POSE[k](t+i*.21,(F(t*2)+i)%2,i,PERSONA[i].face),w=P.G[0].length;drawF(x,P.G,b,F((32-w)/2)+P.cx,22,{cx:P.cx,dy:P.dy||0,blink:P.blink})}})})});
+
+/* 四、试玩 */
+const PW=320,PH=112,pc=document.getElementById('pc');pc.width=PW;pc.height=PH;pc.style.width=PW*3+'px';pc.style.height=PH*3+'px';
+const bg=document.createElement('canvas');bg.width=PW;bg.height=PH;{const c=bg.getContext('2d'),R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  R(0,0,PW,18,'#6b4a6e');for(let x=0;x<PW;x+=8)R(x,0,4,14,'#744f78');R(0,14,PW,4,'#4a3150');
+  for(let r=0,y=18;y<PH;y+=6,r++){R(0,y,PW,6,r%2?'#c48a58':'#bb8150');R(0,y+5,PW,1,'#a56f43');for(let x=(r*13)%24;x<PW;x+=24)R(x,y,1,5,'#a56f43')}
+  R(282,2,22,16,'#3a2630');R(283,3,20,15,'#9a6448');R(286,5,14,6,'#cdeaf8');R(299,11,1,2,'#ffd84a');   // 门
+  R(8,86,40,14,'#3a2630');R(9,87,38,12,'#f7a58c');for(let x=10;x<46;x+=4)R(x,92,2,2,'#f4a6b8');         // 坐垫
+  R(250,100,12,5,'#3a2630');R(251,101,10,3,'#5B9BD5');R(252,100,8,2,'#a0602e')}                         // 饭碗
+const play=document.querySelector('.play'),keys={},logEl=document.getElementById('log');
+play.addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')){keys[e.key]=true;e.preventDefault()}});play.addEventListener('keyup',e=>keys[e.key]=false);play.addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
+const SPOTS={cushion:[26,96],bowl:[240,104],door:[292,40]};
+const cats=[{b:0,x:150,y:80,me:1},{b:1,x:28,y:96},{b:2,x:92,y:56},{b:3,x:200,y:92},{b:4,x:120,y:104},{b:5,x:230,y:60},{b:6,x:266,y:104}]
+  .map((c,i)=>({...c,o:i*.37,face:i%2?'L':'R',k:'sit',t0:0,until:1+Math.random()*2,q:[],tx:null}));
+const me=cats[0];let yarn=null,now=0,logT=0;
+const say=s=>{logEl.textContent=s;logEl.style.display='block';logT=3};
+const rnd=a=>a[F(Math.random()*a.length)];
+function pickIdle(b){const w=PERSONA[b].idle,e=Object.entries(w),sum=e.reduce((s,x)=>s+x[1],0);let r=Math.random()*sum;for(const [k,v] of e){if((r-=v)<=0)return k}return 'sit'}
+const IDLE_DUR={sit:[2,4],lick:[DUR.lick*2,DUR.lick*2],lie:[4,7],sleep:[6,10],knead:[3,5],belly:[3,4],meow:[2,3],bat:[3,4],kick:[3,4],cocoon:[3,4]};
+function setK(c,k,dur){c.k=k;c.t0=now;c.until=now+dur;if(k==='knead'){c.emote='note';c.emoteUntil=c.until}}
+// 队列：[{k,dur}|{go:[x,y]}|{fn}]
+function next(c){const s=c.q.shift();if(!s){c.k='sit';c.until=now+1+Math.random()*2;return}if(s.fn){s.fn();return next(c)}
+  if(s.go){c.tx=s.go[0];c.ty=s.go[1];c.k='walk';return}setK(c,s.k,s.dur)}
+function playYarn(c,y){const side=y.x>c.x?-14:14;c.q=[{go:[y.x+side,y.y]},{fn:()=>{c.face=side<0?'R':'L';c.emote='bang';c.emoteUntil=now+1}},{k:'pounce',dur:DUR.pounce},
+  {fn:()=>{yarn=null;const p=rnd(PLAYS);say(`${BREEDS[c.b].name}：${PLAY_NAMES[p]}`);c.q.unshift({k:p,dur:3.4})}},{k:'happy',dur:1.4}];c.tx=null;c.until=0;next(c)}
+document.getElementById('solve').onclick=()=>{yarn={x:70+Math.random()*180,y:50+Math.random()*50};playYarn(me,yarn)};
+document.getElementById('drop').onclick=()=>{yarn={x:70+Math.random()*180,y:50+Math.random()*50};
+  const g=cats[6];g.q=[{go:SPOTS.door},{k:'maneki',dur:2.4}];g.tx=null;g.until=0;next(g);
+  const w=cats.slice(1,6).map(c=>[c,({5:4,3:3,4:3}[c.b]||1)]);let r=Math.random()*w.reduce((s,x)=>s+x[1],0),pick=w[0][0];for(const [c,v] of w){if((r-=v)<=0){pick=c;break}}
+  say(`金哥招手：来了新毛线球，${BREEDS[pick.b].name}去接`);setTimeout(()=>playYarn(pick,yarn),600)};
+document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act;me.q=a==='sleep'?[{k:'sleep',dur:6},{k:'stretch',dur:DUR.stretch}]:a==='knead'?[{go:SPOTS.cushion},{k:'knead',dur:4}]:[{k:'lick',dur:DUR.lick*2}];me.tx=null;me.until=0;next(me)});
+const FACE_KEYS=Object.keys(FACE_NAMES);let fi=0;document.getElementById('faceBtn').onclick=()=>{fi=(fi+1)%FACE_KEYS.length;me.ex=FACE_KEYS[fi];me.q=[];me.tx=null;setK(me,'sit',4);say('表情：'+FACE_NAMES[me.ex])};
+
+function tick(dt){
+  cats.forEach(c=>{let dx=0,dy=0;const ctrl=c.me&&(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp||keys.ArrowDown);
+    if(ctrl){if(c.k==='sleep'){c.q=[];setK(c,'stretch',DUR.stretch)}                          // 睡着时按方向键：先伸个懒腰
+      if(!(c.k==='stretch'&&now<c.until)){dx=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);dy=(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0);c.q=[];c.tx=null;c.k='walk';c.until=now+.3}}
+    else if(c.tx!=null){const ex=c.tx-c.x,ey=c.ty-c.y,l=Math.hypot(ex,ey);if(l<1.2){c.tx=null;next(c)}else{dx=ex/l;dy=ey/l}}
+    else if(now>=c.until){if(c.q.length)next(c);else if(c.k==='sleep')setK(c,'stretch',DUR.stretch);
+      else if(c.me)setK(c,'sit',2);
+      else{const k=pickIdle(c.b);if(k==='walk'){c.tx=20+Math.random()*(PW-40);c.ty=30+Math.random()*(PH-36);c.k='walk'}
+        else if(k==='pounce'){c.q=[{k:'pounce',dur:DUR.pounce},{k:rnd(['bat','kick']),dur:3}];next(c)}
+        else{const d=IDLE_DUR[k]||[2,4];setK(c,k,d[0]+Math.random()*(d[1]-d[0]))}}}
+    const l=Math.hypot(dx,dy);if(l>0){const sp=(c.me?40:24)*dt;c.x=Math.max(16,Math.min(PW-16,c.x+dx/l*sp));c.y=Math.max(30,Math.min(PH-4,c.y+dy/l*sp));if(Math.abs(dx)>.2)c.face=dx>0?'R':'L';c.moving=true}else c.moving=false;
+    // 靠近：慢眨眼 / 不爽
+    if(!c.me){const d=Math.hypot(c.x-me.x,c.y-me.y);if(d>44)c.greeted=false;
+      else if(d<24&&!c.greeted&&!c.q.length&&c.tx==null){c.greeted=true;
+        if(c.b===2&&c.k==='lick'){c.emote='anger';c.emoteUntil=now+1.6;say('砚砚：别打扰我舔爪')}
+        else if(['sit','lie','meow'].includes(c.k)&&Math.random()<PERSONA[c.b].slowBlink){setK(c,'slowBlink',DUR.slowBlink);c.emote='heart';c.emoteUntil=c.until;say(`${BREEDS[c.b].name} 对你慢眨眼：猫的"我喜欢你"`)}}}});
+}
+function drawPlay(t){const x=pc.getContext('2d');x.drawImage(bg,0,0);
+  if(yarn){x.fillStyle='#9e2f2a';x.fillRect(Math.round(yarn.x)-3,Math.round(yarn.y)-6,6,6);x.fillStyle='#e0533d';x.fillRect(Math.round(yarn.x)-2,Math.round(yarn.y)-5,4,4);x.fillStyle='#f7a58c';x.fillRect(Math.round(yarn.x)-1,Math.round(yarn.y)-4,1,1)}
+  [...cats].sort((p,q)=>p.y-q.y).forEach(c=>{const k=c.moving||c.k==='walk'?(c.face==='L'?'walkL':'walkR'):c.k,loc=LOCAL.has(k);
+    const P=drawCat(x,k,c.b,c.x,c.y,loc?now-c.t0:t,{o:loc?0:c.o,face:c.face,ex:c.me?c.ex:undefined});const top=c.y-P.G.length+(P.dy||0);
+    if(c.emote&&now<c.emoteUntil)drawEmote(x,c.x,top-2,c.emote,t);
+    if(c.me){x.fillStyle='#e0533d';x.fillRect(Math.round(c.x)-1,Math.round(top)-5,3,2);x.fillRect(Math.round(c.x),Math.round(top)-3,1,1)}})}
+
+/* 主循环 */
+let last=performance.now();
+function loop(ms){const t=ms/1000,dt=Math.min(.05,(ms-last)/1000);last=ms;now=t;
+  cells.forEach(({c,W,H,draw})=>{const x=c.getContext('2d');x.clearRect(0,0,W,H);draw(x,t)});
+  tick(dt);drawPlay(t);if(logT>0&&(logT-=dt)<=0)logEl.style.display='none';
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>像素猫动作样页</title>
+<style>
+  :root{--bg:#241a2e;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  main{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:24px;line-height:1.3;margin:0 0 8px}
+  h2{font-size:19px;margin:44px 0 4px;line-height:1.4}
+  h3{font-size:16px;margin:0 0 4px;line-height:1.4}
+  h3 .no{color:var(--acc);margin-right:8px;font-family:ui-monospace,Menlo,monospace}
+  p{margin:0}
+  .lead,.desc{color:var(--sub)}
+  .desc{font-size:13px}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:20px;margin-top:18px}
+  .label{font-size:12px;color:var(--sub);margin:14px 0 6px}
+  .row{display:flex;flex-wrap:wrap;gap:10px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--sub);background:#3a2c4a;border-radius:4px;padding:8px 8px 4px}
+  .play{position:relative;border-radius:4px;overflow:hidden;outline:none;cursor:pointer}
+  .play canvas{width:100%;height:auto}
+  .play .tip{position:absolute;left:10px;top:8px;font-size:12px;background:#241a2ecc;padding:1px 8px;border-radius:3px}
+  .play:focus .tip{background:var(--acc);color:var(--bg)}
+  .verdict{margin-top:10px;font-size:13px}
+  .verdict b{color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <h1>A · 像素猫咖：动作样页（基于 V3 端坐猫）</h1>
+  <p class="lead">约定：<b>静止时是 V3 端坐猫</b>，一开始移动就切换成行走形态；停下时会先"站一下"，再坐回 V3。第一部分对比三种移动方案，第二部分把 V3 延伸成一组静止状态。<br>每个方案都有一块"试玩地板"：点一下后，可以用方向键操控你的猫（白猫、红项圈）；不操作时它会自己闲逛。</p>
+
+  <h2>一、移动形态：三套方案</h2>
+  <div id="schemes"></div>
+
+  <h2>二、V3 状态延伸</h2>
+  <p class="desc">这些都是静止状态，给游戏里不同的时刻用：待机、闲着没事、解开毛线球、正在解毛线球、在沙发上、有新毛线球出现。</p>
+  <div class="card"><div class="row" id="states"></div>
+    <div class="label">7 种毛色 · 抱毛线球</div><div class="row" id="breedsHold"></div></div>
+</main>
+<script>
+/* ================= 调色 ================= */
+const BREEDS=[
+  {name:'你',body:'#fff3e0',light:'#ffffff',shade:'#e8d2c0',outline:'#5a3a4a',collar:'#e0533d',whisk:'#9a7a8a'},
+  {name:'宪宪 · 布偶',body:'#f3ece2',light:'#ffffff',shade:'#d8ccc0',outline:'#5a4a52',points:'#8c7a70',collar:'#9B7EBD',whisk:'#9a8a90'},
+  {name:'砚砚 · 缅因',body:'#9a8a70',light:'#e2d6bf',shade:'#7a6c56',outline:'#3a3028',stripe:'#62533f',tuft:1,collar:'#5B8C5A',whisk:'#e2d6bf'},
+  {name:'烁烁 · 暹罗',body:'#f1e4c8',light:'#fbf4e4',shade:'#d8c8a8',outline:'#3e3028',points:'#5a4436',collar:'#5B9BD5',whisk:'#b8a890'},
+  {name:'小狸花',body:'#b99a6c',light:'#e8dcc0',shade:'#9a7e56',outline:'#3e3024',stripe:'#6a5236',collar:'#e0533d',whisk:'#e8dcc0'},
+  {name:'斑斑 · 孟加拉',body:'#e3a456',light:'#f7e0b6',shade:'#c48840',outline:'#4a2c14',spot:'#8a4f1e',collar:'#4a7fd0',whisk:'#f7e0b6'},
+  {name:'金哥 · 金渐层',body:'#dcb46c',light:'#f5e6c0',shade:'#bf9752',outline:'#4a3818',stripe:'#c49a50',collar:'#6a4a9a',whisk:'#f5e6c0'},
+];
+function color(ch,b){switch(ch){
+  case 'o':return b.outline;case 'b':return b.body;case 'l':return b.light;case 'd':return b.shade;case 'p':return '#f4a6b8';case 'n':return '#e27a8f';
+  case 'e':return '#241a2e';case 'w':return '#ffffff';case 'k':return b.whisk;case 'c':return b.collar;case 'y':return '#ffd84a';
+  case 'x':case 'm':case 't':return b.points||b.body;case 'f':case 'g':return b.stripe||b.spot||b.body;
+  case 'r':return '#e0533d';case 'R':return '#9e2f2a';case 'h':return '#f7a58c';case 'z':return '#b9a8c9';
+  case 'u':return b.tuft?b.outline:null;default:return null}}
+
+/* ================= 网格工具 ================= */
+const mir=rows=>rows.map(r=>r+[...r].reverse().join(''));
+const blank=(w,h)=>Array.from({length:h},()=>Array(w).fill('.'));
+function stamp(G,rows,dx=0,dy=0,skip=''){rows.forEach((r,y)=>[...r].forEach((c,x)=>{if(c!=='.'&&!skip.includes(c)&&G[y+dy]&&x+dx<G[0].length)G[y+dy][x+dx]=c}))}
+function sp(G,o,dx=0,dy=0){for(const y in o)o[y].split('|').filter(Boolean).forEach(seg=>{const [sx,s]=seg.split(':');[...s].forEach((c,i)=>{const yy=+y+dy,xx=+sx+i+dx;if(G[yy]&&xx>=0&&xx<G[0].length)G[yy][xx]=c})})}
+function leg(G,x,len,fill,top=15){for(let i=0;i<len;i++){const y=top+i;if(!G[y])continue;const s=i===len-1?'ooo':'o'+fill+'o';[...s].forEach((c,k)=>G[y][x+k]=c)}}
+
+/* ================= V3 基础 ================= */
+const V3=mir(["..u......","..o......","..oo.....","..opo....","..oppxooo",".obbbbfbf",".obbbbbbf",".obbbbebb","kobbbbebb",".obpbbbmn","kobbbbbom","..obbbbbb","...occccc","...obbbll","..obbbbll","..obgblld","..obbglld",".obbbblld",".obgbblld",".obbbolld","..ooooooo"]);
+const V3TAIL=[{11:"18:o",12:"17:oto",13:"17:oto",14:"17:oto",15:"17:oto",16:"17:oto",17:"17:oto",18:"17:oto",19:"16:otto",20:"16:ooo"},
+              {11:"19:o",12:"18:oto",13:"18:oto",14:"17:oto",15:"17:oto",16:"17:oto",17:"17:oto",18:"17:oto",19:"16:otto",20:"16:ooo"}];
+const BACKHEAD=mir(["..u......","..o......","..oo.....","..obo....","..obbxooo",".obbbbbbb",".obbbfbbf",".obbbbfbb",".obbbfbbf",".obbbbfbb","kobbbbbbb","..obbbbbb","...occccc","...obbbbb","...obgbbb"]);
+
+/* ---- 静止：坐 ---- */
+function sit(tf,mod){const G=blank(20,21);stamp(G,V3);if(mod!=='noTail')sp(G,V3TAIL[tf]);return G}
+/* ---- 正面站 / 走（向下）：尾巴从右肩后探出 ---- */
+const FRONT_BODY=mir(["..obgbbll","...obbbll"]),BACK_BODY=mir(["..obgbbbb","...obbgbb"]);
+function walker(head,body,fill,step,tf,tail,tailFirst){const G=blank(20,21);if(tailFirst)sp(G,tail);stamp(G,head);stamp(G,body,0,15);sp(G,{17:"4:oooooooooo"});
+  const L=step===0?[4,3]:step===2?[3,4]:[4,4];leg(G,5,L[0],fill,17);leg(G,10,L[1],fill,17);if(!tailFirst)sp(G,tail);return G}
+function front(step,tf){return walker(V3.slice(0,15),FRONT_BODY,'l',step,tf,tf?{3:"18:o",4:"17:oto",5:"17:oto",6:"16:oto",7:"16:oto"}:{3:"17:o",4:"16:oto",5:"16:oto",6:"16:oto",7:"16:oto"},true)}
+/* ---- 背面走（向上）：后脑勺 + 竖在正中的尾巴 ---- */
+function back(step,tf){return walker(BACKHEAD,BACK_BODY,'b',step,tf,tf?{7:"9:o",8:"8:oto",9:"8:oto",10:"8:oto",11:"8:oto",12:"8:oto",13:"8:oto",14:"8:oto",15:"8:oto",16:"8:oto"}:{7:"8:o",8:"7:oto",9:"7:oto",10:"8:oto",11:"8:oto",12:"8:oto",13:"8:oto",14:"8:oto",15:"8:oto",16:"8:oto"},false)}
+/* ---- 侧身走（朝右） ---- */
+const SIDE_BODY={8:"6:oooooooo",9:"4:oobbbbgbbbbb",10:"3:obbbgbbbbgbbbbb",11:"3:obbbbgbbbbgbbbb",12:"3:obbbbbbbbbbbbbb",13:"3:obbbbbbbbbbbbbbllllo",14:"4:olllllllllllllllllo",15:"5:ooooooooooooooooo"};
+const SIDE_LEGS=[{far:[[7,4],[15,4]],near:[[4,4],[18,4]]},{far:[[6,3],[16,4]],near:[[6,4],[17,3]]},{far:[[4,4],[18,4]],near:[[7,4],[15,4]]},{far:[[6,4],[16,3]],near:[[6,3],[17,4]]}];
+function side(step,tf){const G=blank(28,19);sp(G,SIDE_BODY);const L=SIDE_LEGS[step%4];L.far.forEach(([x,l])=>leg(G,x,l,'d'));L.near.forEach(([x,l])=>leg(G,x,l,'l'));
+  sp(G,tf?{1:"2:o",2:"1:oto",3:"1:oto",4:"1:oto",5:"1:oto",6:"1:oto",7:"2:oto",8:"3:oto",9:"4:ot"}:{1:"1:o",2:"0:oto",3:"0:oto",4:"0:oto",5:"1:oto",6:"1:oto",7:"2:oto",8:"3:oto",9:"4:ot"});
+  stamp(G,V3.slice(0,13).map(r=>'.'+r.slice(1)),10,0);return G}
+
+/* ---- V3 状态延伸 ---- */
+function st_groom(f){const G=sit(0);sp(G,{7:"6:b|11:b",8:"6:e|11:e"});sp(G,{15:"9:dbb",16:"9:dbb",17:"9:dbb",18:"9:dbb",19:"9:dbo"});
+  sp(G,f?{9:"11:ooo",10:"10:olllo",11:"10:olllo",12:"11:olo",13:"11:olo",14:"11:olo"}:{10:"11:ooo",11:"10:olllo",12:"10:olllo",13:"11:olo",14:"11:olo"});if(f)sp(G,{11:"9:n"});return G}
+function st_happy(f){const G=sit(f);sp(G,{7:"6:b|11:b",8:"6:b|11:b"});sp(G,{7:"6:e|11:e",8:"5:e|7:e|10:e|12:e",10:"8:nn"});
+  if(f)sp(G,{1:"0:y|19:y",3:"17:y"});else sp(G,{2:"1:y",0:"16:y"});return G}
+function st_hold(f){const G=sit(f);sp(G,{7:"6:b|11:b",8:"6:b|11:b",9:"6:e|11:e"});sp(G,{8:"6:e|11:e"});
+  sp(G,{14:"6:RRRRRR",15:"5:RrrhrrR",16:"5:RrhrrrR",17:"5:RrrrhrR",18:"5:RhrrrrR",19:"6:RRRRRR",20:"12:rr"},f?0:1,0);
+  sp(G,{14:"4:olo|12:olo",15:"4:olo|12:olo",16:"4:ooo|12:ooo"},f?0:1,0);return G}
+function st_loaf(tf,sleep){const G=sit(tf,'noTail');const R=G.filter((_,i)=>![15,16,17].includes(i));
+  sp(R,{15:"12:oooooo",16:"11:otttttto",17:"12:oooooo"});if(sleep){sp(R,{7:"6:b|11:b"})}return R}
+function st_alert(f){const G=sit(0);const H=blank(20,30);stamp(H,G,0,9);
+  const bub={0:"6:ooooooo",1:"5:owwwwwwwo",2:"5:owwwrwwwo",3:"5:owwwrwwwo",4:"5:owwwrwwwo",5:"5:owwwwwwwo",6:"5:owwwrwwwo",7:"6:oooowoo",8:"9:o"};
+  sp(H,bub,0,f?0:1);return H}
+function st_sleep(f){const R=st_loaf(0,true);const H=blank(20,R.length+8);stamp(H,R,0,8);
+  sp(H,f?{0:"14:zzzz",1:"16:z",2:"15:z",3:"14:zzzz",5:"11:zz",6:"11:zz"}:{2:"14:zzzz",3:"16:z",4:"15:z",5:"14:zzzz",6:"11:zz",7:"11:zz"});return H}
+/* ================= 渲染 ================= */
+// (x,y) 为脚底中心；cx 为该造型的"身体中轴"列
+function draw(ctx,G,b,x,y,o={}){const w=G[0].length,h=G.length,cx=o.cx??9.5;const ox=Math.round(x-cx),oy=Math.round(y-h+(o.dy||0));
+  G.forEach((r,ry)=>r.forEach((ch,rx)=>{if(ch==='.')return;
+    if(o.blink&&(ch==='e'||ch==='w')){const bl=(G[ry+1]||[])[rx];if(bl==='e'||bl==='w')ch='b'}
+    const c=color(ch,b);if(!c)return;ctx.fillStyle=c;ctx.fillRect(o.flip?ox+Math.round(2*cx)-1-rx:ox+rx,oy+ry,1,1)}))}
+
+/* 地板 */
+function disc(c,cx,cy,rx,ry,col){c.fillStyle=col;for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++)if(x*x/(rx*rx+.6)+y*y/(ry*ry+.6)<=1)c.fillRect(cx+x,cy+y,1,1)}
+function floor(W,H){const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+  R(0,0,W,16,'#6b4a6e');for(let x=0;x<W;x+=8)R(x,0,4,12,'#744f78');R(0,12,W,4,'#4a3150');
+  for(let r=0,y=16;y<H;y+=6,r++){R(0,y,W,6,r%2?'#c48a58':'#bb8150');R(0,y+5,W,1,'#a56f43');for(let x=(r*13)%24;x<W;x+=24)R(x,y,1,5,'#a56f43')}
+  R(10,20,44,9,'#c25a73');R(10,28,44,10,'#d86f88');R(6,22,6,18,'#a84860');R(52,22,6,18,'#a84860');
+  R(W-30,26,10,14,'#4d7cc9');disc(c,W-25,21,4,4,'#f2c9a0');R(W-29,16,9,3,'#3a2a2a');R(W-29,40,3,12,'#3b4766');R(W-24,40,3,12,'#3b4766');
+  return cv}
+
+/* ================= 方案 ================= */
+const SCHEMES=[
+ {key:'A',name:'四向行走',desc:'左右走用侧身走，向下走显示正脸，向上走显示后脑勺和竖起的尾巴。停下时先站一下再坐成 V3。最像传统像素 RPG，方向感最完整。',
+  dirs:['right','left','down','up'],
+  pose(dir,step,tf){if(dir==='down')return{G:front(step%4===1||step%4===3?1:step%4,tf)};if(dir==='up')return{G:back(step%4===1||step%4===3?1:step%4,tf)};return{G:side(step,tf),cx:14,flip:dir==='left'}},
+  verdict:'<b>推荐。</b>工作量最大（要画 3 组行走帧），但走起来最自然，和"在咖啡馆里自由走动"最搭。'},
+ {key:'B',name:'只用侧身走',desc:'不管往哪个方向走都用侧身形态，上下移动时保持上一次的左右朝向。画面统一，要画的帧最少。',
+  dirs:['right','left'],
+  pose(dir,step,tf,last){return{G:side(step,tf),cx:14,flip:(dir==='left')||((dir==='up'||dir==='down')&&last==='left')}},
+  verdict:'性价比高：一套帧就够用。上下走时看起来像"横着挪"，俯视角下稍显奇怪，但老同事基本注意不到。'},
+ {key:'C',name:'端坐蹦跳',desc:'不换形态，保持 V3 坐姿一蹦一蹦地移动，落地时压扁一下。最可爱，也最省事。',
+  dirs:['right','left'],
+  pose(dir,step,tf,last,t){const ph=(t*3.2)%1;return{G:ph>.8?st_loaf(tf):sit(tf),dy:-Math.round(Math.sin(Math.min(ph,.8)/.8*Math.PI)*5),flip:dir==='left'}},
+  verdict:'萌感最强，但移动速度一快会显得"跳个不停"。适合做小体积 NPC，不太适合做主角。'},
+];
+
+const PW=220,PH=78,ROAM={x0:70,x1:PW-40,y0:34,y1:PH-3};
+const scenes=[];
+SCHEMES.forEach(s=>{
+  const card=document.createElement('section');card.className='card';
+  card.innerHTML=`<h3><span class="no">方案 ${s.key}</span>${s.name}</h3><p class="desc">${s.desc}</p>
+    <div class="label">行走帧（放大）</div><div class="row">${s.dirs.map(d=>`<div class="cell"><canvas data-d="${d}"></canvas>${{right:'→ 向右',left:'← 向左',down:'↓ 向下',up:'↑ 向上'}[d]}</div>`).join('')}<div class="cell"><canvas data-d="stop"></canvas>停下 → 坐</div></div>
+    <div class="label">试玩地板（点一下后用方向键操控白猫）</div><div class="play" tabindex="0"><canvas></canvas><div class="tip">点我 · 方向键移动</div></div>
+    <p class="verdict">${s.verdict}</p>`;
+  document.getElementById('schemes').appendChild(card);
+  const cells=[...card.querySelectorAll('.cell canvas')];cells.forEach(c=>{c.width=34;c.height=30;c.style.width=34*4+'px';c.style.height=30*4+'px'});
+  const play=card.querySelector('.play'),pc=play.querySelector('canvas');pc.width=PW;pc.height=PH;
+  const keys={};play.addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')){keys[e.key]=true;e.preventDefault()}});play.addEventListener('keyup',e=>keys[e.key]=false);play.addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
+  const cats=[{b:0,x:110,y:60,me:true},{b:2,x:150,y:50},{b:3,x:170,y:70}].map(c=>({...c,dir:'down',last:'right',moving:false,still:9,tx:null,wait:Math.random()*2}));
+  scenes.push({s,cells,pc,bg:floor(PW,PH),cats,keys})});
+
+/* ================= 状态延伸 ================= */
+const STATES=[
+ {name:'待机（眨眼 · 摆尾）',f:(t,tf)=>({G:sit(tf),blink:(t*1000%3000)<150})},
+ {name:'洗脸（闲置彩蛋）',f:(t)=>({G:st_groom(Math.floor(t*4)%2)})},
+ {name:'开心（解开毛线球）',f:(t)=>{const f=Math.floor(t*4)%2;return{G:st_happy(f),dy:f?-1:0}}},
+ {name:'抱毛线球（解题中）',f:(t)=>({G:st_hold(Math.floor(t*2.5)%2)})},
+ {name:'猫饼（在沙发上）',f:(t,tf)=>({G:st_loaf(tf),blink:(t*1000%3600)<150})},
+ {name:'睡觉',f:(t)=>({G:st_sleep(Math.floor(t*1.2)%2)})},
+ {name:'发现毛线球！',f:(t)=>({G:st_alert(Math.floor(t*3)%2)})},
+];
+const stCells=STATES.map(s=>{const d=document.createElement('div');d.className='cell';d.innerHTML=`<canvas></canvas>${s.name}`;document.getElementById('states').appendChild(d);const c=d.querySelector('canvas');c.width=24;c.height=32;c.style.width=24*5+'px';c.style.height=32*5+'px';return c});
+const bhCells=BREEDS.map(b=>{const d=document.createElement('div');d.className='cell';d.innerHTML=`<canvas></canvas>${b.name}`;document.getElementById('breedsHold').appendChild(d);const c=d.querySelector('canvas');c.width=24;c.height=24;c.style.width=24*3+'px';c.style.height=24*3+'px';return c});
+
+/* ================= 主循环 ================= */
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000,step=Math.floor(t*8),tf=Math.floor(t*2)%2;
+  scenes.forEach(sc=>{const s=sc.s;
+    // 放大帧
+    sc.cells.forEach(cv=>{const x=cv.getContext('2d');x.clearRect(0,0,34,30);const d=cv.dataset.d;
+      if(d==='stop'){const ph=t%3;const P=ph<1.2?s.pose('right',step,tf,'right',t):ph<1.5?(s.key==='C'?{G:sit(tf)}:{G:front(1,tf)}):{G:sit(tf),blink:(t*1000%3000)<150};draw(x,P.G,BREEDS[0],P.cx?17:17,29+(P.dy||0),{cx:P.cx||9.5,flip:P.flip,blink:P.blink});return}
+      const P=s.pose(d,step,tf,'right',t);draw(x,P.G,BREEDS[0],17,29,{cx:P.cx||9.5,flip:P.flip,dy:P.dy})});
+    // 试玩
+    const c=sc.pc.getContext('2d');c.drawImage(sc.bg,0,0);
+    sc.cats.forEach(a=>{let dx=0,dy=0;
+      if(a.me&&(sc.keys.ArrowLeft||sc.keys.ArrowRight||sc.keys.ArrowUp||sc.keys.ArrowDown)){dx=(sc.keys.ArrowRight?1:0)-(sc.keys.ArrowLeft?1:0);dy=(sc.keys.ArrowDown?1:0)-(sc.keys.ArrowUp?1:0);a.tx=null;a.wait=3}
+      else if(a.tx!=null){const ex=a.tx-a.x,ey=a.ty-a.y,l=Math.hypot(ex,ey);if(l<1)a.tx=null;else{dx=ex/l;dy=ey/l}}
+      else{a.wait-=dt;if(a.wait<=0){a.tx=ROAM.x0+Math.random()*(ROAM.x1-ROAM.x0);a.ty=ROAM.y0+Math.random()*(ROAM.y1-ROAM.y0);a.wait=1.5+Math.random()*2.5}}
+      const l=Math.hypot(dx,dy);a.moving=l>0;
+      if(a.moving){const sp=26*dt;a.x=Math.max(ROAM.x0-50,Math.min(ROAM.x1+10,a.x+dx/l*sp));a.y=Math.max(ROAM.y0,Math.min(ROAM.y1,a.y+dy/l*sp));
+        const nd=Math.abs(dx)>=Math.abs(dy)*.9?(dx>0?'right':'left'):(dy>0?'down':'up');if(nd==='left'||nd==='right')a.last=nd;a.dir=s.dirs.includes(nd)?nd:(s.key==='A'?nd:nd);a.still=0}
+      else a.still+=dt});
+    [...sc.cats].sort((p,q)=>p.y-q.y).forEach(a=>{const b=BREEDS[a.b];let P;
+      if(a.moving){const dir=s.key==='C'&&(a.dir==='up'||a.dir==='down')?a.last:a.dir;P=s.pose(dir,step+a.b,(tf+a.b)%2,a.last,t+a.b*.3)}
+      else if(a.still<.18&&s.key!=='C')P={G:front(1,tf)};
+      else P={G:sit((tf+a.b)%2),blink:((t+a.b)*1000%3200)<150};
+      draw(c,P.G,b,a.x,a.y,{cx:P.cx||9.5,flip:P.flip,dy:P.dy,blink:P.blink});
+      if(a.me){c.fillStyle='#e0533d';c.fillRect(Math.round(a.x)-1,Math.round(a.y)-(P.G.length+5)+(P.dy||0),3,2);c.fillRect(Math.round(a.x),Math.round(a.y)-(P.G.length+3)+(P.dy||0),1,1)}})});
+  stCells.forEach((cv,i)=>{const x=cv.getContext('2d');x.clearRect(0,0,24,32);const P=STATES[i].f(t,tf);draw(x,P.G,BREEDS[0],11,31,{blink:P.blink,dy:P.dy})});
+  bhCells.forEach((cv,i)=>{const x=cv.getContext('2d');x.clearRect(0,0,24,24);draw(x,st_hold(Math.floor(t*2.5+i)%2),BREEDS[i],11,23,{})});
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
