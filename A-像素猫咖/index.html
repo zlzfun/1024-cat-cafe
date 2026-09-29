@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1024 猫咖营业中</title>
+<meta name="description" content="一个纯网页的像素 RPG：你扮演一只猫，在照着 Clowder AI 开的猫咖里解毛线球。">
+<style>
+  :root{--bg:#1c1424;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a;--ok:#9ccc98;--bad:#f7a58c;--dim:#8a7a9a}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  button{font:inherit;cursor:pointer}
+  /* 像素窗框：外深、中奶白、切角（和店里的对话框一套） */
+  .px1{background:#140e1a;padding:3px;clip-path:polygon(0 6px,3px 6px,3px 3px,6px 3px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 3px,calc(100% - 3px) 3px,calc(100% - 3px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 3px) calc(100% - 6px),calc(100% - 3px) calc(100% - 3px),calc(100% - 6px) calc(100% - 3px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 3px),3px calc(100% - 3px),3px calc(100% - 6px),0 calc(100% - 6px))}
+  .px2{background:#fff4dc;padding:3px;clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))}
+  .pbtn{border:0;background:var(--acc);color:#241a2e;font-size:15px;font-weight:600;padding:7px 26px 9px;box-shadow:inset 0 -3px 0 #b8962a;clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))}
+  .pbtn:hover{background:#ffe27a}.pbtn:active{box-shadow:inset 0 -1px 0 #b8962a;transform:translateY(2px)}
+  .pbtn[disabled]{background:#4a3a5c;color:var(--dim);box-shadow:inset 0 -3px 0 #3a2c4c;cursor:default;transform:none}
+  .lbtn{border:2px solid var(--line);background:#241a2e;color:var(--sub);font-size:13px;padding:5px 14px}.lbtn:hover{border-color:var(--sub);color:var(--ink)}
+  kbd.k{display:inline-block;min-width:26px;text-align:center;padding:1px 6px 0;background:#2f2340;border:2px solid var(--line);border-bottom-width:4px;color:var(--ink);font:12px/1.6 ui-monospace,Menlo,monospace;border-radius:0;transition:transform .06s}
+  kbd.k.on{background:var(--acc);color:#241a2e;border-color:#b8962a;border-bottom-width:2px;transform:translateY(2px)}
+
+  /* ---------- 加载页 ---------- */
+  #boot{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .45s}
+  #boot.out{opacity:0;pointer-events:none}
+  .bt{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .bt h1{margin:0;font-size:20px;font-weight:600;letter-spacing:.3em;padding-left:.3em;color:var(--ink)}
+  #bootcv{width:480px;height:102px;max-width:90vw}
+  #bootmsg{margin:0;font-size:12px;color:var(--dim);min-height:1.6em}
+  #bootmsg button{margin-left:8px}
+  .wb{display:flex;gap:16px;align-items:center;background:var(--card);padding:14px 22px 14px 14px;box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;animation:rise .35s ease-out}
+  .wb canvas{width:90px;height:78px;background:#241a2e}
+  .wb small{display:block;font-size:12px;color:var(--sub)}.wb b{display:block;font-size:24px;font-weight:600;color:var(--acc);line-height:1.3}
+  .wb p{margin:2px 0 10px;font-size:13px;color:#d8cce4}
+  .wb .acts{display:flex;align-items:center;gap:16px}
+  .wb .go{position:relative;overflow:hidden}.wb .go i{position:absolute;left:0;bottom:0;height:3px;background:#241a2e55;width:0}
+  .wb a{font-size:13px;color:var(--sub);cursor:pointer;text-decoration:underline;text-underline-offset:3px}.wb a:hover{color:var(--acc)}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
+
+  /* ---------- 进店流程 ---------- */
+  #entry{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;overflow:hidden;transition:opacity .45s}
+  #entry.on{display:block}#entry.out{opacity:0;pointer-events:none}
+  #ehc,#epc{position:absolute;left:0;top:0;display:none}
+  #eui{position:absolute;inset:0;pointer-events:none}#eui>*{pointer-events:auto}
+  #eskip{position:absolute;right:18px;bottom:16px;display:none;background:none;border:0;color:var(--dim);font-size:13px;padding:4px 8px}#eskip:hover{color:var(--ink)}
+  #ehc[style*="block"]~#esnd{display:none}
+  #esnd{position:absolute;right:18px;top:14px;background:none;border:0;color:var(--dim);font-size:12px;padding:4px 8px}#esnd:hover{color:var(--ink)}#esnd.on{color:var(--acc)}
+  .nm{position:absolute;inset:0;pointer-events:none;animation:fadein .3s}.nm>*{pointer-events:auto}.nm.leave{opacity:0;transition:opacity .25s}
+  @keyframes fadein{from{opacity:0}}
+  .nm-t{position:absolute;left:0;right:0;margin:0;text-align:center;font-size:20px;font-weight:600;line-height:32px;color:var(--ink)}
+  .pxf{position:absolute}
+  .pxf input{display:block;width:100%;height:60px;border:0;outline:0;background:#fff8e8;color:#3a2630;font:600 24px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding:0 18px;caret-color:#e0533d;border-radius:0}
+  .pxf input::placeholder{color:#c8b89a;font-weight:400}
+  .nm-low{position:absolute;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+  .nm-st{margin:0;font-size:13px;color:var(--dim);min-height:21px}.nm-st.good{color:var(--ok)}.nm-st.bad{color:var(--bad)}.nm-st.wait{color:var(--sub)}
+  .nm-st a,.nm-alt a{color:var(--sub);cursor:pointer;text-decoration:underline;text-underline-offset:3px}.nm-st a{color:var(--acc)}.nm-alt a:hover{color:var(--acc)}
+  .nm-sug{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:100%}
+  .nm-sug span{font-size:12px;color:var(--dim);align-self:center;margin-right:4px}
+  .nm-sug button{background:#2f2340;border:2px solid var(--line);color:var(--ink);font-size:13px;padding:2px 10px}.nm-sug button:hover{border-color:var(--acc)}
+  .nm-sug button.re{border-style:dashed;color:var(--sub)}
+  .nm-acts{margin-top:4px}
+  .nm-alt{margin:0;font-size:13px}
+  .nm-lab{font-size:13px;color:var(--ink)}.nm-lab small{margin-left:8px;color:var(--dim);font-size:12px}
+  /* 暗号面板 */
+  .cp{display:flex;flex-direction:column;align-items:center;gap:10px;outline:none}
+  .cp-slots{display:flex;gap:6px}.cp-slots i{width:38px;height:38px;background:#241a2e;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center}.cp-slots i.on{border:2px solid var(--acc);background:#2f2340}
+  .cp-grid{display:grid;grid-template-columns:repeat(3,52px);gap:6px}
+  .cp-grid button{position:relative;width:52px;height:52px;background:#2f2340;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;padding:0}
+  .cp-grid button:hover{border-color:var(--acc);background:#3a2c4c}.cp-grid button:active{transform:translateY(1px)}
+  .cp-grid button b{position:absolute;right:3px;bottom:0;font:10px ui-monospace,Menlo,monospace;color:#6a5a7a}
+  .cp:focus-visible .cp-grid{outline:2px dashed #ffd84a66;outline-offset:4px}
+  .shake,.flash{animation:shake .35s}
+  @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+  /* 扭蛋、引导里的字幕和卡片 */
+  .cap{position:absolute;left:50%;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadein .3s;white-space:nowrap}
+  .cap b{font-size:18px;font-weight:600;color:var(--ink)}
+  .cap span,.cap i{font-size:13px;color:var(--sub);font-style:normal}
+  .cap .kk{display:flex;align-items:center;gap:10px}
+  .cap .pad{display:inline-block;text-align:center;line-height:1.9}
+  .cap .ms{color:var(--sub)}
+  .cap .prog{display:block;width:120px;height:4px;background:#2f2340}.cap .prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .15s}
+  .gc{position:absolute;background:var(--card);padding:12px 18px 14px;box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;min-width:210px;animation:rise .3s ease-out}
+  .gc small{display:block;font-size:12px;color:var(--sub)}.gc b{display:block;font-size:22px;font-weight:600;color:var(--acc);line-height:1.35}
+  .gc p{margin:4px 0 12px;font-size:13px;color:#d8cce4}
+  .gc .acts{display:flex;gap:10px;align-items:center}
+  .gc .re small{display:block;font-size:11px;color:var(--dim);line-height:1.2}
+  .gc.en{width:300px}.gc.en b{font-size:17px}.gc.en .cp{margin:4px 0 12px}.gc.en .cp-grid{grid-template-columns:repeat(3,46px)}.gc.en .cp-grid button{width:46px;height:46px}
+  .gc .err{margin:8px 0 0;color:var(--bad);font-size:12px;min-height:0}
+  .fly{position:absolute;background:#fff8e8;color:#3a2630;font-size:24px;font-weight:600;padding:4px 14px;white-space:nowrap;transition:left .6s cubic-bezier(.5,0,.3,1),top .6s cubic-bezier(.5,-.4,.3,1),transform .6s,opacity .6s ease-in;pointer-events:none}
+
+  /* ---------- 店里 ---------- */
+  kbd{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px;color:var(--ink);background:#2a2036}
+  .game{position:relative;margin:0 auto;outline:none;border-radius:4px;overflow:hidden;background:#000;user-select:none;-webkit-user-select:none}
+  .game canvas{position:absolute;left:0;top:0}
+  .game #oc{pointer-events:none}
+  .hud{position:absolute;font-size:13px;pointer-events:none}
+  .tl{left:10px;top:8px;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+  .tl>*{pointer-events:auto}
+  .room{background:#241a2ecc;border-radius:3px;padding:2px 10px;pointer-events:none!important}
+  .room b{color:var(--acc);font-weight:600;margin-right:6px}
+  .room span{color:var(--sub)}
+  .game .mini{left:auto;right:10px;top:10px;border:1px solid #ffd84a88;border-radius:3px;cursor:pointer;image-rendering:auto;opacity:.92}
+  .prompt{left:50%;bottom:14px;transform:translateX(-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:3px;padding:1px 12px;white-space:nowrap;display:none}
+  .cstack{top:10px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:min(560px,50%)}
+  .toast{background:var(--acc);color:var(--bg);border-radius:3px;padding:1px 12px;opacity:0;transition:opacity .3s;text-align:center}
+  .disc,.reply{background:#241a2ef0;border:1px solid var(--acc);border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;opacity:0;transition:opacity .4s,transform .4s;transform:translateY(-6px);width:100%}
+  .disc.show,.reply.show{opacity:1;transform:none}
+  .disc h5,.reply h5{margin:0;font-size:13px;font-weight:600;color:var(--acc)}
+  .disc h5 i{font-style:normal;color:var(--sub);font-weight:400;margin-left:6px}
+  .disc p,.reply p{color:#d8cce4}
+  .disc .tie,.reply .chain{color:var(--ok);font-size:12px}
+  .reply{border-color:#f4a6b8}.reply h5{color:#f4a6b8}
+  .reply q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}
+  .news{left:10px;bottom:12px;font-size:12px;line-height:1.6;max-width:32%}
+  .news div{background:#241a2ecc;border-radius:3px;padding:0 8px;margin-top:3px;width:fit-content;transition:opacity .6s}
+  .mecard{display:flex;gap:8px;align-items:center;background:#241a2ee6;border:1px solid var(--acc);border-radius:3px;padding:3px 10px 3px 3px;cursor:pointer}
+  .mecard canvas{position:static;width:44px;height:40px;background:#3a2c4c}
+  .mecard b{color:var(--bg);background:var(--acc);padding:0 6px;border-radius:2px;font-size:12px;font-weight:600}
+  .mecard span{display:block;font-size:12px;color:var(--sub);line-height:1.45}
+  .mecard kbd{font-size:11px;padding:0 3px}
+  .mecard .st{display:flex;gap:10px;align-items:center;margin-top:1px}
+  .mecard .st em{font-style:normal;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}
+  .mecard .st em b{background:none;color:var(--ink);padding:0;font-weight:600;font-size:12px;font-variant-numeric:tabular-nums}
+  .mecard .st canvas{width:14px;height:14px;background:none;image-rendering:pixelated}
+  .mecard .st em.bk{cursor:pointer}.mecard .st em.bk:hover b{color:var(--acc)}
+  .panel{width:260px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:6px 10px 7px;font-size:12px;line-height:1.6;cursor:pointer}
+  .panel:empty{display:none}
+  .panel h4{margin:0;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
+  .panel h4 i{font-style:normal;color:var(--sub);font-weight:400}
+  .panel .q{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .panel .ln{color:var(--acc)}
+  .panel ul{list-style:none;margin:2px 0 0;padding:0}
+  .panel li{display:flex;gap:6px;align-items:baseline;color:#d8cce4}
+  .panel li:before{content:"";flex:none;width:8px;height:8px;border:2px solid #b9a8c9;transform:translateY(1px)}
+  .panel li.done{color:var(--ok)}.panel li.done:before{background:#7ee08a;border-color:#7ee08a}
+  .panel li.cur{color:var(--acc)}.panel li.cur:before{border-color:var(--acc)}
+  .panel small{color:#8a7a9a}
+  .stamps{right:10px;top:124px;width:258px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:4px 10px 5px;font-size:12px;line-height:1.4;pointer-events:auto;cursor:pointer}
+  .stamps h4{margin:0 0 3px;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
+  .stamps h4 i{font-style:normal;color:var(--sub);font-weight:400}
+  .stamps .row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;color:var(--sub)}
+  .stamps .s{border:2px dashed #4a3a5c;border-radius:50%;width:30px;height:30px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6a5a7a;transform:rotate(-8deg)}
+  .stamps .s.on{border:2px solid #e0533d;color:#e0533d;background:#e0533d18;font-weight:700}
+  #roomban b{color:var(--acc)}
+  .tipbox{position:absolute;pointer-events:none;background:#241a2ef0;border:1px solid var(--line);border-radius:3px;padding:3px 9px;font-size:12px;line-height:1.6;display:none;max-width:300px;z-index:4}
+  .tipbox b{color:var(--ink);font-weight:600}.tipbox .how{color:var(--acc)}.tipbox .what{color:#d8cce4}.tipbox .tie{color:var(--ok)}.tipbox .st{float:right;color:var(--sub);margin-left:10px}
+  .menu{position:absolute;display:none;background:#2f2340;border:1px solid var(--acc);border-radius:4px;padding:4px;min-width:170px;max-width:280px;z-index:7}
+  .menu .t{font-size:12px;color:var(--sub);padding:2px 8px 4px;border-bottom:1px solid var(--line);margin-bottom:4px;line-height:1.55}
+  .menu .t b{color:var(--acc);font-weight:600}
+  .menu button{display:block;width:100%;text-align:left;border:0;padding:3px 8px}
+  .menu button:hover{background:#ffd84a22}
+  .menu button[disabled]{color:#6a5a7a;cursor:default;background:none}
+  .photo{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#241a2eb0;z-index:8}
+  .polaroid{background:#fff8e8;color:#3a2630;padding:12px 12px 10px;border-radius:3px;box-shadow:0 8px 30px #0008;text-align:center;font-size:13px}
+  .polaroid canvas{position:static;margin:0 auto 8px;border:1px solid #d8c8a8}
+  .polaroid .who{color:#8a7a6a;font-size:12px;max-width:360px;margin:0 auto 8px}
+  .polaroid a,.polaroid button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:28px;line-height:1;vertical-align:middle;font:inherit;font-size:13px;color:#3a2630;border:1px solid #c9b89a;background:#fff;margin:0 3px;padding:0 14px;border-radius:3px;text-decoration:none;cursor:pointer}
+  .bookov{position:absolute;inset:0;background:#1c1424f2;display:none;z-index:6;overflow:auto;padding:14px 20px 18px}
+  .bookov .top{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .bookov .top b{font-size:16px;color:var(--acc)}.bookov .top span{color:var(--sub);font-size:12px}.bookov .top button{margin-left:auto}
+  .bookov .top .prog{flex:0 1 280px;height:6px;background:#3a2c4c;border-radius:3px;overflow:hidden;align-self:center}
+  .bookov .top .prog i{display:block;height:100%;background:var(--acc)}
+  .bookov .top .num{color:var(--ink);font-size:13px;font-variant-numeric:tabular-nums}
+  .bookov .sec{font-size:13px;color:var(--acc);font-weight:600;margin:14px 0 6px;display:flex;gap:8px;align-items:baseline}
+  .bookov .sec i{font-style:normal;color:var(--sub);font-weight:400}
+  .bookov .sec em{font-style:normal;color:#8a7a9a;font-weight:400;font-size:12px;margin-left:auto}
+  .bookov .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+  .bookov .e{cursor:pointer}
+  .bookov .e.on{display:flex;gap:9px;background:#2f2340;border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:12px;line-height:1.55;color:#d8cce4}
+  .bookov .e.on:hover{border-color:var(--acc)}
+  .bookov .ic{flex:none;font-weight:700;font-size:12px}
+  .bookov .e.on .ic{width:20px;height:20px;border-radius:50%;background:#7ee08a26;color:#7ee08a;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .bookov .e.on b{color:var(--ink);font-size:13px;font-weight:600;margin-right:6px}
+  .bookov .e.on small{color:#8a7a9a}
+  .bookov .e.on p{margin:1px 0 0}.bookov .e.on p.tie{color:var(--ok)}
+  .bookov .none{font-size:12px;color:var(--sub)}
+  .bookov .lk{display:flex;flex-wrap:wrap;gap:5px 6px;align-items:center;margin:5px 0}
+  .bookov .lk .rn{width:86px;font-size:12px;color:var(--sub)}
+  .bookov .e.off{display:inline-flex;gap:5px;align-items:baseline;font-size:12px;color:#8a7a9a;background:#241a2e;border:1px solid #3a2c4c;border-radius:3px;padding:1px 9px}
+  .bookov .e.off .ic{color:#6a5a7a}
+  .bookov .e.off small{color:#6a5a7a}
+  .bookov .e.off:hover{border-color:var(--sub);color:var(--sub)}
+  .game.vista .tl,.game.vista .mini,.game.vista .stamps,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle,.game.vista #roomban{display:none!important}
+  .vcap{left:50%;bottom:12px;transform:translateX(-50%);display:none;align-items:baseline;gap:12px;background:#241a2ecc;border-radius:3px;padding:3px 14px;font-size:12px;color:var(--sub);white-space:nowrap}
+  .game.vista .vcap{display:flex}
+  .vcap b{color:var(--acc);font-weight:600;font-size:13px}.vcap .sc{color:var(--ink)}.vcap .sc:empty{display:none}
+  .vtitle{left:0;right:0;top:24%;text-align:center;opacity:0;transition:opacity 1.2s;padding:14px 0 16px;background:linear-gradient(90deg,transparent,#1c1424c8 22%,#1c1424c8 78%,transparent)}
+  .vtitle.show{opacity:1}
+  .vtitle small{display:block;font-size:12px;letter-spacing:6px;color:var(--acc);text-shadow:0 1px 6px #000}
+  .vtitle b{display:inline-block;font-size:34px;line-height:1.3;font-weight:600;letter-spacing:12px;color:#fff4dc;padding:6px 0 6px 12px;margin:8px 0;border-top:1px solid #ffd84a99;border-bottom:1px solid #ffd84a99;text-shadow:0 2px 10px #000}
+  .vtitle span{display:block;font-size:13px;color:#fff4dc;letter-spacing:2px;text-shadow:0 1px 6px #000}
+  .replydemo{background:#241a2ef0;border:1px solid #f4a6b8;border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;max-width:520px}
+  .replydemo h5{margin:0;font-size:13px;color:#f4a6b8;font-weight:600}.replydemo q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}.replydemo .chain{color:var(--ok);font-size:12px}
+  .game{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0}
+  .game:not(.on) .hud,.game:not(.on) .mini,.game:not(.on) .corner{display:none!important}
+  .corner{position:absolute;right:10px;bottom:10px;display:flex;gap:4px;z-index:3}
+  .corner button{background:#241a2ecc;border:1px solid var(--line);color:var(--sub);font-size:12px;padding:1px 9px;border-radius:3px}.corner button:hover{color:var(--ink);border-color:var(--sub)}.corner button.on{color:var(--acc)}
+  .game.vista .corner{display:none}
+  .ov{position:absolute;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:#140e1acc}
+  .ov .box{background:var(--card);box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;padding:16px 22px 18px;max-width:min(760px,92vw)}
+  .ov h3{margin:0 0 10px;font-size:15px;color:var(--acc);font-weight:600}
+  .ov .keys{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font-size:13px;color:#d8cce4}
+  .ov .keys div{white-space:nowrap}
+  .ov .box>button{margin-top:14px}
+  #elsewhere{position:fixed;z-index:70}#elsewhere p{margin:0 0 12px;color:#d8cce4;font-size:13px}
+  #devbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;flex-wrap:wrap;gap:4px 6px;align-items:center;padding:4px 10px;background:#140e1ae6;font-size:12px;color:var(--sub)}
+  #devbar button{background:none;border:1px solid var(--line);color:var(--ink);font-size:12px;padding:0 8px}#devbar input{width:120px;accent-color:#ffd84a}#devbar b{color:var(--ink);font-weight:400;min-width:28px}
+  #devbar #dvP{margin-left:auto}
+</style>
+</head>
+<body>
+<!-- 店里（加载时就在后台建好，进店以后才露出来） -->
+<div class="game" id="game" tabindex="0">
+  <canvas id="pc"></canvas><canvas id="oc"></canvas>
+  <div class="hud tl"><div class="room" id="room"><b>前厅</b><span id="online"></span></div>
+    <div class="mecard" id="mecard" title="点一下，找到你自己（C）"><canvas id="mec" width="22" height="20"></canvas><div><b id="mename">你</b><span id="mest">空着嘴</span><span class="st"><em title="一共解开了几颗毛线球"><canvas id="icYarn" width="7" height="7"></canvas>毛线球 <b id="stBall">0</b></em><em class="bk" id="stBook" title="点一下打开图鉴（B）"><canvas id="icPaw" width="7" height="7"></canvas>装置 <b id="stDisc">0</b></em></span></div></div>
+    <div class="panel" id="panel"></div></div>
+  <canvas class="mini" id="mm" width="336" height="108" title="小地图：点一下，猫就走过去"></canvas>
+  <div class="hud stamps" id="stamps" title="集章卡：点一下看入口"></div>
+  <div class="hud news" id="news"></div>
+  <div class="hud prompt" id="prompt"></div>
+  <div class="hud cstack"><div class="toast" id="toast"></div><div class="disc" id="roomban"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
+  <div class="hud vtitle" id="vtitle"></div><div class="hud vcap" id="vcap"></div>
+  <div class="tipbox" id="tip"></div>
+  <div class="menu" id="menu"></div>
+  <div id="dlg"></div>
+  <div class="bookov" id="bookov"></div>
+  <div class="photo" id="photo"><div class="polaroid"><canvas id="phc"></canvas><div class="who" id="phw"></div><a id="phs" download="1024猫咖合照.png">保存照片</a><button id="phx">关掉</button></div></div>
+  <div class="corner"><button id="bKeys" title="按键说明">按键 H</button><button id="bSnd">声音 关</button><button id="bOut" title="让这台浏览器忘掉你的猫">离店</button></div>
+  <div class="ov" id="keyov"><div class="box"><h3>按键</h3><div class="keys">
+    <div><kbd>WASD</kbd> <kbd>↑↓←→</kbd> 走动，<kbd>Shift</kbd> 跑</div><div><kbd>E</kbd> <kbd>空格</kbd> 互动 · 打开便签</div>
+    <div>鼠标点地面走过去，点东西、点猫也行</div><div>右键点猫：看名片 / 蹭蹭 / 传球</div>
+    <div><kbd>Q</kbd> 把毛线球传给鼠标下（或最近）的猫</div><div><kbd>F</kbd> 跟着一只猫走，<kbd>Esc</kbd> 不跟</div>
+    <div><kbd>C</kbd> 找到我 · <kbd>B</kbd> 图鉴</div><div><kbd>T</kbd> 快捷短语 · <kbd>1</kbd>–<kbd>8</kbd> 表情</div>
+    <div>对话框里：<kbd>↑↓</kbd> 或数字键选，<kbd>E</kbd> 确定，<kbd>Esc</kbd> 收起</div><div>看风景时：<kbd>E</kbd> 做画面里的事，<kbd>Esc</kbd> 回到店里</div>
+    <div><kbd>Z</kbd> 缩放 · <kbd>H</kbd> 这张说明</div></div><button class="lbtn">知道了</button></div></div>
+</div>
+<!-- 进店流程 -->
+<div id="entry"><canvas id="ehc"></canvas><canvas id="epc"></canvas><div id="eui"></div><button id="eskip"></button><button id="esnd"></button></div>
+<!-- 同一只猫在别的窗口里开着 -->
+<div class="ov" id="elsewhere"><div class="box"><h3>它在另一个窗口里醒着</h3><p>同一只猫只能待在一个地方。要在这里接着玩吗？</p><button class="pbtn" id="wakeHere">在这里继续</button></div></div>
+<div id="devbar"></div>
+<!-- 加载页 -->
+<div id="boot"><div class="bt"><h1>1024 猫咖营业中</h1><canvas id="bootcv" width="160" height="34"></canvas><p id="bootmsg">开门……</p><div id="bootbox"></div></div></div>
+<script>
+/* 加载器：并行下载、按顺序执行；进度是真的（脚本到齐 → 建好店 → 认出你），显示上最快也要走一秒，让小猫把线球追完 */
+(()=>{
+const FILES=[['cat-sprites.js','把猫叫醒……'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['world-map.js','铺地板、刷墙……'],['world4-layout.js'],['world4-map.js'],
+  ['quest-bank.js','把毛线球装进篮子……'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world4-desk.js'],
+  ['world4-atrium.js','给巨树缠毛线……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world4-arrive.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],
+  ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['app.js']];
+const msg=document.getElementById('bootmsg'),cv=document.getElementById('bootcv'),x=cv.getContext('2d');let real=0,shown=0,label='开门……',ready=false,failed=false,t0=performance.now(),doneCb=null;
+const say=s=>{if(s!=null)label=s;if(!failed)msg.textContent=label};
+function fail(f){failed=true;msg.innerHTML=`有一样东西没加载出来（${f}）<button class="lbtn" onclick="location.reload()">再试一次</button>`}
+// 小猫追着线球跑：线就是进度条
+function draw(ms){const t=(ms-t0)/1000;shown=Math.min(real,shown+(1/55));x.clearRect(0,0,160,34);const bx=10+Math.round(shown*136);
+  x.fillStyle='#4a3a5c';x.fillRect(10,30,136,1);x.fillStyle='#e0533d';x.fillRect(10,30,bx-10,1);for(let i=12;i<bx-4;i+=6){x.fillStyle='#f7a58c';x.fillRect(i,30,2,1)}
+  if(typeof yarnBall==='function'&&typeof drawCat==='function'){const o=typeof C!=='undefined'?C:null;use(x);yarnBall(bx,26,3,0,Math.floor(shown*40));
+    const done=shown>=1,k=done?(ready?'pounce':'sit'):'walkR';drawCat(x,k,0,Math.max(12,bx-22),31,done?t%2:t,{});if(o)use(o)}
+  if(shown>=1&&ready&&doneCb){const f=doneCb;doneCb=null;setTimeout(f,280)}if(!failed)requestAnimationFrame(draw)}
+requestAnimationFrame(draw);
+let n=0;const total=FILES.length;
+function load(src,cb,err){const s=document.createElement('script');s.src=src;s.async=false;s.onload=cb;s.onerror=err;document.body.appendChild(s)}
+// config.js 可以没有（公开仓库里只有 config.example.js）
+load('config.js',()=>{},()=>{});
+FILES.forEach(([f,l])=>load('js/'+f,()=>{n++;real=n/total*.8;if(l)say(l);if(n===total)start()},()=>fail(f)));
+function start(){const snd=document.getElementById('esnd'),paint=()=>{snd.textContent='声音 '+(Sound.on?'开':'关');snd.classList.toggle('on',Sound.on)};paint();snd.onclick=()=>{Sound.set(!Sound.on);paint()};
+  document.getElementById('wakeHere').onclick=()=>App.sleep(false);EK.mount();
+  App.boot(s=>{if(s===null){real=1;ready=true;return new Promise(r=>doneCb=r)}real=Math.max(real,s==='点灯……'?.85:.93);say(s)}).catch(e=>{console.error(e);fail(e.message)})}
+})();
+</script>
+</body>
+</html>
