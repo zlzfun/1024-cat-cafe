@@ -5,14 +5,17 @@
    Account.rule(name)          → null | {why}            只查格式（不联网）
    Account.check([names])      → {name: {ok, why, mine}}  格式 + 有没有被占
    Account.create({name,code,look}) → {cat}              code 是暗号：4 个图案的编号，如 [3,0,7,5]
-   Account.login(name, code)   → {cat} | {err:'code', left} | {err:'lock', wait} | {err:'none'}
+   Account.login(name, code)   → {cat} | {err:'code', left} | {err:'lock', wait} | {err:'none'} | {err:'ban'}
    Account.resume()            → cat | null              这台电脑记住的猫
-   Account.save(state)、Account.logout()
-   cat = {id, name, look:{coat, collar, face}, created, last, state} */
+   Account.save(state)、Account.logout()、Account.prizeSeen(no)
+   Account.token()             → 联机用的令牌（服务端模式才有）；Account.wsUrl() → 联机的地址
+   cat = {id, name, look:{coat, collar, face}, created, last, state, prizes?} */
 const Account=(()=>{
 const CFG=window.CAT1024_CONFIG||{},API=(CFG.api||'').replace(/\/$/,'');
 const STORE_CATS=['宪宪','砚砚','烁烁','小狸花','斑斑','金哥','前台猫'];
 const RESERVED=[...STORE_CATS,'你','我','人类','店长','店猫','猫猫','管理员','系统','猫猫咖啡馆','clowder','clowderai','admin','root','null','undefined'];
+// 名字里带这些词容易被当成办活动的人
+const NO_PART=['管理员','官方','系统','客服','组织者','主办方'];
 const ICONS=['小鱼干','毛线球','铃铛','爪印','咖啡杯','老鼠玩具','纸箱','猫薄荷','月亮'],CODE_LEN=4,MAX_FAIL=5,LOCK_MIN=10;
 const key=s=>String(s||'').normalize('NFKC').trim().toLowerCase();
 const wide=ch=>/[⺀-鿿가-힯豈-﫿＀-｠]/.test(ch);
@@ -23,6 +26,7 @@ function rule(name){const s=String(name||'').normalize('NFKC').trim();if(!s)retu
   const w=width(s);if(w<2)return{why:'再长一点：至少一个汉字或两个字母'};if(w>16)return{why:'太长了：最多 8 个汉字或 16 个字母'};
   if(STORE_CATS.some(r=>key(r)===key(s)))return{why:`「${s}」是店里的猫，换一个吧`};
   if(RESERVED.some(r=>key(r)===key(s)))return{why:'这个名字店里留着用，换一个吧'};
+  if(NO_PART.some(p=>s.includes(p)))return{why:'这个名字容易被当成办活动的人，换一个吧'};
   return null}
 const okCode=c=>Array.isArray(c)&&c.length===CODE_LEN&&c.every(i=>Number.isInteger(i)&&i>=0&&i<ICONS.length);
 const okLook=l=>l&&Number.isInteger(l.coat)&&l.coat>=0&&l.coat<9&&Number.isInteger(l.collar)&&l.collar>=0&&l.collar<6&&typeof l.face==='string';
@@ -74,7 +78,8 @@ const remote={
   async login(name,code){const j=await call('POST','/login',{name,code});if(j.token){LS.set(TK,j.token);return{cat:j.cat}}return{err:j.err||'net',left:j.left,wait:j.wait}},
   async resume(){if(!LS.get(TK,null))return null;const j=await call('GET','/me');if(j.cat)return j.cat;if(j.status===401)LS.del(TK);return null},
   async save(state,keepalive){const j=await call('PUT','/me/state',{state},keepalive);return j.status===200},
-  async logout(){await call('POST','/logout').catch(()=>{});LS.del(TK)}};
+  async logout(){await call('POST','/logout').catch(()=>{});LS.del(TK)},
+  async prizeSeen(no){await call('POST','/me/prize-seen',{no})}};
 
 const B=API?remote:local;
 // 连不上服务端时别整页卡死：返回 {err:'net'}，界面上说"店门口网不好"
@@ -82,4 +87,7 @@ const safe=f=>async(...a)=>{try{return await f(...a)}catch(e){console.warn('[acc
 return{rule,width,ICONS,CODE_LEN,mode:API?'server':'local',
   check:async names=>{try{return await B.check(names)}catch(e){return Object.fromEntries(names.map(n=>[n,rule(n)?{ok:false,why:rule(n).why}:{ok:true,unsure:true}]))}},
   create:safe(B.create),login:safe(B.login),resume:async()=>{try{return await B.resume()}catch(e){return null}},
-  save:(s,k)=>B.save(s,k).catch(()=>false),logout:()=>B.logout().catch(()=>{})}})();
+  save:(s,k)=>B.save(s,k).catch(()=>false),logout:()=>B.logout().catch(()=>{}),prizeSeen:no=>API?remote.prizeSeen(no).catch(()=>{}):null,
+  token:()=>API?LS.get(TK,null):null,
+  // 联机地址：和接口同一台服务器的 /ws（config.js 里也可以用 ws 另给）
+  wsUrl:()=>{if(!API)return null;if(CFG.ws)return CFG.ws;const u=new URL(API,location.href);if(!/^https?:$/.test(u.protocol))return null;u.protocol=u.protocol==='https:'?'wss:':'ws:';u.pathname=u.pathname.replace(/\/api\/?$/,'')+'/ws';u.search='';return u.href}}})();

@@ -1,4 +1,4 @@
-/* 1024 猫咖 · 场景 v4 · 巨树中庭，在整张图的正中间（x 640～1040，布局见 world4-layout.js）。地图部分在 world4-map.js 后面加载（makeWorld 之前）；WORLD_MODS 里接在 world4-desk.js 后面。
+/* 1024 猫咖 · 场景 v4 · 巨树中庭，在整张图的正中间（x 640～1040，布局见 world-map.js 开头）。地图部分在 world4-map.js 后面加载（makeWorld 之前）；WORLD_MODS 里接在 world4-desk.js 后面。
    左边两道门通橱窗长廊、大客厅，右边一道门通工坊；右下角不砌墙，和后院连成一片草地。四条石子路都通到树下。
    店里别的东西都在 10～60 像素之间，这一棵有 400 多像素高，比哪一样都大一个量级：走到树底下，树冠在画面外面，只看得到树干往上伸。
    - 样子：金色树冠；树干和横枝裹着五色毛线织的套子（yarn bombing）；树下一圈石头围起来的树池，地上是树冠的斑驳影子和落叶。
@@ -91,7 +91,7 @@ const TREE_ORN=Array.from({length:TREE.N},(_,i)=>{if(i<24){const x=Math.round(66
   for(let k=0;k<40;k++){const x=Math.round(690+hsh(i,66+k)*300),y=Math.round(40+hsh(i,67+k)*120);if(inCanopy(x,y)&&inCanopy(x,y+16)&&Math.abs(x-TREE.cx)>18)return{x,y,len:3+Math.round(hsh(i,68)*4)}}return{x:760+i*4,y:150,len:4}})
   .map((p,i)=>({p,k:hsh(i,77)})).sort((a,b)=>a.k-b.k).map(o=>o.p);   // 打乱顺序：先挂上去的几件就散在整个树冠上
 
-/* ---------- 地图：巨树中庭在正中间（640～1040），左右是店里的房间（布局见 world4-layout.js） ---------- */
+/* ---------- 地图：巨树中庭在正中间（640～1040），左右是店里的房间（布局见 world-map.js 开头） ---------- */
 // 石板广场：一个大椭圆，一块块石板（逐行画，边缘是干净的像素）
 function plaza(cx,cy,rx,ry){disc(cx,cy,rx+2,ry+2,'#8a8278');disc(cx,cy,rx+1,ry+1,'#a49c90');
   for(let dy=-ry;dy<=ry;dy++){const s=Math.floor(rx*Math.sqrt(Math.max(0,1-dy*dy/((ry+.5)*(ry+.5))))),y=cy+dy,x0=cx-s,x1=cx+s,j=Math.floor((dy+ry)/14),ly=(dy+ry)%14,off=(j%2)*7;
@@ -157,12 +157,13 @@ const now=()=>A.t,tick=f=>A.tickers.push(f),near=(a,b,d)=>Math.hypot(a.x-b.x,a.y
 
 /* ---------- 全店一起挂：橱窗里每挂一件，树上多挂一件；挂满了满树金光 ---------- */
 const kinds=Object.keys(KNIT);S.tree={orn:Array.from({length:12},()=>({kind:rnd(kinds),ci:Math.floor(Math.random()*5),t0:-99})),blooms:0,bloom:0,v:1};
-function treeAdd(item){const T0=S.tree;if(T0.bloom||T0.orn.length>=TREE.N)return;T0.orn.push({kind:item.kind,ci:item.ci,t0:now()});T0.v++;
-  if(T0.orn.length>=TREE.N){T0.bloom=now();T0.blooms++;news(`毛线巨树挂满了 ${TREE.N} 件！满树金光`);if(A.play&&inAtrium(me)){sfx('fanfare');say('毛线巨树挂满了！满树金光')}
+function treeAdd(item){const T0=S.tree;if(T0.bloom||T0.orn.length>=TREE.N)return;T0.orn.push({kind:item.kind,ci:item.ci,t0:now()});T0.v++;if(T0.orn.length>=TREE.N)bloom()}
+function bloom(){const T0=S.tree;if(T0.bloom)return;T0.bloom=now();T0.blooms++;news(`毛线巨树挂满了 ${TREE.N} 件！满树金光`);if(A.play&&inAtrium(me)){sfx('fanfare');say('毛线巨树挂满了！满树金光')}
     S.cats.forEach(c=>{if(inAtrium(c)&&!c.me&&!c.hidden&&Math.random()<.6)emote(c,'bang',2)});
-    after(14,()=>{T0.orn=[];T0.bloom=0;T0.v++;if(A.play&&inAtrium(me))say('树上的成品收下来了，又可以从头挂')})}}
-const h0=A.onHang;A.onHang=(c,item)=>{if(h0)h0(c,item);treeAdd(item)};
-A.tree={add:treeAdd,get n(){return S.tree.orn.length},N:TREE.N};
+    after(14,()=>{T0.orn=[];T0.bloom=0;T0.v++;if(A.play&&inAtrium(me))say('树上的成品收下来了，又可以从头挂')})}
+// 联机时（A.shared）树跟着服务端走：谁挂了一件，world-online.js 调 A.tree.add；连上时用 A.tree.set 换成服务端那一份
+const h0=A.onHang;A.onHang=(c,item)=>{if(h0)h0(c,item);if(!A.shared)treeAdd(item)};
+A.tree={add:treeAdd,bloom,set:list=>{const T0=S.tree;if(T0.bloom)return;T0.orn=list.slice(0,TREE.N-1).map(o=>({kind:o.kind,ci:o.ci,t0:-99}));T0.v++},get n(){return S.tree.orn.length},N:TREE.N};
 
 /* ---------- 爬树：一根根横枝跳上去；你先上树顶，别的猫随便挑一根 ---------- */
 const FLOOR=TREE.floor,up=i=>i<6?TREE_PERCH.slice(0,i+1):[...TREE_PERCH.slice(0,6),TREE_PERCH[i]];
@@ -187,9 +188,9 @@ A.overs.push(vis=>{if(!vis(640,0,400,540))return;const t=now(),T0=S.tree,bl=T0.b
   for(let i=0;i<14;i++){const per=7+hsh(i,96)*6,k=((t+hsh(i,97)*per)%per)/per,gy=300+hsh(i,98)*220,y0=120+hsh(i,99)*70,y=Math.round(y0+(gy-y0)*Math.min(1,k*1.25)),x=Math.round(660+hsh(i,100)*360+(k<.8?Math.sin(t*1.6+i)*8:0));
     if(vis(x-2,y-2,4,4))leafG(x,y,i+Math.floor(t*3))}
   T0.orn.forEach((it,i)=>{const k=t-it.t0;if(k<0||k>2.2)return;const p=TREE_ORN[i];for(let j=0;j<6;j++){const a=t*4+j*Math.PI/3,r=4+k*8;P1(Math.round(p.x+Math.cos(a)*r),Math.round(p.y+p.len+4+Math.sin(a)*r*.7),'#fff4c0')}});
-  // 白天、黄昏：树冠边上一圈淡淡的金光，几道光柱从叶子缝里斜着照下来
+  // 白天、黄昏：树冠边上一圈淡淡的金光；晴天还有几道光柱从叶子缝里斜着照下来
   if(S.tod!=='night'){C.save();C.globalCompositeOperation='lighter';C.globalAlpha=.1+.03*Math.sin(t*.8);[[690,110,70],[990,110,70],[840,24,90],[760,176,56],[920,176,56]].forEach(([x,y,r])=>C.drawImage(glowTex(r,'#ffe08a'),x-r,y-r));
-    C.globalAlpha=.06;C.fillStyle='#fff4c0';[[712,186,20],[796,194,12],[946,184,16]].forEach(([x,y,wd],i)=>{const sw=Math.sin(t*.3+i)*6;C.beginPath();C.moveTo(x,y);C.lineTo(x+wd,y);C.lineTo(x+wd+70+sw,y+320);C.lineTo(x+70+sw,y+320);C.closePath();C.fill()});C.restore()}
+    if((S.weather||'sun')==='sun'){C.globalAlpha=.06;C.fillStyle='#fff4c0';[[712,186,20],[796,194,12],[946,184,16]].forEach(([x,y,wd],i)=>{const sw=Math.sin(t*.3+i)*6;C.beginPath();C.moveTo(x,y);C.lineTo(x+wd,y);C.lineTo(x+wd+70+sw,y+320);C.lineTo(x+70+sw,y+320);C.closePath();C.fill()})}C.restore()}   // 光柱只在晴天有
   // 树顶瞭望台的小灯笼：满树金光过几次，就亮一点
   const L=TOPLAMP,g=Math.min(1,.35+T0.blooms*.2);R(L.x,L.y,1,4,OL);R(L.x-3,L.y+4,7,8,OL);R(L.x-2,L.y+5,5,6,g>.6?'#fff4c0':'#ffd84a');R(L.x-2,L.y+10,5,1,'#e8b83a');
   if(S.tod==='day'||bl>0){C.save();C.globalCompositeOperation='lighter';C.globalAlpha=.25*g+.5*bl;C.drawImage(glowTex(12,'#ffd84a'),L.x-12,L.y-4);C.restore()}

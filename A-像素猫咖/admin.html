@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>组织者后台 · 1024 猫咖</title>
+<style>
+  :root{--bg:#1c1424;--card:#2f2340;--card2:#261c34;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a;--ok:#9ccc98;--bad:#f7a58c;--dim:#8a7a9a}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+  button,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  .pbtn{border:0;background:var(--acc);color:#241a2e;font-weight:600;padding:6px 18px 8px;box-shadow:inset 0 -3px 0 #b8962a;clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))}
+  .pbtn:hover{background:#ffe27a}.pbtn[disabled]{background:#4a3a5c;color:var(--dim);box-shadow:inset 0 -3px 0 #3a2c4c;cursor:default}
+  .lbtn{border:2px solid var(--line);background:#241a2e;color:var(--sub);font-size:13px;padding:3px 12px}.lbtn:hover{border-color:var(--sub);color:var(--ink)}
+  .lbtn.warn:hover{border-color:var(--bad);color:var(--bad)}
+  input[type=text],input[type=password],input[type=number],textarea{background:#140e1a;border:2px solid var(--line);padding:6px 10px;outline:none}
+  input:focus,textarea:focus{border-color:var(--acc)}
+  header{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:2px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.08em}
+  header #live{font-size:12px;color:var(--sub)}header #live b{color:var(--ok);font-weight:600}
+  header .sp{flex:1}
+  main{max-width:1180px;margin:0 auto;padding:22px 24px 60px}
+  .card{background:var(--card);box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;padding:16px 18px;margin:6px 6px 26px}
+  .card h2{margin:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:10px}
+  .card h2 small{font-size:12px;font-weight:400;color:var(--sub)}
+  .hint{font-size:12px;color:var(--dim);margin:6px 0 0}
+  .err{color:var(--bad);font-size:13px;min-height:1.6em;margin:6px 0 0}
+  /* 口令 */
+  #login{max-width:420px;margin:12vh auto 0}
+  #login form{display:flex;gap:10px}#login input{flex:1}
+  /* 概况 */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 6px 26px}
+  .stat{background:var(--card2);border:2px solid var(--line);padding:10px 14px}
+  .stat b{display:block;font-size:24px;font-weight:600;line-height:1.3;color:var(--acc)}.stat span{font-size:12px;color:var(--sub)}
+  .stat.ok b{color:var(--ok)}
+  .two{display:grid;grid-template-columns:3fr 2fr;gap:0 14px}
+  @media (max-width:860px){.two{grid-template-columns:1fr}header{flex-wrap:wrap}main{padding:16px}}
+  /* 抽奖 */
+  .form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+  .form label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub)}
+  .form input[type=number]{width:80px}.form .how{flex:1;min-width:220px}
+  .draw{border-top:2px solid var(--line);margin-top:14px;padding-top:10px}
+  .draw h3{margin:0 0 6px;font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.draw h3 span{font-weight:400;color:var(--sub);font-size:12px}
+  .draw h3 .lbtn{margin-left:auto}
+  .wins{display:flex;flex-wrap:wrap;gap:6px}
+  .win{display:flex;align-items:center;gap:8px;background:#241a2e;border:2px solid var(--line);padding:3px 10px 3px 4px;font-size:13px}
+  .win code{font:600 13px ui-monospace,Menlo,monospace;color:var(--acc);letter-spacing:1px}
+  .win.new{border-color:var(--acc)}
+  /* 屏蔽词 */
+  #words textarea{width:100%;min-height:150px;resize:vertical;font-size:13px}
+  #words .row{display:flex;gap:12px;align-items:center;margin-top:8px}
+  /* 名册 */
+  .bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:10px}
+  .bar input[type=text]{width:220px}.bar label{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px}.bar .sp{flex:1}
+  .tbl{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:860px}
+  th{text-align:left;font-weight:400;color:var(--sub);font-size:12px;padding:4px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+  td{padding:5px 8px;border-bottom:1px solid #3a2d4a;vertical-align:middle;white-space:nowrap}
+  tr:hover td{background:#35284a}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .who{display:flex;align-items:center;gap:8px}.who canvas{width:33px;height:30px;background:#241a2e}
+  .who b{font-weight:600}.dot{display:inline-block;width:8px;height:8px;background:var(--ok);margin-left:6px;vertical-align:1px}
+  .tag{display:inline-block;font-size:11px;padding:0 6px;margin-left:6px;border:1px solid var(--line);color:var(--sub)}
+  .tag.ban{border-color:var(--bad);color:var(--bad)}.tag.flag{border-color:#c8a86a;color:#e8c880}
+  .st{display:inline-flex;gap:3px}.st i{display:inline-block;width:22px;text-align:center;font-style:normal;font-size:11px;border:1px solid var(--line);color:var(--dim)}
+  .st i.on{background:#e0533d;border-color:#e0533d;color:#fff4dc}
+  .acts{display:flex;gap:6px}
+  .more{font-size:12px;color:var(--dim);margin:10px 0 0}
+  /* 弹窗 */
+  #modal{position:fixed;inset:0;background:#0c0810cc;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+  #modal .card{max-width:440px;width:100%;margin:0}
+  #modal p{margin:0 0 10px;color:#d8cce4}
+  .code{display:flex;gap:10px;margin:12px 0 14px;flex-wrap:wrap}
+  .code div{display:flex;flex-direction:column;align-items:center;gap:4px;background:#241a2e;border:2px solid var(--line);padding:8px 10px 6px;min-width:70px}
+  .code canvas{width:36px;height:36px}.code span{font-size:12px;color:var(--sub)}.code em{font-style:normal;font-size:11px;color:var(--dim)}
+  #modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+  #modal input{width:100%}
+</style>
+</head>
+<body>
+<header><h1>1024 猫咖 · 组织者后台</h1><span id="live"></span><span class="sp"></span><a class="lbtn" href="./" target="_blank" rel="noopener" style="text-decoration:none">打开猫咖</a><button class="lbtn" id="out" hidden>退出</button></header>
+<main>
+  <section class="card" id="login">
+    <h2>口令</h2>
+    <form id="loginf"><input type="password" id="key" placeholder="后台口令" autocomplete="current-password"><button class="pbtn">进入</button></form>
+    <p class="err" id="loginerr"></p>
+    <p class="hint">口令在服务器的 <code>server/data/admin.key</code> 里，服务端启动时也会打印出来（也可以用环境变量 ADMIN_KEY 指定）。关掉这个标签页就要重新输入。</p>
+  </section>
+  <div id="app" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="two">
+      <section class="card" id="draw">
+        <h2>抽奖<small>集齐三个章的猫各有一次资格；封禁的不算</small></h2>
+        <div class="form">
+          <label>抽 <input type="number" id="dn" min="1" max="500" value="10"> 只</label>
+          <label><input type="checkbox" id="dfresh" checked> 排除已经抽中过的</label>
+          <input type="text" class="how" id="dhow" maxlength="200" placeholder="怎么领奖（抽中的猫会在画面上看到这句话）">
+          <button class="pbtn" id="dgo">抽</button>
+          <button class="lbtn" id="exElig">导出有资格的名单</button>
+        </div>
+        <p class="err" id="drawerr"></p>
+        <div id="draws"></div>
+      </section>
+      <section class="card" id="words">
+        <h2>屏蔽词<small>一行一个；名字去掉空格标点以后含有其中的词，就不能用</small></h2>
+        <textarea id="wtext" spellcheck="false"></textarea>
+        <div class="row"><button class="pbtn" id="wsave">保存</button><span class="hint" id="wmsg"></span></div>
+        <p class="hint">另外，名字里含"管理员""官方""系统""客服""组织者""主办方"的一直不能用（写在程序里）。已经登记的名字不受新词影响，要处理就在名册里改名。</p>
+      </section>
+    </div>
+    <section class="card" id="roster">
+      <h2>名册<small id="rcount"></small></h2>
+      <div class="bar"><input type="text" id="q" placeholder="按名字找"><label><input type="checkbox" id="onlyElig"> 只看有资格的</label><label><input type="checkbox" id="onlyOn"> 只看在线的</label><span class="sp"></span><button class="lbtn" id="exAll">导出全部</button><button class="lbtn" id="reload">刷新</button></div>
+      <div class="tbl"><table><thead><tr><th>猫</th><th>登记</th><th>最近来过</th><th class="n">来过</th><th class="n">解开毛线球</th><th class="n">挂进橱窗</th><th>集章</th><th>抽中</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+      <p class="more" id="more"></p>
+      <p class="hint">"挂进橱窗"是联机时服务端记到的次数。盖了解球章、服务端却一次没记到的，标着"待核"：可能是离线玩的，也可能改过存档，由你判断。</p>
+    </section>
+  </div>
+</main>
+<div id="modal"><div class="card" id="mbox"></div></div>
+<script src="config.js"></script>
+<script src="js/cat-sprites.js"></script>
+<script src="js/scene-kit.js"></script>
+<script src="js/world-kit.js"></script>
+<script src="js/world4-kit.js"></script>
+<script src="js/world-play.js"></script>
+<script src="js/dialog-ui.js"></script>
+<script src="js/entry-art.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

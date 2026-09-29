@@ -15,7 +15,7 @@ const {S,P,me,rr,rnd,pickW,run,setK,idle,emote,speak,say,sfx,T,TH,dist,findPath,
 const now=()=>A.t,near=(a,b,d)=>Math.hypot(a.x-b.x,a.y-b.y)<d,tick=f=>A.tickers.push(f),val=(v,...a)=>typeof v==='function'?v(...a):v;
 const G=A.guide,NAME='前台猫',tipOf=k=>TIPS[k]?{...TIPS[k],key:k}:null;
 S.bellT=0;tick(dt=>{S.bellT=Math.max(0,S.bellT-dt)});
-const cat=A.mkCat(1,NAME,{kind:'desk',desk:1,def:'content',myFace:'content',sp:30,...P.fdeskTop});S.cats.push(cat);
+const cat=A.mkCat(DESK_PAL,NAME,{kind:'desk',desk:1,def:'content',myFace:'content',sp:30,...P.fdeskTop});S.cats.push(cat);
 const onDesk=()=>cat.z!=null&&near(cat,P.fdeskTop,3);
 const backSteps=()=>[{go:P.fdeskFloor},{jump:{...P.fdeskTop}},{fn:c=>{c.face='R';setK(c,'sit')}}];
 const ring=()=>{S.bellT=.7;sfx('bell')};
@@ -64,7 +64,7 @@ tick(()=>{if(!A.play||lead)return;const n=near(me,cat,56)&&!me.hidden;
 
 /* ---------- 对话框 ---------- */
 const HEAD={icon:'bell',title:NAME,chips:['有事问我']};
-const say1=t=>({k:'say',pal:1,name:NAME,t});
+const say1=t=>({k:'say',pal:DESK_PAL,name:NAME,t});
 const BACK=[{id:'back',t:'回去'},{id:'close',t:'再逛逛',key:'Esc'}];
 function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick=null;
   if(id==='menu'){const items=[...(q&&ball?[{id:'quest',t:'我叼着的这颗球，该怎么解？',sub:'再看一眼便签'}]:[]),

@@ -1,7 +1,8 @@
-/* 1024 猫咖 · 场景 v3 引擎（电脑端、多人同屏）。依赖 cat-sprites.js、scene-kit.js、world-kit.js、world-map.js；交互和 AI 在 world-acts.js（WORLD_MODS）。
+/* 1024 猫咖 · 店里的引擎（电脑端、多人同屏）。依赖 cat-sprites.js、scene-kit.js、world-kit.js、world-map.js；交互和 AI 在 world-acts.js 等 WORLD_MODS 里。
    makeWorld(canvas, {play, ui, bots}) → {S, me, tick(t,dt), render(ctx,vx,vy,vw,vh), hud(...), mini(...), input, cmd, ...}
    一个世界、多个视口：试玩画布跟着"你"走，页面上的全店大图画的是同一份世界。
-   其他在线的猫在原型里由机器人扮演，它们和玩家走同一套接口（走到 / 用某个东西 / 表情 / 传球 / 蹭蹭）；接真实联机时，把机器人换成从网络收到的这些指令。
+   别的猫：店猫和补位的机器人（world-acts.js），它们和玩家走同一套接口（走到 / 用某个东西 / 表情 / 传球 / 蹭蹭）；
+   联机时真人的猫（world-online.js）带 puppet 标记：位置和姿态只跟着网络走，引擎不给它排动作、不替它想事情、也不推它让路。
    动作队列同 v2：{go 走到 / chase 追着走} {jump 跳到} {k 姿态, dur 秒} {when 等到} {fn 回调}；soft 可被玩家打断，lock 不可。
    画猫走缓存：同一姿态、同一帧、同一毛色只画一次，之后直接贴图——100 只猫同屏也只是 100 次 drawImage。 */
 const rnd=a=>a[Math.floor(Math.random()*a.length)],rr=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -21,6 +22,8 @@ const COATS=[
   {name:'白猫',body:'#fbfaf6',light:'#ffffff',shade:'#e4e0d8',outline:'#5a5060',whisk:'#b0a8b0',eye:'#4a7fd0'}];
 const COLLARS=['#e0533d','#5B9BD5','#9B7EBD','#5B8C5A','#e8b83a','#f4a6b8'];
 const PAL=[...BREEDS];COATS.forEach(c=>COLLARS.forEach(col=>PAL.push({...c,collar:col})));
+// 前台猫：蓝色重点色的布偶猫，金项圈、蓝眼睛——和宪宪（海豹色、紫项圈）一眼能分开。放在所有玩家毛色后面，机器人不会挑到
+const DESK_PAL=PAL.length;PAL.push({name:'前台猫',body:'#f2efe9',light:'#ffffff',shade:'#d6d2cc',outline:'#4a4c5a',points:'#7c889c',collar:'#e8b83a',whisk:'#9a98a4',eye:'#4a7fd0'});
 const BOT_FACES=['normal','content','curious','blep','sparkle','meh','sleepy','happy','smug','wink'];
 const BOT_NAMES=`年糕 汤圆 芝麻 豆包 可乐 布丁 团子 咸鱼 拿铁 摩卡 奶盖 花卷 麻薯 栗子 桃酥 果冻 芋圆 黑糖 肉松 饼干 雪球 煤球 小满 阿福 锅巴 米粒 毛豆 蛋挞 酥酥 嘟嘟
   大橘 小橘 二花 奥利奥 可颂 贝果 松饼 曲奇 泡芙 抹茶 焦糖 奶茶 豆花 冰粉 春卷 小笼 烧卖 馄饨 粽子 麦芽 燕麦 玉米 土豆 地瓜 南瓜 柚子 橙子 柠檬 青提 蓝莓
@@ -102,7 +105,7 @@ const me=mkCat(0,'你',{me:1,kind:'me',sp:56,x:236,y:150});S.cats.push(me);
 const byName=n=>S.cats.find(c=>c.name===n);
 function setK(c,k,ex){c.k=k;c.t0=now;c.ex=ex??c.myFace;c.mirror=false}
 function unclaim(c){const f=c.onLeave;c.onLeave=null;if(f)f(c)}
-function run(c,steps,keep){if(!keep){c.q=[];c.cur=null;c.dy=0;c.place=null;unclaim(c)}c.q.push(...steps)}
+function run(c,steps,keep){if(c.puppet)return;if(!keep){c.q=[];c.cur=null;c.dy=0;c.place=null;unclaim(c)}c.q.push(...steps)}
 const idle=c=>!c.cur&&!c.q.length;
 const restPose=c=>c.hold&&!c.hold.knit?'hold':'sit';
 function startStep(c,s){
@@ -251,7 +254,7 @@ function key(e,down){const k=e.key.length===1?e.key.toLowerCase():e.key,m=KEYMAP
   if(e.key==='Escape'){me.follow=null;return true}
   if(/^[1-8]$/.test(k)){doEmote(me,+k-1);return true}return false}
 function blurKeys(){for(const k in keys)keys[k]=false}
-A.doEmote=doEmote;A.busy=busy;A.pressE=pressE;A.tap=(x,y)=>tap(x,y);A.snap=(x,y,w,h)=>{const cv=mkCanvas(w,h),keep=lastView;render(cv.getContext('2d'),x,y,w,h,{marker:false});lastView=keep;return cv};
+A.doEmote=doEmote;A.EMOTES=EMOTES;A.view=()=>lastView;A.poke=()=>poke();A.busy=busy;A.pressE=pressE;A.tap=(x,y)=>tap(x,y);A.snap=(x,y,w,h)=>{const cv=mkCanvas(w,h),keep=lastView;render(cv.getContext('2d'),x,y,w,h,{marker:false});lastView=keep;return cv};
 
 /* ---------- 每帧 ---------- */
 let room=null,camX=me.x-240,camY=me.y-135;
@@ -261,7 +264,7 @@ function tick(t,dt){now=t;S.now=t;
   S.hearts=S.hearts.filter(h=>(h.k=(now-h.t0)/1.8)<1);S.puffs=S.puffs.filter(p=>(p.k=(now-p.t0)/.6)<1);
   S.flying=S.flying.filter(f=>{const k=Math.max(0,Math.min(1,(now-f.t0)/f.dur));f.x=f.x0+(f.x1-f.x0)*k;f.y=f.y0+(f.y1-f.y0)*k-Math.sin(k*Math.PI)*(f.arc??18);if(k<1)return true;f.done&&f.done();return false});
   const moving=play&&keyMove(dt);
-  for(const c of S.cats){if(c.gone)continue;if(c===me&&moving&&!busy())continue;stepCat(c,dt);if(c.riding)continue;
+  for(const c of S.cats){if(c.gone||c.puppet)continue;if(c===me&&moving&&!busy())continue;stepCat(c,dt);if(c.riding)continue;
     if(c!==me&&idle(c)&&!c.place&&(c.wait-=dt)<=0)A.think(c);
     if(c===me&&idle(c)){if(me.follow&&!me.place&&!me.hidden){const f=me.follow;if(f.gone||f.hidden)me.follow=null;else if(dist(f,me)>30)run(me,[{chase:()=>({x:f.x+(me.x<f.x?-14:14),y:f.z!=null?f.z+6:f.y+1}),near:18}])}
       else if(play&&!me.place&&!me.hidden&&!moving&&c.k!==restPose(c))setK(c,restPose(c))}}
@@ -269,7 +272,7 @@ function tick(t,dt){now=t;S.now=t;
   if(play)afk(dt,moving);if(pendingTap&&!busy())tap(...pendingTap);
   for(const c of S.cats)c.carry=c.hold&&(c.hold.knit||c.k.startsWith('walk'))&&!PLAYS.includes(c.k)?{ci:c.hold.ci,kind:c.hold.knit?c.hold.kind:null}:null;
   // 挤在一起的闲猫慢慢让开一点
-  for(let i=0;i<S.cats.length;i++){const a=S.cats[i];if(a.z!=null||a.hidden||!idle(a)||a.place)continue;for(let j=i+1;j<S.cats.length;j++){const b=S.cats[j];if(b.z!=null||b.hidden||!idle(b)||b.place)continue;
+  for(let i=0;i<S.cats.length;i++){const a=S.cats[i];if(a.z!=null||a.hidden||!idle(a)||a.place||a.puppet)continue;for(let j=i+1;j<S.cats.length;j++){const b=S.cats[j];if(b.z!=null||b.hidden||!idle(b)||b.place||b.puppet)continue;
     const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<7){const ux=d>.01?dx/d:1,uy=d>.01?dy/d:0,st=10*dt;if(free(b.x+ux*st,b.y+uy*st)&&!b.me){b.x+=ux*st;b.y+=uy*st}else if(free(a.x-ux*st,a.y-uy*st)&&!a.me){a.x-=ux*st;a.y-=uy*st}}}}
   if(play&&ui.prompt)ui.prompt(promptText());
   const r=roomAt(me.x,me.y);if(r!==room){room=r;ui.room&&ui.room(r)}}

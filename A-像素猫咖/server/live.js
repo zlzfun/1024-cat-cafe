@@ -1,0 +1,95 @@
+/* 1024 猫咖 · 联机：谁在店里、各自在哪儿，把走路、表情、快捷短语、蹭蹭、传球转给附近的猫；巨树和小黑板的计数全店共用。设计见 docs/联机.md。
+   - 身份只认令牌（第一条消息 {t:'hi', token}），名字和长相由服务端按令牌填，浏览器发来的消息里不带名字。
+   - 不转任何自由文字：短语只传序号，毛线球只传题号。每样字段都查，不对的消息直接丢掉。
+   - 每 0.1 秒给每个人发一包：他画面里（按他报的画面大小，四周再多留一圈）的猫，凡是比他上次收到的新，就发一份完整状态；
+     画面外的猫每秒只发一次位置（给小地图用）。走进画面的那一刻，缺的完整状态会补上。高频的这几样用连接的短编号 n 代替猫的 id。
+   - 同一只猫从第二个地方连上来，先连的那个收到 {t:'bye', why:'elsewhere'}。 */
+const WS=require('./ws'),S=require('./store');
+const TICK=100,FAR_EVERY=10,HI_MS=5000,MAX_CONN=600,TREE_N=36;
+const KINDS=['scarf','hat','mitten','sock','sweater','flag'],TOYS=['pen','globe','mouse','cactus'];
+const GAP={emo:.45,ph:.9,rub:.45,pass:.45,back:.2,hang:2.5,s:.07,v:.5};   // 同一种消息最短间隔（秒）
+
+const conns=new Set(),byCat=new Map();let joins=[],leaves=[],tickN=0,nseq=0;
+const st={in:0,out:0,bytesIn:0,bytesOut:0,tickMs:0,drop:0,t0:Date.now()};
+
+/* ---------- 检查 ---------- */
+const num=(v,a,b)=>typeof v==='number'&&Number.isFinite(v)&&v>=a&&v<=b;
+const okHold=h=>h===0||typeof h==='string'&&(/^y[0-4]$/.test(h)||new RegExp('^('+KINDS.join('|')+'):[0-4]$').test(h)||new RegExp('^t:('+TOYS.join('|')+')$').test(h));
+function okState(s){if(!Array.isArray(s)||s.length!==9)return false;const [x,y,z,dy,k,f,e,h,fl]=s;
+  return num(x,0,1680)&&num(y,0,540)&&(z===null||num(z,0,560))&&num(dy,-300,20)&&typeof k==='string'&&/^[a-zA-Z]{2,14}$/.test(k)&&(f===0||f===1)&&
+    typeof e==='string'&&/^[a-zA-Z]{0,14}$/.test(e)&&okHold(h)&&Number.isInteger(fl)&&fl>=0&&fl<4}
+const okBall=b=>b&&Number.isInteger(b.ci)&&b.ci>=0&&b.ci<5&&KINDS.includes(b.kind)&&(b.qid==null||typeof b.qid==='string'&&/^[a-z0-9-]{1,24}$/.test(b.qid));
+const cleanBall=b=>({ci:b.ci,kind:b.kind,qid:b.qid||null,...(b.rv?{rv:1}:{})});
+const idx=(i,n)=>Number.isInteger(i)&&i>=0&&i<n;
+
+/* ---------- 发 ---------- */
+function send(c,o){if(!c.ws.open)return;const s=JSON.stringify(o);c.ws.send(s);st.out++;st.bytesOut+=s.length}
+const live=()=>[...conns].filter(c=>c.cat&&c.s);
+// 画面里：按收的那一方报的画面大小算（半宽 + 200、半高 + 120）；没报过按 1440×860 的窗口算
+const sees=(r,c)=>!r.s||Math.abs(c.s[0]-r.s[0])<r.nx&&Math.abs(c.s[1]-r.s[1])<r.ny;
+const nearOf=c=>live().filter(o=>o!==c&&sees(o,c));
+const dist=(a,b)=>Math.hypot(a.s[0]-b.s[0],a.s[1]-b.s[1]);
+const info=c=>({id:c.cat.id,n:c.n,name:c.cat.name,look:c.cat.look,s:c.s});
+const worldInfo=()=>({hung:S.db.world.hung,today:S.db.world.days[S.today()]||0,tree:S.db.world.tree});
+
+/* ---------- 连上来 ---------- */
+function upgrade(req,socket,head){if(conns.size>=MAX_CONN){socket.end('HTTP/1.1 503 Busy\r\n\r\n');return}
+  const ws=WS.accept(req,socket,head,{maxPayload:2048});if(!ws)return;
+  const c={ws,cat:null,s:null,ver:0,n:0,seen:new Map(),posSent:new Map(),last:{},bucket:60,bt:Date.now(),strikes:0,nx:440,ny:255};conns.add(c);
+  const hiT=setTimeout(()=>{if(!c.cat)ws.close(1008)},HI_MS);
+  ws.on('message',txt=>{st.in++;st.bytesIn+=txt.length;let m;try{m=JSON.parse(txt)}catch(e){return strike(c)}if(!m||typeof m.t!=='string')return strike(c);
+    if(!c.cat){if(m.t==='hi')hello(c,m,hiT);else ws.close(1008);return}
+    if(!allow(c,m.t))return;const h=ON[m.t];if(h)h(c,m);else strike(c)});
+  ws.on('close',()=>{clearTimeout(hiT);conns.delete(c);if(c.cat&&byCat.get(c.cat.id)===c){byCat.delete(c.cat.id);if(c.announced)leaves.push({id:c.cat.id,n:c.n})}})}
+function hello(c,m,hiT){const me=S.who(m.token);if(!me){send(c,{t:'bye',why:'auth'});return c.ws.close(1008)}clearTimeout(hiT);
+  const old=byCat.get(me.c.id);if(old){send(old,{t:'bye',why:'elsewhere'});old.ws.close(4000);if(old.announced)leaves.push({id:me.c.id,n:old.n})}
+  c.cat=me.c;c.n=nseq=nseq%999999+1;byCat.set(me.c.id,c);
+  send(c,{t:'welcome',id:me.c.id,cats:live().filter(o=>o!==c&&o.announced).map(o=>{c.seen.set(o.n,o.ver);return info(o)}),world:worldInfo()})}
+// 限速：每条连接一个桶（每秒补 30 条，最多攒 60 条），每种消息还有最短间隔；老是超就断开
+function allow(c,t){const now=Date.now();c.bucket=Math.min(60,c.bucket+(now-c.bt)*.03);c.bt=now;if(c.bucket<1){st.drop++;return strike(c),false}c.bucket--;
+  const g=GAP[t];if(g){if(now-(c.last[t]||0)<g*1000){st.drop++;return false}c.last[t]=now}return true}
+function strike(c){if(++c.strikes>200)c.ws.close(1008);return false}
+
+/* ---------- 收 ---------- */
+const ON={
+  s(c,m){if(!okState(m.s))return strike(c);c.s=m.s;c.ver++;if(!c.announced){c.announced=true;joins.push(c)}},
+  v(c,m){const v=m.v;if(!Array.isArray(v)||!num(v[0],100,1680)||!num(v[1],80,540))return;c.nx=v[0]/2+200;c.ny=v[1]/2+120},
+  emo(c,m){if(!c.s||!idx(m.i,8))return;for(const o of nearOf(c))send(o,{t:'emo',id:c.cat.id,i:m.i})},
+  ph(c,m){if(!c.s||!idx(m.i,8))return;for(const o of nearOf(c))send(o,{t:'ph',id:c.cat.id,i:m.i})},
+  rub(c,m){const o=byCat.get(m.to);if(!c.s||!o||!o.s||dist(c,o)>60)return;for(const r of nearOf(c))send(r,{t:'rub',id:c.cat.id,to:o.cat.id})},
+  // 传球：对方不在，球马上滚回来；附近看热闹的只收到一道弧线
+  pass(c,m){if(!c.s||!okBall(m.ball)||!Number.isInteger(m.p))return;const o=byCat.get(m.to),ball=cleanBall(m.ball);
+    if(!o||!o.s||dist(c,o)>200){send(c,{t:'back',id:m.to,p:m.p,ball});return}
+    send(o,{t:'pass',id:c.cat.id,p:m.p,ball});for(const r of nearOf(c))if(r!==o)send(r,{t:'toss',id:c.cat.id,to:o.cat.id,ci:ball.ci})},
+  back(c,m){if(!okBall(m.ball)||!Number.isInteger(m.p))return;const o=byCat.get(m.to);if(!o)return;const ball=cleanBall(m.ball);
+    send(o,{t:'back',id:c.cat.id,p:m.p,ball});if(c.s)for(const r of nearOf(c))if(r!==o)send(r,{t:'toss',id:c.cat.id,to:o.cat.id,ci:ball.ci})},
+  // 挂进橱窗：全店计数 +1，巨树多一件；这颗球是别人传过来的，告诉它
+  hang(c,m){if(!KINDS.includes(m.kind)||!idx(m.ci,5))return;const W=S.db.world,d=S.today();W.hung++;W.days[d]=(W.days[d]||0)+1;
+    W.tree.push({kind:m.kind,ci:m.ci});let gold=false;if(W.tree.length>=TREE_N){W.tree=[];gold=true}
+    c.cat.hangs=(c.cat.hangs||0)+1;S.save();
+    const msg={t:'hang',id:c.cat.id,kind:m.kind,ci:m.ci,hung:W.hung,today:W.days[d],...(gold?{gold:1}:{})};for(const o of conns)if(o.cat)send(o,msg);
+    const f=m.from&&byCat.get(m.from);if(f&&f!==c)send(f,{t:'woven',id:c.cat.id,kind:m.kind,ci:m.ci})}};
+
+/* ---------- 每 0.1 秒：按远近打包 ---------- */
+setInterval(()=>{const t0=process.hrtime.bigint();tickN++;const far=tickN%FAR_EVERY===0,L=live().filter(c=>c.announced),J=joins.filter(c=>c.ws.open&&c.announced),Lv=leaves;joins=[];leaves=[];
+  for(const r of conns){if(!r.cat)continue;const u=[],p=[];for(const x of Lv){r.seen.delete(x.n);r.posSent.delete(x.n)}
+    for(const c of L){if(c===r||J.includes(c))continue;
+      if(sees(r,c)){if(r.seen.get(c.n)!==c.ver){u.push([c.n,c.s]);r.seen.set(c.n,c.ver)}}
+      else if(far&&r.seen.get(c.n)!==c.ver){const k=c.s[0]*1000+c.s[1];if(r.posSent.get(c.n)!==k){p.push([c.n,c.s[0],c.s[1]]);r.posSent.set(c.n,k)}}}
+    const j=J.filter(c=>c!==r).map(c=>{r.seen.set(c.n,c.ver);return info(c)}),l=Lv.filter(x=>x.id!==r.cat.id).map(x=>x.n);
+    if(u.length||p.length||j.length||l.length)send(r,{t:'b',...(u.length?{u}:{}),...(p.length?{p}:{}),...(j.length?{j}:{}),...(l.length?{l}:{})})}
+  st.tickMs=st.tickMs*.9+Number(process.hrtime.bigint()-t0)/1e6*.1},TICK).unref();
+
+/* ---------- 给后台用 ---------- */
+function kick(id,why){const c=byCat.get(id);if(c){send(c,{t:'bye',why});c.ws.close(4000)}}
+function rename(id,name){const c=byCat.get(id);if(c)c.cat.name=name;for(const o of conns)if(o.cat)send(o,{t:'rename',id,name})}
+function prize(id,p){const c=byCat.get(id);if(c)send(c,{...p,t:'prize'})}
+// 收发速率每 5 秒算一次
+let rate={inPerSec:0,outPerSec:0,kbInPerSec:0,kbOutPerSec:0,dropped:0,cpu:0,rssMB:0},cpu0=process.cpuUsage();
+setInterval(()=>{const sec=(Date.now()-st.t0)/1000,cu=process.cpuUsage(cpu0);cpu0=process.cpuUsage();
+  rate={inPerSec:+(st.in/sec).toFixed(1),outPerSec:+(st.out/sec).toFixed(1),kbInPerSec:+(st.bytesIn/sec/1024).toFixed(1),kbOutPerSec:+(st.bytesOut/sec/1024).toFixed(1),dropped:st.drop,
+    cpu:Math.round((cu.user+cu.system)/1e4/sec),rssMB:Math.round(process.memoryUsage().rss/1048576)};   // cpu：这 5 秒里占了一个核的百分之几
+  Object.assign(st,{in:0,out:0,bytesIn:0,bytesOut:0,drop:0,t0:Date.now()})},5000).unref();
+const stats=()=>({online:[...byCat.values()].filter(c=>c.announced).length,conns:conns.size,...rate,tickMs:+st.tickMs.toFixed(3)});
+const isOnline=id=>byCat.has(id);
+module.exports={upgrade,kick,rename,prize,stats,isOnline};

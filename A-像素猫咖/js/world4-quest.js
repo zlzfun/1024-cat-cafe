@@ -21,8 +21,9 @@ function pickQuest(){if(Q.force){const d=def(Q.force);Q.force=null;if(d)return d
     if(q.type==='route'){const c=npc(q.ans);w*=c?(dist(c,me)<320?1.6:dist(c,me)<640?1:.5):.2}
     if(q.type==='memory')w*=me.x>1320?1.8:.9;if(q.type==='flow')w*=me.x>1000&&me.x<1380&&me.y<260?1.8:.8;   // 在图书馆附近多出查记忆的题，在工坊附近多出走流程的题
     if(q.type==='coop')w*=S.cats.filter(c=>isBot(c)&&near(c,me,260)).length>=2?1.4:.6;return w})}
-function assign(y){const d=pickQuest();Q.seen[d.id]=1;Q.types[d.type]=(Q.types[d.type]||0)+1;
-  const qs={d,y,no:++qno,ch:d.ch||chPick(),st:'pick',wrong:new Set(),chain:['门外','你'],flow:{test:0,ci:0,review:0},pp:{},tried:new Set()};
+// 联机时别的真人传过来的球带着题号（qid）和它经过谁（chain）：接着做同一道题
+function assign(y){const d=(y.qid&&def(y.qid))||pickQuest();Q.seen[d.id]=1;Q.types[d.type]=(Q.types[d.type]||0)+1;
+  const qs={d,y,no:++qno,ch:d.ch||chPick(),st:'pick',wrong:new Set(),chain:[...(y.chain||['门外']),'你'],flow:{test:0,ci:0,review:0},pp:{},tried:new Set()};
   if(d.opts)qs.opts=shuffle(d.opts.map((o,i)=>({t:o[0],right:!!o[1],why:o[2],pose:o[3],i})));
   if(d.type==='route')qs.cards=shuffle([d.ans,...shuffle([1,2,3,4,5,6].filter(p=>p!==d.ans)).slice(0,2)]);
   y.qs=qs;y.note=d.q;return qs}
@@ -71,6 +72,9 @@ function open(q){A.dlg.show(spec(q),{q,pick:i=>pick(q,i),act:id=>act(q,id)})}
 const showing=q=>A.dlg.open&&A.dlg.spec&&A.dlg.spec.noteKey==='q'+q.no;
 function refresh(q,force){if(showing(q))A.dlg.update(spec(q));else if(force&&!A.dlg.open)open(q)}
 A.Q.open=()=>{if(Q.cur)open(Q.cur)};
+// 联机：走流程的 Review 那一步请真人的猫看一眼（world-online.js），它看完球回来了
+A.Q.flowAt=()=>flowAt();
+A.Q.reviewDone=(q,name)=>{if(!q||q.d.type!=='flow')return;q.flow.review=1;q.chain.push(name,'你');say(`${name} review 过了 ✓ 最后一步：去合并门禁`);refresh(q)};
 
 /* ---------- 在对话框里选 ---------- */
 function pick(q,i){const d=q.d;if(q.st!=='pick'||q.wrong.has(i))return;

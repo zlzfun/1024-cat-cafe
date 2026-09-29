@@ -203,7 +203,7 @@
   .ov .keys{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font-size:13px;color:#d8cce4}
   .ov .keys div{white-space:nowrap}
   .ov .box>button{margin-top:14px}
-  #elsewhere{position:fixed;z-index:70}#elsewhere p{margin:0 0 12px;color:#d8cce4;font-size:13px}
+  #elsewhere,#gone{position:fixed;z-index:70}#elsewhere p,#gone p{margin:0 0 12px;color:#d8cce4;font-size:13px}
   #devbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;flex-wrap:wrap;gap:4px 6px;align-items:center;padding:4px 10px;background:#140e1ae6;font-size:12px;color:var(--sub)}
   #devbar button{background:none;border:1px solid var(--line);color:var(--ink);font-size:12px;padding:0 8px}#devbar input{width:120px;accent-color:#ffd84a}#devbar b{color:var(--ink);font-weight:400;min-width:28px}
   #devbar #dvP{margin-left:auto}
@@ -239,16 +239,18 @@
 <!-- 进店流程 -->
 <div id="entry"><canvas id="ehc"></canvas><canvas id="epc"></canvas><div id="eui"></div><button id="eskip"></button><button id="esnd"></button></div>
 <!-- 同一只猫在别的窗口里开着 -->
-<div class="ov" id="elsewhere"><div class="box"><h3>它在另一个窗口里醒着</h3><p>同一只猫只能待在一个地方。要在这里接着玩吗？</p><button class="pbtn" id="wakeHere">在这里继续</button></div></div>
+<div class="ov" id="elsewhere"><div class="box"><h3>它在另一个窗口里醒着</h3><p>同一只猫只能待在一个地方（另一个窗口，或者另一台电脑）。要在这里接着玩吗？</p><button class="pbtn" id="wakeHere">在这里继续</button></div></div>
+<!-- 被封禁、暗号被重置、登录过期 -->
+<div class="ov" id="gone"><div class="box"><h3 id="goneh"></h3><p id="gonep"></p><button class="pbtn" id="goneb">好</button></div></div>
 <div id="devbar"></div>
 <!-- 加载页 -->
 <div id="boot"><div class="bt"><h1>1024 猫咖营业中</h1><canvas id="bootcv" width="160" height="34"></canvas><p id="bootmsg">开门……</p><div id="bootbox"></div></div></div>
 <script>
 /* 加载器：并行下载、按顺序执行；进度是真的（脚本到齐 → 建好店 → 认出你），显示上最快也要走一秒，让小猫把线球追完 */
 (()=>{
-const FILES=[['cat-sprites.js','把猫叫醒……'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['world-map.js','铺地板、刷墙……'],['world4-layout.js'],['world4-map.js'],
+const FILES=[['cat-sprites.js','把猫叫醒……'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['world-map.js','铺地板、刷墙……'],['world4-map.js'],
   ['quest-bank.js','把毛线球装进篮子……'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world4-desk.js'],
-  ['world4-atrium.js','给巨树缠毛线……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world4-arrive.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],
+  ['world4-atrium.js','给巨树缠毛线……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
   ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['app.js']];
 const msg=document.getElementById('bootmsg'),cv=document.getElementById('bootcv'),x=cv.getContext('2d');let real=0,shown=0,label='开门……',ready=false,failed=false,t0=performance.now(),doneCb=null;
 const say=s=>{if(s!=null)label=s;if(!failed)msg.textContent=label};

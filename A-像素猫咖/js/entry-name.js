@@ -62,6 +62,7 @@ function show(mode='new',o={}){const ui=EK.ui,W=innerWidth,H=innerHeight,r=CW.fi
       if(r.err==='none'){status(`店里没有叫「${esc(n)}」的猫。<a data-go="new">是新来的吗？</a>`,'bad');const a=$('.nm-st a');if(a)a.onclick=()=>{o.name=n;cur='new';render()}}
       else if(r.err==='code')status(r.left>0?`暗号不对，还能再试 ${r.left} 次`:'暗号不对','bad');
       else if(r.err==='lock')status(`试错太多次了，${Math.ceil(r.wait/60)} 分钟以后再来`,'bad');
+      else if(r.err==='ban')status('这只猫暂时不能进店，有疑问请找组织者','bad');
       else status('店门口网不好，等一下再试','bad');upd()}
     const onKey=e=>{if(!root.isConnected)return;if(cur==='back'&&pd&&document.activeElement!==$('.nm-in')&&pd.key(e)){e.preventDefault();upd();return}
       if(e.key==='Enter'&&cur==='back'&&document.activeElement!==$('.nm-in')){e.preventDefault();submit()}};

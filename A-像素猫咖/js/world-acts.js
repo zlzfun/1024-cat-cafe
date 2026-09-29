@@ -55,11 +55,17 @@ function freeSlot(c){const busy=new Set(S.cats.map(o=>o.slot).filter(x=>x!=null)
   if(best<0){SLOTS.forEach((s,j)=>{if(busy.has(j))return;const it=S.lines[s.w][s.i],d=it?it.until:0;if(best<0||d<bd){bd=d;best=j}});if(best<0)best=0;const s=SLOTS[best];pickup(s.w,s.i)}return best}
 function deliverSteps(c){let j=0;return[{fn:c=>{j=c.slot=freeSlot(c);c.doing='去橱窗交付';c.onLeave=c=>{c.slot=null}}},{go:()=>({x:SLOTS[j].x,y:P.hangY})},{jump:()=>({x:SLOTS[j].x,y:P.sillY,z:P.sillY})},
   {fn:c=>hang(c,j)},{k:'happy',dur:.7},{jump:()=>({x:SLOTS[j].x,y:P.hangY+2})}]}
-function hang(c,j){c.onLeave=null;if(!c.hold)return;const s=SLOTS[j];if(S.lines[s.w][s.i])pickup(s.w,s.i);const item=S.lines[s.w][s.i]={kind:c.hold.kind,ci:c.hold.ci,until:now()+rr(12,22),by:c,y:c.hold};c.hold=null;c.slot=null;c.doing=null;S.count++;if(A.onHang)A.onHang(c,item);
+function hang(c,j){c.onLeave=null;if(!c.hold)return;const s=SLOTS[j];if(S.lines[s.w][s.i])pickup(s.w,s.i);const item=S.lines[s.w][s.i]={kind:c.hold.kind,ci:c.hold.ci,until:now()+rr(12,22),by:c,y:c.hold};c.hold=null;c.slot=null;c.doing=null;if(!A.shared)S.count++;if(A.onHang)A.onHang(c,item);
   const b=S.birds[s.w];if(b&&!b.fly)b.fly=now();c.delivered=(c.delivered||0)+1;
   if(c.me){sfx('hang');say('挂进橱窗了，等人类来取。可以去墙边按个爪印')}if(c.from&&c.from.me)say(`${c.name}把你传的毛线球织成了${kindOne(S.lines[s.w][s.i])}，挂进了橱窗`);c.from=null;
+  if(!A.shared)cheer(c)}
+// 今天第 10、50、100……件：全店一起高兴。联机时（A.shared）计数跟着服务端走，由 world-online.js 调它
+function cheer(c){if(!S.count)return;
   if(S.count%50===0){S.party=5;news(`今天第 ${S.count} 件！整条街都看见了`);if(A.play)say(`今天第 ${S.count} 件！全店庆祝`);S.cats.forEach(o=>{if(o!==c)borrow(o,'happy',1.6)});for(let i=0;i<90;i++)fx.push({kind:'confetti',x:rr(0,M.w),y:rr(-60,0),vy:rr(20,50),vx:rr(-10,10),ci:i%5,t0:now(),life:6})}
   else if(S.count%10===0){S.goal=3.5;news(`今天第 ${S.count} 件`);S.cats.forEach(o=>{if(o!==c&&roomAt(o.x,o.y).id==='gallery')borrow(o,'happy',1.6)})}}
+// 联机时别的真人挂的：在离它最近的空夹子上也挂一件（只是画面，不计数）
+A.hangShow=(c,it)=>{const j=freeSlot(c),s=SLOTS[j];if(S.lines[s.w][s.i])pickup(s.w,s.i);S.lines[s.w][s.i]={kind:it.kind,ci:it.ci,until:now()+rr(12,22),by:c,y:null};const b=S.birds[s.w];if(b&&!b.fly)b.fly=now()};
+A.cheer=c=>cheer(c);
 function pickup(w,i){const it=S.lines[w][i];if(!it)return;const s=SLOTS[w*7+i];S.lines[w][i]=null;S.hearts.push({x:s.x,y:s.y+6,t0:now()});if(A.onTaken&&A.onTaken(it))return;if(it.by&&it.by.me)say(`人类取走了${kindName(it)}，窗外飘起一颗心`)}
 function watchWindow(c,w){const W=P.wins[w],x=W.x+rr(14,W.w-14);run(c,[{go:{x,y:P.hangY+4}},{fn:c=>{c.face='R';stay(c,{k:'sit',ex:'lookUp',dur:rr(5,10)});if(S.birds[w]&&!S.birds[w].fly)after(1,()=>{if(c.k==='sit'){emote(c,'bang',1.4)}})}}])}
 P.wins.forEach((Wn,w)=>T({id:'win'+w,n:'橱窗',hit:[Wn.x-2,Wn.y,Wn.w+4,Wn.h+30],at:c=>c.hold&&c.hold.knit?{x:c.x<Wn.x?Wn.x+10:c.x>Wn.x+Wn.w?Wn.x+Wn.w-10:c.x,y:P.hangY+2}:{x:Wn.x+Wn.w/2,y:P.hangY+6},near:[Wn.x-4,56,Wn.w+8,26],
@@ -87,7 +93,7 @@ A.pass=(c,o)=>{const y=c.hold;if(!y||o.gone)return;c.hold=null;run(c,[{k:'happy'
   if(!o.me&&!o.hidden&&!o.place&&!o.working)run(o,[{k:'alert',dur:.7}]);sfx('toss');throwTo(c,o,y,()=>receive(o,y,c))};
 const REPLY={1:['heart','宪宪接住了，慢慢眨了一下眼'],3:['q','烁烁歪着头看了看便签'],4:['note','小狸花一把抱住'],5:['bang','斑斑兴奋地扑了上来'],6:['q','金哥醒了，慢吞吞地接住']};
 function receive(o,y,from){
-  if(o.me){if(o.hold||o.hidden){say('你嘴里已经有东西了，球滚回去了');throwTo(o,from,y,()=>giveBack(from,y));return}o.hold=y;y.knit=false;say(`接住了！便签上写着：「${y.note}」`);return}
+  if(o.me){if(o.hold||o.hidden){say('你嘴里已经有东西了，球滚回去了');throwTo(o,from,y,()=>giveBack(from,y));return}o.hold=y;y.knit=false;say('接住了！');return}
   if(o.hold||o.hidden||o.gone||o.riding){throwTo(o,from,y,()=>{giveBack(from,y);if(from.me)say(`${o.name}现在腾不出嘴，球滚回来了`)});return}
   if(o.kind==='npc'){
     if(o.pal===2&&Math.random()<.3){emote(o,'anger',1.6);run(o,[{k:'sit',dur:1,ex:'angry'},{k:o.atHome?HOMES[2].pool[0]:'sit',dur:0}]);if(from.me)say('砚砚看了一眼，把球拍了回来');throwTo(o,from,y,()=>{giveBack(from,y);if(from.me)say('球又回到你手里了')});return}
@@ -103,7 +109,7 @@ function petNpc(c,o){if(c.hold&&!c.hold.knit)return A.pass(c,o);if(o.pal===2&&o.
 // 蹭蹭：对方闲着才停下来回应（打断走到一半或正在吃饭的猫，它会停在家具边上）
 function rub(c,o){faceTo(c,o);run(c,[{k:'sit',dur:1.2,ex:'content',soft:1}]);S.hearts.push({x:Math.round((c.x+o.x)/2),y:Math.round(Math.min(c.y,o.y)-14),t0:now()});
   if(!o.me&&!o.hidden&&!o.place&&!o.working&&!o.riding&&!o.leaving&&idle(o)){faceTo(o,c);run(o,[{k:'sit',dur:1.3,ex:'content'}]);if(isBot(o)&&Math.random()<.4)speak(o,rnd(['蹭蹭','喵～','嘿嘿','你好呀']),1.8)}else emote(o,'heart',1.4);
-  if(c.me||o.me)sfx('purr');if(c.me)say(`和${o.name}蹭了蹭`);if(o.me)say(`${c.name}蹭了蹭你`);c.rubs=(c.rubs||0)+1}
+  if(c.me||o.me)sfx('purr');if(c.me)say(`和${o.name}蹭了蹭`);if(o.me)say(`${c.name}蹭了蹭你`);c.rubs=(c.rubs||0)+1;if(A.onRub)A.onRub(c,o)}
 A.social=(c,o,kind='auto')=>{if(!o||o.gone)return;if(kind==='auto')kind=c.hold&&!c.hold.knit?'pass':'rub';
   if(kind==='pass'){if(c.hold&&!c.hold.knit){if(dist(c,o)>170){if(c.me)say('太远了，走近一点再传');return}A.pass(c,o)}else if(c.me)say('嘴里没有毛线球');return}
   if(kind==='follow'){c.follow=o;if(c.me)say(`跟着${o.name}走（Esc 不跟了）`);return}
@@ -366,7 +372,7 @@ T({id:'pile',n:'落叶堆',hit:[P.pile.x-20,P.pile.y-12,40,14],at:{x:P.pile.x-30
   go(c){run(c,[{go:{x:P.pile.x-30,y:P.pile.y+2}},{fn:c=>{c.face='R'}},{k:'pounce',dur:1.1},{jump:{x:P.pile.x,y:P.pile.y},h:14,dur:.45},{fn:c=>{c.hidden=true;S.pile=.15;sfx('rustle');
       for(let i=0;i<36;i++){const a=rr(0,Math.PI*2),s=rr(20,60);fx.push({kind:'leaf',x:P.pile.x+rr(-8,8),y:P.pile.y+rr(-3,3),h:rr(2,8),vx:Math.cos(a)*s,vy:Math.sin(a)*s*.3,vh:rr(40,90),ci:i%4,t0:now(),life:rr(6,12)})}
       c.onLeave=c=>{c.hidden=false};if(c.me)say('哗啦——')}},{k:'sit',dur:.9},{fn:unclaim},{k:'happy',dur:1,soft:1}])}});
-const FLY=P.flyArea||[660,310,280,200];   // 蝴蝶飞的范围（v4 把后院和巨树中庭连起来了）
+const FLY=P.flyArea;   // 蝴蝶飞的范围：后院和巨树中庭连成一片
 S.flies=[0,1,2].map(i=>({x:rr(FLY[0]+20,FLY[0]+FLY[2]-40),y:rr(FLY[1]+10,FLY[1]+FLY[3]-30),h:rr(12,26),tx:0,ty:0,col:['#ffd84a','#f4a6b8','#fff4dc'][i],spook:0}));
 tick(dt=>S.flies.forEach(f=>{if(f.spook>0)f.spook-=dt;if(Math.hypot(f.tx-f.x,f.ty-f.y)<3||!f.tx){const p=Math.random()<.4?{x:P.flowers.x+rr(6,P.flowers.w-6),y:P.flowers.y+14}:randFree(FLY);f.tx=p.x;f.ty=p.y}
   const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy),sp=f.spook>0?60:18;f.x+=dx/d*Math.min(d,sp*dt)+Math.sin(now()*7+f.col.length)*8*dt;f.y+=dy/d*Math.min(d,sp*dt);f.h=Math.max(6,Math.min(40,(f.spook>0?f.h+30*dt:f.h+Math.sin(now()*3+f.x)*10*dt)))}));
@@ -391,11 +397,11 @@ T({id:'wheel',n:'猫跑轮',hit:[P.wheel.x,P.wheel.y,48,50],at:{x:WHEEL.x,y:P.wh
     {fn:c=>{c.face='R';stay(c,{k:'walkR',dur:rr(8,14),leave:()=>[{jump:{x:WHEEL.x,y:P.wheel.y+60}},{fn:c=>{c.z=undefined}}]});if(c.me)say('跑起来！旁边的串灯会一颗颗亮起来')}}])}});
 tick(dt=>{if(wheelBy&&wheelBy.gone)wheelBy=null;const run2=wheelBy&&wheelBy.k==='walkR';S.wheelA+=dt*(run2?5:0);S.power=Math.max(0,Math.min(1,S.power+(run2?.06:-.004)*dt));
   const n=Math.floor(S.power*30);if(n>lit&&n===30)news('后院的串灯全亮了');lit=n;
-  A.lights.length=0;if(S.tod!=='day'){const {x0,x1}=P.yardLights||{x0:650,x1:950},m=Math.floor((x1-x0)/10);for(let i=0;i<=m;i+=3)if(i/m<S.power)A.lights.push({x:x0+i*10,y:294+Math.round(Math.sin(i/m*Math.PI)*12),r:16,col:YARN[i%5][2],a:.8})}});
+  A.lights.length=0;if(S.tod!=='day'){const {x0,x1}=P.yardLights,m=Math.floor((x1-x0)/10);for(let i=0;i<=m;i+=3)if(i/m<S.power)A.lights.push({x:x0+i*10,y:294+Math.round(Math.sin(i/m*Math.PI)*12),r:16,col:YARN[i%5][2],a:.8})}});
 tick(dt=>{S.hamSw=Math.sin(now()*1.2)*(S.hamBy?1:.4);if(S.hamBy&&!S.hamBy.gone&&S.hamBy.k!=='leap')S.hamBy.dy=Math.round(Math.sin(now()*1.2))});
 
 /* ================= 大毛线团：疑难委托，三只猫一起扒拉才解得开 ================= */
-const GIANT_PATH=[P.xlOut,...(P.giantPath||[{x:150,y:92},{x:300,y:160},{x:470,y:150},{x:640,y:160}]),{x:P.giant.x,y:P.giant.y}];
+const GIANT_PATH=[P.xlOut,...P.giantPath,{x:P.giant.x,y:P.giant.y}];
 let nextGiant=rr(90,150);S.giant=null;const GSPOTS=[[-20,2,'R'],[20,2,'L'],[-12,12,'R'],[12,12,'L']];
 function giantArrive(){if(S.giant)return;S.xl=2.5;S.door.ring=1.2;sfx('bell');S.giant={x:P.xlOut.x,y:P.xlOut.y,seg:0,p:0,cols:[rnd([0,2,4]),1,3],state:'roll',help:GSPOTS.map(()=>null)};
   news('门外塞进来一颗大毛线团！要三只猫一起解（工坊）');if(A.play)say('大毛线团来了！它会滚到工坊，要三只猫一起扒拉')}
@@ -444,7 +450,7 @@ function doWork(c){const opts=S.baskets.map((b,i)=>[i,b.length]).filter(([,n])=>
 const usedNames=A.usedNames=new Set();let botTarget=0,botT=0,visitT=rr(12,25);   // A.usedNames：成品里把玩家的名字也放进去，机器人就不会重名
 function botName(){const f=BOT_NAMES.filter(n=>!usedNames.has(n));const n=f.length?rnd(f):rnd(BOT_NAMES)+(2+Math.floor(Math.random()*8));usedNames.add(n);return n}
 const MOODW=()=>({work:rr(1,4),play:rr(1.5,4),rest:rr(1,3),social:rr(1,3),afk:rr(.3,1.5),explore:rr(.5,2)});
-function addBot(instant){const c=A.mkCat(7+Math.floor(Math.random()*(PAL.length-7)),botName(),{kind:'bot',def:rnd(BOT_FACES),sp:rr(26,36),moods:MOODW(),mood:null,moodUntil:0});
+function addBot(instant){const c=A.mkCat(7+Math.floor(Math.random()*COATS.length*COLLARS.length),botName(),{kind:'bot',def:rnd(BOT_FACES),sp:rr(26,36),moods:MOODW(),mood:null,moodUntil:0});
   if(instant){Object.assign(c,randIn(rnd(M.rooms).id));c.wait=rr(0,4)}
   else{Object.assign(c,{x:P.spawnIn.x,y:P.spawnIn.y,hidden:true});S.spawnPop=.6;run(c,[{fn:c=>{c.hidden=false;c.z=P.spawn.y+19.5}},{jump:{...P.spawnOut},h:14},{k:'happy',dur:.8}]);if(Math.random()<.35||A.online<20)news(`${c.name} 上线了`)}
   S.cats.push(c);return c}
@@ -472,7 +478,7 @@ function socialAct(c){const r=Math.random(),others=S.cats.filter(o=>o!==c&&!o.hi
 // 页面上的"事件"按钮
 A.events={arrive:()=>{for(let i=0;i<3;i++)after(i*.5,arrive)},giant:()=>{if(S.giant)return'大毛线团已经在店里了';giantArrive()},ci:()=>{if(S.ci.state==='pass'){S.ci.next=0;return}return'CI 已经是红的了'},
   laser:()=>startLaser(),bubbles:()=>{S.bubbleOn=10},bird:()=>{nextBath=0;S.birds.forEach((b,w)=>{if(!b)nextWinBird[w]=0})},vac:()=>VACS.forEach(V=>vacGo(V,V.mode==='dock'?'clean':'home'))};
-// v4 的模块要用到的几样（v3 页面不用）
+// 别的模块要用到的几样
 Object.assign(A,{HOMES,LIKES,goHome,solveSteps,deliverSteps,throwTo,giveBack,land,useThing,TID,fx,nearest,seatThing,faceTo,pickBy,chaseDot,eatTreat,VACS,kindOne});
 A.think=c=>{if(c.leaving)return;if(c.kind==='npc')return npcThink(c);
   c.wait=rr(.6,2.4);if(c.hold){c.working=true;c.doing='在做委托';run(c,[...(c.hold.knit?[]:solveSteps(c)),...deliverSteps(c),{fn:c=>{c.working=false;c.doing=null}}]);return}

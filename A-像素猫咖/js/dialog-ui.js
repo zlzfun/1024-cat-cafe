@@ -56,6 +56,7 @@ const DLG_CSS=`
 .dlg .progt{font-size:12px;color:#b9a8c9;margin-top:-4px}
 .dlg .right{color:#9ccc98;margin:0 0 8px}.dlg .right:before{content:"✓ ";font-weight:700}
 .dlg .result{color:#241a2e;background:#ffd84a;padding:4px 12px;margin:2px 0 6px;font-weight:600}
+.dlg .code{display:flex;align-items:center;gap:12px;margin:4px 0 10px}.dlg .code span{color:#b8aac8}.dlg .code b{font:700 22px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:4px;color:#241a2e;background:#ffd84a;padding:6px 12px;box-shadow:0 0 0 2px #241a2e,0 0 0 4px #ffd84a;user-select:all}
 .dlg .made{display:flex;gap:14px;align-items:center;background:#ffd84a;color:#241a2e;padding:8px 14px;margin:2px 0 6px;box-shadow:3px 3px 0 #140e1a}
 .dlg .made canvas{width:52px;height:52px;image-rendering:pixelated;background:#fff8e8;border:2px solid #241a2e;flex:none}
 .dlg .made b{display:block;font-size:17px;font-weight:700;line-height:1.4}
@@ -111,6 +112,7 @@ function makeDialog(root,cb={},{isStatic=false}={}){
       else if(b.k==='say')html+=`<div class="say"><canvas data-pal="${b.pal}"></canvas><div><b>${esc(b.name)}</b>${esc(b.t)}</div></div>`;
       else if(b.k==='steps')html+='<ul class="steps">'+b.items.map(it=>`<li class="${it.done?'done':it.cur?'cur':''}"><span>${esc(it.t)}${it.sub?` <small>${esc(it.sub)}</small>`:''}</span></li>`).join('')+'</ul>';
       else if(b.k==='progress')html+=`<div class="prog"><i style="width:${Math.round((b.p||0)*100)}%"></i></div>${b.t?`<p class="progt">${esc(b.t)}</p>`:''}`;
+      else if(b.k==='code')html+=`<div class="code"><span>${esc(b.label||'')}</span><b>${esc(b.t)}</b></div>`;
       else if(b.k==='right')html+=`<p class="right">${esc(b.t)}</p>`;else if(b.k==='result')html+=`<p class="result">${esc(b.t)}</p>`;else if(b.k==='made')html+=`<div class="made"><canvas data-knit="${b.kind}" data-ci="${b.ci||0}"></canvas><div><b>${esc(b.t)}</b>${b.next?`<span>${esc(b.next)}</span>`:''}</div></div>`;else if(b.k==='book')html+=`<div class="book">${esc(b.t)}</div>`;
       else if(b.k==='links')html+='<div class="links">'+b.items.map(it=>`<button data-link="${it.key}"><b>${esc(it.n)}</b>${cb.visited&&cb.visited(it.key)?'<span class="got">已盖章</span>':''}<small>${esc(it.sub)}${it.url?'':'（地址待填）'}</small></button>`).join('')+'</div>';
       else if(b.k==='words')html+='<dl>'+b.items.map(([w,d])=>`<dt>「${esc(w)}」</dt><dd>${esc(d)}</dd>`).join('')+'</dl>'}

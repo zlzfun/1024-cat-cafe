@@ -2,14 +2,16 @@
    - drop（第一次来）：镜头停在毛线巨树的树冠上，你的猫从树叶里掉下来，一路带下几片叶子，落在树下的空地上——压扁一下、扬起一圈灰；
      旁边的猫吓一跳回头看，你的猫开心地蹦一下。
    - wake（来过）：画面从黑里一圈圈亮开，你的猫在上次离开的地方蜷着睡觉，醒来、伸个懒腰。
+   - 第一颗毛线球送到面前：第一次来、落地以后，一只闲着的店猫（先找斑斑）叼着一颗毛线球从画面外跑过来，传给你——
+     训练营第二步不用先穿过半个店去前厅找毛线篮，也是第一次看到"传球"。
    A.arrive(how, {x,y, onLand, onDone})；到结束之前 A.arriving() 为真，页面这时不接玩家的操作。 */
 WORLD_MODS.push(A=>{
-const {S,P,me,rr,run,emote,sfx,after,idle}=A;
+const {S,P,me,rr,run,emote,speak,sfx,after,idle}=A;
 const now=()=>A.t,tick=f=>A.tickers.push(f);
 const LAND={x:872,y:462},TOP=46,G=560,D=.45,fy=k=>TOP+.5*G*Math.max(0,k-D)**2;
 let ar=null;const leaves=[];
 function spotNear(x,y){if(A.free?A.free(x,y):true)return{x,y};for(let r=4;r<60;r+=4)for(let a=0;a<12;a++){const q=a/12*Math.PI*2,px=x+Math.cos(q)*r,py=y+Math.sin(q)*r;if(A.free(px,py))return{x:px,y:py}}return{...LAND}}
-A.arrive=(how,o={})=>{const p=how==='wake'&&o.x!=null?spotNear(o.x,o.y):spotNear(LAND.x,LAND.y);me.x=p.x;me.y=p.y;run(me,[]);me.place=null;me.follow=null;
+A.arrive=(how,o={})=>{const p=how==='wake'&&o.x!=null?spotNear(o.x,o.y):spotNear(LAND.x,LAND.y);me.x=p.x;me.y=p.y;run(me,[]);me.place=null;me.follow=null;A.poke();
   ar={how,t0:now(),o,x:p.x,y:p.y,landed:false};
   if(how==='drop'){me.hidden=true;me.face='R';for(let i=0;i<14;i++)leaves.push({x:p.x+rr(-26,26),y:rr(60,130),vx:rr(-8,8),vy:rr(-6,6),t0:now()+rr(0,.5),col:rnd2(['#7cc47a','#5e8a4a','#9ccc98','#e8b83a'])});sfx('rustle')}
   else{me.hidden=false;run(me,[{k:'sleep',dur:1.2,lock:1},{k:'stretch',dur:DUR.stretch,lock:1},{k:'happy',dur:.8,lock:1}])}};
@@ -25,7 +27,15 @@ tick(()=>{if(!ar)return;const k=now()-ar.t0;
   else{if(k>1.2&&!ar.woke){ar.woke=1;sfx('yawn');
       const c=S.cats.filter(c=>c.kind==='npc'&&!c.hidden&&Math.hypot(c.x-me.x,c.y-me.y)<120)[0];if(c)after(.8,()=>emote(c,'heart',1.6))}
     if(k>1.2+DUR.stretch+.9)end()}});
-function end(){const o=ar.o;ar=null;me.hidden=false;o.onDone&&o.onDone()}
+function end(){const o=ar.o,how=ar.how;ar=null;me.hidden=false;A.poke();o.onDone&&o.onDone();if(how==='drop')after(2.4,greet)}
+function greet(){const s=A.camp&&A.camp.cur();if(!s||s.id!=='take'||me.hold||me.hidden||me.place)return;
+  const c=[5,4,3].map(p=>S.cats.find(o=>o.kind==='npc'&&o.pal===p)).find(o=>o&&!o.working&&!o.hold&&!o.toy&&!o.place&&!o.riding&&!o.hidden&&o.z==null);if(!c)return;
+  // 从画面外跑进来：离得远就先挪到画面边上外头一点（能站的地方），省得跑半个店
+  const v=A.view(),out=p=>p.x<v.x-8||p.x>v.x+v.w+8||p.y<v.y-8||p.y>v.y+v.h+30;
+  if(Math.hypot(c.x-me.x,c.y-me.y)>320||!out(c)){const side=me.x-v.x<v.w/2?1:-1;for(const dx of [side,-side]){const p=A.land(me.x+dx*(v.w/2+26),me.y-6);if(out(p)&&A.findPath(p.x,p.y,me.x,me.y)){A.run(c,[]);c.x=p.x;c.y=p.y;c.z=undefined;c.atHome=false;break}}}
+  c.hold={ci:Math.floor(Math.random()*5),kind:rnd2(Object.keys(KNIT)),note:'',knit:false,chain:['门外',c.name]};c.working=true;c.doing='给新来的猫送毛线球';
+  run(c,[{chase:()=>({x:me.x+(c.x<me.x?-24:24),y:me.y+2}),near:26,sp:64},{fn:c=>{A.faceTo(c,me);speak(c,'新来的？这颗给你练练手',2.8)}},{k:'hold',dur:1.5},
+    {fn:c=>{c.working=false;c.doing=null;if(!c.hold)return;if(me.hold||me.hidden||Math.hypot(c.x-me.x,c.y-me.y)>170){S.baskets[0].push(c.hold);c.hold=null;return}A.pass(c,me)}}])}
 // 掉下来的那只猫和叶子画在最上面（落地以前 me.hidden，引擎不画它）
 A.overs.push(()=>{const t=now();for(let i=leaves.length-1;i>=0;i--){const l=leaves[i],a=t-l.t0;if(a<0)continue;if(a>3){leaves.splice(i,1);continue}
     const x=Math.round(l.x+l.vx*a+Math.sin(a*3+i)*4),y=Math.round(l.y+22*a+a*a*16);alpha(Math.min(1,(3-a)/.8),()=>{P1(x,y,l.col);P1(x+1,y,l.col);P1(x,y+1,'#3f7a44')})}
