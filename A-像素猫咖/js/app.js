@@ -54,8 +54,9 @@ function drawPanel(){const A=game.A,tr=A.Q.tracker();let html='';
   if(tr){html=`<h4>🧶 毛线球 #${tr.no}<i>${esc(tr.type)} · E 打开便签</i></h4><div class="q">「${esc(tr.q)}」</div>`+(tr.steps?'<ul>'+tr.steps.map(s=>`<li class="${s.done?'done':s.cur?'cur':''}">${esc(s.t)}</li>`).join('')+'</ul>':`<div class="ln">${esc(tr.line)}</div>`)}
   else if(A.camp.on&&!A.camp.done.finished){const c=A.camp.cur();html=`<h4>🎓 新猫训练营<i>${A.camp.steps.filter(s=>A.camp.done[s.id]).length}/${A.camp.steps.length}</i></h4><ul>`+A.camp.steps.map(s=>`<li class="${A.camp.done[s.id]?'done':s===c?'cur':''}">${esc(s.t)}${s===c?`<br><small>${esc(s.sub)}</small>`:''}</li>`).join('')+'</ul>'}
   if(html!==panelKey){panelKey=html;$('panel').innerHTML=html}}
-function drawStamps(){const s=game.S.stamps,n=(s.ball?1:0)+(s.inner?1:0)+(s.site?1:0);$('stamps').innerHTML=`<h4>集章卡<i>${n}/3${n===3?' · 集齐了！':''}</i></h4><div class="row">`+
-  [['ball','解球','解一颗球'],['inner','内源','内源主页'],['site','官网','官网 / GitHub']].map(([k,a,b])=>`<div><div class="s ${s[k]?'on':''}">${s[k]?'已盖':a}</div>${b}</div>`).join('')+'</div>'}
+function drawStamps(){const s=game.S.stamps,n=(s.ball?1:0)+(s.inner?1:0)+(s.site?1:0),en=cat&&cat.entry;$('stamps').innerHTML=`<h4>集章卡<i>${n}/3${n===3?' · 集齐了！':''}</i></h4><div class="row">`+
+  [['ball','解球','解一颗球'],['inner','内源','内源主页'],['site','官网','官网 / GitHub']].map(([k,a,b])=>`<div><div class="s ${s[k]?'on':''}">${s[k]?'已盖':a}</div>${b}</div>`).join('')+'</div>'+
+  (n===3&&cat?`<div class="lt ${en?'done':''}">${en?'已登记抽奖 · 点这里改':'点这里登记抽奖 →'}</div>`:'')}
 function findMe(){game.A.findMe();$('game').focus()}
 
 /* ---------- 图鉴 ---------- */
@@ -118,14 +119,17 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
   menu.addEventListener('pointerdown',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b||b.disabled)return;
     if(b.dataset.ph!=null)game.cmd.say(phrasesList[+b.dataset.ph]);else if(menuCat){const a=b.dataset.a;if(a==='follow')game.cmd.follow(menuCat);game.cmd.social(menuCat,a==='follow'?'follow':a)}closeMenu();gameEl.focus()});
   $('mm').addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const r=$('mm').getBoundingClientRect();game.tap((e.clientX-r.left)/r.width*WW,(e.clientY-r.top)/r.height*WH)});
-  $('mecard').onclick=e=>{e.stopPropagation();findMe()};$('stBook').onclick=e=>{e.stopPropagation();openGuide()};$('panel').onclick=e=>{e.stopPropagation();if(game.A.Q.cur)game.A.Q.open();gameEl.focus()};$('stamps').onclick=e=>{e.stopPropagation();game.A.openWelcome();gameEl.focus()};
+  $('mecard').onclick=e=>{e.stopPropagation();findMe()};$('stBook').onclick=e=>{e.stopPropagation();openGuide()};$('panel').onclick=e=>{e.stopPropagation();if(game.A.Q.cur)game.A.Q.open();gameEl.focus()};$('stamps').onclick=e=>{e.stopPropagation();if(cat&&full()){openLotto();return}game.A.openWelcome();gameEl.focus()};
   $('bookov').addEventListener('pointerdown',e=>{e.stopPropagation();const d=e.target.closest('[data-go]');if(!d)return;const id=d.dataset.go,th=game.A.TH.find(t=>t.id===id||t.id.replace(/\d$/,'')===id);closeGuide();if(!th)return;
     const h=typeof th.hit==='function'?th.hit(game.me):th.hit,at=typeof th.at==='function'?th.at(game.me):th.at;if(h&&h[2])game.tap(h[0]+h[2]/2,h[1]+h[3]/2);else if(at)game.tap(at.x,at.y)});
   $('phx').onclick=()=>{$('photo').style.display='none';gameEl.focus()};
   // 右下角：按键、声音、离店
   const snd=$('bSnd'),paintSnd=()=>{snd.textContent='声音 '+(Sound.on?'开':'关');snd.classList.toggle('on',Sound.on)};paintSnd();
   snd.onclick=()=>{Sound.set(!Sound.on);paintSnd();gameEl.focus()};$('bKeys').onclick=openKeys;$('keyov').onclick=e=>{if(e.target===$('keyov')||e.target.closest('button'))closeKeys()};
-  $('bOut').onclick=()=>{if(!confirm(`让「${cat.name}」离店？\n这台浏览器会忘掉它，下次进店要报名字和暗号。`))return;flush();Account.logout().then(()=>location.reload())}}
+  $('bOut').onclick=()=>{if(!confirm(`让「${cat.name}」离店？\n这个浏览器会忘掉它，以后也找不回来。已经登记的抽奖不受影响。`))return;flush();Account.logout().then(()=>location.reload())}
+  // 登记抽奖的表：回车登记，Esc 收起
+  $('lgo').onclick=sendLotto;$('lno').onclick=closeLotto;$('lok').onclick=closeLotto;
+  $('lotto').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeLotto()}else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&!e.isComposing){e.preventDefault();sendLotto()}})}
 function showPhoto(cv,names){const s=4,c=$('phc');c.width=cv.width*s;c.height=cv.height*s;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(cv,0,0,c.width,c.height);
   $('phw').textContent='1024 猫咖 · 合照 · '+names.slice(0,12).join('、')+(names.length>12?` 等 ${names.length} 只猫`:'');$('phs').href=c.toDataURL('image/png');$('photo').style.display='flex'}
 
@@ -140,8 +144,8 @@ function weatherNow(d=new Date()){const m=d.getMonth()+1,day=d.getDate();if(m===
 /* ---------- 联机：接了服务端才有（设计见 docs/联机.md） ---------- */
 function startNet(){if(Account.mode!=='server')return;const L=game.A.live;L.send=o=>Net.send(o);
   Net.start({onState:s=>L.state(s),onMsg:m=>{if(m.t==='bye'){if(m.why==='elsewhere')sleep(true);else gone(m.why);return}if(m.t==='prize'){queuePrize(m);return}L.recv(m)}})}
-// 被封禁、暗号被重置、登录过期：请出店，下次重新报名字和暗号
-function gone(why){playing=false;Net.stop();const T={ban:['这只猫暂时不能进店','有疑问请找组织者。'],reset:['暗号换过了','组织者给这只猫换了一组新暗号，用新暗号重新进店吧。']}[why]||['要重新进店','这台电脑记着的登录过期了。报上名字和暗号，就能领回你的猫。'];
+// 被封禁、这个浏览器记着的猫店里不认了：请出店，点"好"回到进店第一步
+function gone(why){playing=false;Net.stop();const T={ban:['这只猫暂时不能进店','有疑问请找组织者。']}[why]||['找不到你的猫了','店里不认这个浏览器记着的猫了。点"好"，重新扭一只。'];
   $('goneh').textContent=T[0];$('gonep').textContent=T[1];$('gone').style.display='flex';$('goneb').onclick=()=>Account.logout().then(()=>location.reload())}
 // 抽中了：前台猫来告诉你领奖码。进店动画、对话框、看风景的时候先等等
 // 同一轮只弹一次：进店时的账号快照、联机时推过来的、重连时补发的，可能是同一条
@@ -149,6 +153,27 @@ const prizeQ=[],prizeNos=new Set(),queuePrize=p=>{if(!p||!Number.isInteger(p.no)
 function tryPrize(){if(!prizeQ.length||!playing||asleep||dlg.open||game.A.arriving()||game.A.vista.on)return;const p=prizeQ.shift();sfx('fanfare');
   game.A.dlg.show({id:'prize-'+p.no,kind:'info',head:{icon:'star',title:'你被抽中了'},blocks:[{k:'say',pal:DESK_PAL,name:'前台猫',t:`第 ${p.no} 轮抽奖，抽中了你！`},
     {k:'code',label:'领奖码',t:p.code},...(p.how?[{k:'text',t:'怎么领：'+p.how}]:[]),{k:'text',t:'这个码只有你看得到。把它发给组织者，就能领奖。'}],acts:[{id:'ok',t:'记下了',key:'E'}]},{close:()=>Account.prizeSeen(p.no)})}
+
+/* ---------- 登记抽奖：集齐三个章以后（设计见 docs/店内设计.md、docs/组织者后台.md） ----------
+   盖上第三个章、手上没别的事时自己弹一次（这一次进店里只弹一次）；以后点集章卡打开，登记过的可以改。只有服务端模式能登记。 */
+let lottoAsked=false;
+const full=()=>{const s=game.S.stamps;return !!(s.ball&&s.inner&&s.site)},lottoOpen=()=>$('lotto').style.display==='flex';
+const LF={real:'lreal',emp:'lemp',contact:'lcon'};
+function openLotto(){const e=cat.entry;$('lotto').style.display='flex';$('lerr').textContent='';Object.values(LF).forEach(id=>$(id).classList.remove('bad'));
+  if(Account.mode!=='server'){lottoDone('现在是本机模式，没有连着店里的服务器，不能登记抽奖。');return}
+  $('ltf').hidden=false;$('ltd').hidden=true;$('ltlead').textContent=e?'改一改登记的信息。':'三个章都集齐了！留下这三项，抽中了好找到你。';
+  $('lreal').value=e?e.real:'';$('lemp').value=e?e.emp:'';$('lcon').value=e?e.contact:'';$('lgo').textContent=e?'改好了':'登记';$('lgo').disabled=false;
+  setTimeout(()=>$('lreal').focus(),30)}
+function lottoDone(t){$('ltf').hidden=true;$('ltd').hidden=false;$('ltdp').textContent=t;setTimeout(()=>$('lok').focus(),30)}
+function closeLotto(){$('lotto').style.display='none';$('game').focus()}
+async function sendLotto(){if($('lgo').disabled)return;const v={real:$('lreal').value,emp:$('lemp').value,contact:$('lcon').value};Object.values(LF).forEach(id=>$(id).classList.remove('bad'));
+  const bad=e=>{$('lerr').textContent=e.why||'格式不对';const f=$(LF[e.field]);if(f){f.classList.add('bad');f.focus()}};
+  const b=Account.entryWhy(v);if(b)return bad(b);
+  $('lgo').disabled=true;$('lerr').textContent='';await Account.save(snapshot());const r=await Account.entry(v);$('lgo').disabled=false;
+  if(r.entry){const first=!cat.entry;cat.entry=r.entry;drawStamps();sfx('stamp');lottoDone(first?'登记好了。抽中了，前台猫会在店里告诉你，组织者也会按你留的联系方式找你。':'改好了。');return}
+  if(r.err==='bad'&&LF[r.field])return bad(r);
+  $('lerr').textContent=r.err==='stamps'?'三个章还没存到店里，过几秒再点一次':'店门口网不好，等一下再点一次'}
+function tryLotto(){if(lottoAsked||!cat||cat.entry||Account.mode!=='server'||!full()||!playing||asleep||dlg.open||prizeQ.length||lottoOpen()||game.A.arriving()||game.A.vista.on)return;lottoAsked=true;openLotto()}
 
 /* ---------- 同一只猫开在两个窗口：后开的接着玩 ---------- */
 let chan=null;const TAB=Math.random().toString(36).slice(2);
@@ -172,7 +197,7 @@ function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));la
     if(veil)drawVeil(t);
     if(fno%4===0)game.mini(mctx,336,108);
     if(fno%10===0){$('online').textContent='店里 '+game.S.cats.filter(c=>!c.gone).length+' 只猫'+(Net.on?' · 在线 '+(1+game.A.live.count()):'');drawMe();drawPanel()}
-    if(fno%30===0)tryPrize();
+    if(fno%30===0){tryPrize();tryLotto()}
     if(fno%1800===0&&!devTod){game.S.tod=clockTod();game.S.weather=weatherNow()}
     if(playing&&(saveT+=dt)>(dirty?3:20)){saveT=0;flush()}}
   jsT+=performance.now()-t0;

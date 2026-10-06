@@ -1,5 +1,5 @@
 /* 1024 猫咖 · 联机压力测试：开 N 个假玩家连上来，在店里走来走去、停下来歇着、冒表情、说快捷短语、蹭蹭、传球、挂成品，统计收发和延迟。
-   要 Node 22 以上（自带 WebSocket）。别对着正式的名册跑：它会登记 N 只叫"压测001"这样的猫。
+   要 Node 22 以上（自带 WebSocket）。别对着正式的名册跑：它会登记 N 只猫（名字从店里领，会占掉 N 个名字）。
      DATA_DIR=/tmp/cat-load PORT=1025 node server/server.js
      node server/loadtest.js http://127.0.0.1:1025 100 60          # 地址、几只猫、跑几秒
    带上 ADMIN_KEY=口令（或 DATA_DIR=同一个数据目录）就顺便读服务端自己的统计：CPU、内存、每 0.1 秒打包花了多久。
@@ -35,11 +35,11 @@ function bot(i,token,id){const c={i,id,ws:null,x:rr(100,1600),y:rr(100,500),tx:0
     if((c.hangT-=dt)<=0){c.hangT=rr(60,150);c.send({t:'hang',kind:rnd(KINDS),ci:Math.floor(Math.random()*5)})}};
   return c}
 (async()=>{console.log(`压力测试：${BASE}，${N} 只猫，${SEC} 秒`);
-  for(let i=0;i<N;i++){const name='压测'+String(i+1).padStart(3,'0');let r=await post('/api/cats',{name,code:[0,0,0,0],look:{coat:i%9,collar:i%6,face:'normal'}});
-    if(r.status===409)r=await post('/api/login',{name,code:[0,0,0,0]});if(!r.token){console.log('登记失败',name,JSON.stringify(r));process.exit(1)}cats.push(bot(i,r.token,r.cat.id))}
+  for(let i=0;i<N;i++){const o=await post('/api/names/offer',{n:1}),name=o.names&&o.names[0];const r=await post('/api/cats',{name,look:{coat:i%9,collar:i%6,face:'normal'}});
+    if(!r.token){console.log('登记失败',name,JSON.stringify(r));process.exit(1)}cats.push(bot(i,r.token,r.cat.id))}
   console.log('登记好了，开始连');for(const c of cats){await c.open();await sleep(20)}console.log('全部连上');
   const tick=setInterval(()=>cats.forEach(c=>c.step(.15)),150);
-  const t0=Date.now();let last={in:0,bytes:0,sent:0},lt=Date.now();
+  const t0=Date.now();let last={in:0,bytes:0,sent:0,catch:0},lt=Date.now();
   while(Date.now()-t0<SEC*1000){await sleep(5000);const now=Date.now(),s=(now-lt)/1000;lt=now;
     const L=lat.splice(0).sort((a,b)=>a-b),q=p=>L.length?L[Math.min(L.length-1,Math.floor(L.length*p))]:0;
     let sv='';if(KEY){try{const j=await (await fetch(BASE+'/api/admin/stats',{headers:{'X-Admin-Key':KEY}})).json(),l=j.live;sv=` · 服务端 CPU ${l.cpu}% 内存 ${l.rssMB}MB 打包 ${l.tickMs}ms 出 ${l.kbOutPerSec}KB/s`}catch(e){}}

@@ -1,4 +1,4 @@
-/* 1024 猫咖 · 进店流程的像素零件：扭蛋机、扭蛋、九个暗号图案、项圈牌、聚光灯、光柱。
+/* 1024 猫咖 · 进店流程的像素零件：扭蛋机、扭蛋、聚光灯、光柱。
    依赖 scene-kit.js（C、R、P1、disc、grid、line、txt）、cat-sprites.js（POSE、drawF）、world-play.js（PAL、COATS、COLLARS）。
    约定同 scene-kit：先 use(ctx)；每个函数注释里写明 (x,y) 是哪一点。全局只露 EA。 */
 const EA=(()=>{
@@ -75,26 +75,6 @@ function machine(mx,my,t,o={}){const turn=o.turn||0,flap=o.flap||0,jig=o.jig||0,
   return{knob:{x:kx,y:ky,r:9},slot:{x:mx+11,y:my-32},chute:{x:mx,y:my-8},globe:{x:mx,y:gy,r:GR}}}
 function coin(x,y,edge=0){const w=Math.max(1,Math.round(3*(1-edge)));disc(x,y,w+1,4,OL);disc(x,y,w,3,'#e8b83a');if(w>1){P1(x-1,y-1,'#fff0a8');P1(x,y-2,'#fff0a8')}}
 
-/* ---------- 暗号的九个图案（9×9，左上角 x,y） ---------- */
-const IC=[
-  {rows:['.........','...oooo..','o.oyyyyo.','oooyyyyeo','oyyyyyyyo','oooylllyo','o.oyyyyo.','...oooo..','.........'],pal:{o:OL,y:'#a8bccb',l:'#dfe8ee',e:OL}},
-  {fn:(x,y)=>{yarnBall(x+4,y+4,3,0);P1(x+8,y+7,'#e0533d');P1(x+7,y+8,'#e0533d')}},
-  {rows:['....o....','...ooo...','..oyyyo..','..oylyo..','.oyyyyyo.','.oyyyyyo.','ooooooooo','...oko...','....o....'],pal:{o:OL,y:'#e8b83a',l:'#fff0a8',k:'#9a7414'}},
-  {rows:['..pp.pp..','..pp.pp..','pp.....pp','pp.....pp','...ppp...','..ppppp..','.ppppppp.','.ppppppp.','..ppppp..'],pal:{p:'#e27a8f'}},
-  {rows:['..s..s...','...s..s..','.........','ooooooo..','occccco..','owwwwwooo','owwwwwo.o','.owwwoooo','..ooo....'],pal:{o:OL,c:'#6e4a28',w:'#fff4dc',s:'#b9a8c9'}},
-  {rows:['.........','...oo....','..okko...','.oggggoo.','oegggggo.','kgggggggo','.ooooooo.','......oo.','.......oo'],pal:{o:OL,g:'#b4acbc',k:'#f4a6b8',e:OL}},
-  {rows:['.........','o.......o','oo.....oo','ooooooooo','obbbtbbbo','obbbtbbbo','obbbbbbbo','odddddddo','ooooooooo'],pal:{o:OL,b:'#d6a868',t:'#eadcb8',d:'#b88a4e'}},
-  {rows:['.........','..oo.....','.oggo.oo.','.ogLgoggo','..ogoggo.','...oogo..','....oo...','....o....','....o....'],pal:{o:OL,g:'#7cc47a',L:'#b4e0a8'}},
-  {rows:['...oooo..','..oyyyo..','.oyyo....','.oyo.....','.oyo.....','.oyyo....','..oyyyo..','...oooo..','.........'],pal:{o:OL,y:'#ffe08a'}}];
-function icon(i,x,y){const d=IC[i];if(!d)return;if(d.fn)d.fn(x,y);else grid(x,y,d.rows,d.pal)}
-
-/* ---------- 项圈牌（圆心 cx,cy）：四个格子放暗号图案，filled 是已经刻上的几个 ---------- */
-function tag(cx,cy,code,t,{shine=0}={}){disc(cx,cy,16,16,OL);disc(cx,cy,15,15,'#c89a2c');disc(cx,cy,14,14,'#e8b83a');
-  for(let a=3.6;a<4.6;a+=.04)P1(Math.round(cx+Math.cos(a)*12),Math.round(cy+Math.sin(a)*12),'#fff0a8');
-  R(cx-2,cy-19,5,4,OL);R(cx-1,cy-18,3,2,'#c8b89a');
-  for(let i=0;i<4;i++){const x=cx-10+(i%2)*11,y=cy-10+Math.floor(i/2)*11;if(code[i]!=null)icon(code[i],x,y);else{R(x+1,y+1,7,7,'#d4a432');R(x+2,y+2,5,5,'#c8962a')}}
-  if(shine>0){const k=Math.floor(shine*30)-6;for(let j=-16;j<=16;j++){const x=cx+k+j*.4|0,y=cy+j;if((x-cx)**2+(y-cy)**2<196){P1(x,y,'#ffffff');P1(x+1,y,'#fff8d8')}}}}
-
 /* ---------- 地上的聚光灯（中心 cx,cy）和从上面照下来的光柱 ---------- */
 function spot(cx,cy,rx,ry,{bright='#4a3a60',mid='#30243e',k=1}={}){for(let y=-ry-4;y<=ry+4;y++)for(let x=-rx-8;x<=rx+8;x++){const d=Math.sqrt((x/rx)**2+(y/ry)**2),X=Math.round(cx+x),Y=Math.round(cy+y);
   if(d<.72*k)P1(X,Y,bright);else if(d<1*k){if(dith(X,Y,(1*k-d)/(.28*k)))P1(X,Y,bright);else P1(X,Y,mid)}else if(d<1.28*k&&dith(X,Y,(1.28*k-d)/(.28*k)))P1(X,Y,mid)}}
@@ -103,4 +83,4 @@ function shaft(cx,top,bot,w0,w1,t,k=1){for(let y=top;y<bot;y++){const f=(y-top)/
   for(let i=0;i<10;i++){const q=(t*.12+i*.1)%1,x=Math.round(cx+Math.sin(i*7.3+t*.8)*(w0/2+(w1-w0)*q/2)*.8),y=Math.round(top+(bot-top)*q);if(Math.floor(t*3+i)%3)P1(x,y,'#fff8e8')}}
 function rays(cx,cy,r,t,col='#fff4dc'){for(let i=0;i<10;i++){const a=i/10*Math.PI*2+t*.4,r0=r*.35;for(let s=r0;s<r;s+=1){if(!dith(Math.round(cx+Math.cos(a)*s),Math.round(cy+Math.sin(a)*s),1-(s-r0)/(r-r0)))continue;P1(Math.round(cx+Math.cos(a)*s),Math.round(cy+Math.sin(a)*s),col)}}}
 
-return{COLLAR_NAMES,LOOK_FACES,FACE_DESC,mix,dith,palOf,roll,describe,cat,catOl,capsule,pile,machine,coin,icon,tag,spot,shaft,rays,tri,globeY,ICON_N:IC.length}})();
+return{COLLAR_NAMES,LOOK_FACES,FACE_DESC,mix,dith,palOf,roll,describe,cat,catOl,capsule,pile,machine,coin,spot,shaft,rays,tri,globeY}})();

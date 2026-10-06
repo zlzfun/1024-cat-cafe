@@ -32,7 +32,7 @@
   #login{max-width:420px;margin:12vh auto 0}
   #login form{display:flex;gap:10px}#login input{flex:1}
   /* 概况 */
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 6px 26px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:12px;margin:6px 6px 26px}
   .stat{background:var(--card2);border:2px solid var(--line);padding:10px 14px}
   .stat b{display:block;font-size:24px;font-weight:600;line-height:1.3;color:var(--acc)}.stat span{font-size:12px;color:var(--sub)}
   .stat.ok b{color:var(--ok)}
@@ -49,9 +49,10 @@
   .win{display:flex;align-items:center;gap:8px;background:#241a2e;border:2px solid var(--line);padding:3px 10px 3px 4px;font-size:13px}
   .win code{font:600 13px ui-monospace,Menlo,monospace;color:var(--acc);letter-spacing:1px}
   .win.new{border-color:var(--acc)}
-  /* 屏蔽词 */
-  #words textarea{width:100%;min-height:150px;resize:vertical;font-size:13px}
-  #words .row{display:flex;gap:12px;align-items:center;margin-top:8px}
+  /* 抽奖登记 */
+  #entries .big{margin:0 0 6px;font-size:22px;font-weight:600;color:var(--acc)}#entries .big small{font-size:13px;font-weight:400;color:var(--sub);margin-left:8px}
+  #entries .row{display:flex;gap:12px;align-items:center;margin-top:12px}
+  td.en small{color:var(--sub)}
   /* 名册 */
   .bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:10px}
   .bar input[type=text]{width:220px}.bar label{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px}.bar .sp{flex:1}
@@ -93,28 +94,29 @@
     <div class="stats" id="stats"></div>
     <div class="two">
       <section class="card" id="draw">
-        <h2>抽奖<small>集齐三个章的猫各有一次资格；封禁的不算</small></h2>
+        <h2>抽奖<small>集齐三个章并登记了抽奖的人，按工号一人一次；封禁的猫不算</small></h2>
         <div class="form">
-          <label>抽 <input type="number" id="dn" min="1" max="500" value="10"> 只</label>
+          <label>抽 <input type="number" id="dn" min="1" max="500" value="10"> 人</label>
           <label><input type="checkbox" id="dfresh" checked> 排除已经抽中过的</label>
-          <input type="text" class="how" id="dhow" maxlength="200" placeholder="怎么领奖（抽中的猫会在画面上看到这句话）">
+          <input type="text" class="how" id="dhow" maxlength="200" placeholder="怎么领奖（抽中的人在店里会看到这句话）">
           <button class="pbtn" id="dgo">抽</button>
-          <button class="lbtn" id="exElig">导出有资格的名单</button>
+          <button class="lbtn" id="exElig">导出抽奖名单</button>
         </div>
         <p class="err" id="drawerr"></p>
         <div id="draws"></div>
       </section>
-      <section class="card" id="words">
-        <h2>屏蔽词<small>一行一个；名字去掉空格标点以后含有其中的词，就不能用</small></h2>
-        <textarea id="wtext" spellcheck="false"></textarea>
-        <div class="row"><button class="pbtn" id="wsave">保存</button><span class="hint" id="wmsg"></span></div>
-        <p class="hint">另外，名字里含"管理员""官方""系统""客服""组织者""主办方"的一直不能用（写在程序里）。已经登记的名字不受新词影响，要处理就在名册里改名。</p>
+      <section class="card" id="entries">
+        <h2>抽奖登记<small>姓名、工号、联系方式只在这里看得到</small></h2>
+        <p class="big" id="enum">—</p>
+        <p class="hint">同一个工号登记在几只猫上（换了浏览器又扭了一只，或者开了小号），名册里标"同工号"，抽奖时只算一个人，姓名和联系方式以最早那次登记为准。工号是不是真的、和姓名对不对得上，领奖时核对。</p>
+        <div class="row"><button class="lbtn warn" id="eclear">清空抽奖登记</button><span class="hint" id="emsg"></span></div>
+        <p class="hint">活动结束、名单导出以后再清：删掉所有猫上的姓名、工号、联系方式，中奖记录里的也一起抹掉，只留猫的名字和领奖码。</p>
       </section>
     </div>
     <section class="card" id="roster">
       <h2>名册<small id="rcount"></small></h2>
-      <div class="bar"><input type="text" id="q" placeholder="按名字找"><label><input type="checkbox" id="onlyElig"> 只看有资格的</label><label><input type="checkbox" id="onlyOn"> 只看在线的</label><span class="sp"></span><button class="lbtn" id="exAll">导出全部</button><button class="lbtn" id="reload">刷新</button></div>
-      <div class="tbl"><table><thead><tr><th>猫</th><th>登记</th><th>最近来过</th><th class="n">来过</th><th class="n">解开毛线球</th><th class="n">挂进橱窗</th><th>集章</th><th>抽中</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="bar"><input type="text" id="q" placeholder="按猫名、姓名、工号找"><label><input type="checkbox" id="onlyElig"> 只看能抽的</label><label><input type="checkbox" id="onlyOn"> 只看在线的</label><span class="sp"></span><button class="lbtn" id="exAll">导出全部</button><button class="lbtn" id="reload">刷新</button></div>
+      <div class="tbl"><table><thead><tr><th>猫</th><th>登记</th><th>最近来过</th><th class="n">来过</th><th class="n">解开毛线球</th><th class="n">挂进橱窗</th><th>集章</th><th>抽奖登记</th><th>抽中</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
       <p class="more" id="more"></p>
       <p class="hint">"挂进橱窗"是联机时服务端记到的次数。盖了解球章、服务端却一次没记到的，标着"待核"：可能是离线玩的，也可能改过存档，由你判断。</p>
     </section>
@@ -128,7 +130,6 @@
 <script src="js/world4-kit.js"></script>
 <script src="js/world-play.js"></script>
 <script src="js/dialog-ui.js"></script>
-<script src="js/entry-art.js"></script>
 <script src="js/admin.js"></script>
 </body>
 </html>
