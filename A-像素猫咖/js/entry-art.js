@@ -11,7 +11,8 @@ const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16),dith=(x,y,
 
 /* ---------- 外观：扭蛋扭出来的就是这三样，存进账号 ---------- */
 const palOf=l=>7+l.coat*6+l.collar;
-const roll=(prev)=>{let l;do{l={coat:Math.floor(Math.random()*COATS.length),collar:Math.floor(Math.random()*COLLARS.length),face:LOOK_FACES[Math.floor(Math.random()*LOOK_FACES.length)]}}while(prev&&l.coat===prev.coat&&l.collar===prev.collar);return l};
+// prev：之前扭到的一只或几只；新扭的毛色 + 项圈不和其中任何一只完全一样
+const roll=(prev)=>{const ps=Array.isArray(prev)?prev:prev?[prev]:[];let l;do{l={coat:Math.floor(Math.random()*COATS.length),collar:Math.floor(Math.random()*COLLARS.length),face:LOOK_FACES[Math.floor(Math.random()*LOOK_FACES.length)]}}while(ps.some(p=>l.coat===p.coat&&l.collar===p.collar));return l};
 const describe=l=>({coat:COATS[l.coat].name,collar:COLLAR_NAMES[l.collar]+'项圈',face:FACE_DESC[l.face]||''});
 // 画一只玩家毛色的猫（脚底中点 x,y）；和 cat-sprites 的 drawCat 一样，只是毛色从 PAL 里取
 function cat(k,l,x,y,t,{face='R',ex,o=0}={}){const pi=palOf(l),tf=(Math.floor(t*2)+pi)%2,P=POSE[k](t+o,tf,o,ex??l.face);if(face==='L'&&FACING.has(k))P.flip=!P.flip;

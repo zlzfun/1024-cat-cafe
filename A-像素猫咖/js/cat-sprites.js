@@ -259,7 +259,7 @@ const PERSONA=[
   {face:'content',sig:['love','meow'],text:'温柔。最爱翻肚皮和踩奶，看到人会慢眨眼',idle:{belly:3,knead:3,lie:2,sleep:2,lick:1,walk:2},slowBlink:.9},
   {face:'meh',sig:['smug','angry'],text:'高冷认真。坐得最端正、舔爪最勤，被打扰会不爽',idle:{lick:4,sit:3,lie:1,sleep:1,walk:2},slowBlink:.3},
   {face:'curious',sig:['meow','surprise'],text:'话多、好奇。常张嘴喵，什么都要凑过去看',idle:{meow:3,walk:5,lick:1,lie:1},slowBlink:.5},
-  {face:'blep',sig:['wink','laugh'],text:'调皮。爱推杯子、钻纸箱',idle:{walk:4,pounce:2,bat:2,lick:1},slowBlink:.5},
+  {face:'focus',sig:['surprise','smug'],text:'机警，爱泡图书馆。常蹲坐着把情况看清楚，再扑出去',idle:{sit:3,pounce:2,lick:1,lie:1,walk:3},slowBlink:.4},
   {face:'sparkle',sig:['laugh','dizzy'],text:'精力最旺。扑球最多，也最常把自己缠成茧',idle:{pounce:3,kick:2,cocoon:1,walk:4},slowBlink:.4},
   {face:'sleepy',sig:['content','cry'],text:'懒，也是门口的招财猫。总趴在饭碗边睡，饿了会哭唧唧；来了新毛线球会招手',idle:{sleep:4,lie:3,knead:1,walk:1},slowBlink:.6,role:'maneki'},
 ];

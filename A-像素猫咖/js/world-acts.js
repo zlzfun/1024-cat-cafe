@@ -91,7 +91,7 @@ function throwTo(from,to,y,then){const d=dist(from,to);S.flying.push({x0:from.x,
 function giveBack(to,y){if(to.gone||to.hold){S.baskets[Math.floor(Math.random()*3)].push(y);return}to.hold=y}
 A.pass=(c,o)=>{const y=c.hold;if(!y||o.gone)return;c.hold=null;run(c,[{k:'happy',dur:.6,soft:1}]);if(c.me)say(`传给${o.name}`);if(o.me)say(`${c.name}把一颗毛线球传给了你`);
   if(!o.me&&!o.hidden&&!o.place&&!o.working)run(o,[{k:'alert',dur:.7}]);sfx('toss');throwTo(c,o,y,()=>receive(o,y,c))};
-const REPLY={1:['heart','宪宪接住了，慢慢眨了一下眼'],3:['q','烁烁歪着头看了看便签'],4:['note','小狸花一把抱住'],5:['bang','斑斑兴奋地扑了上来'],6:['q','金哥醒了，慢吞吞地接住']};
+const REPLY={1:['heart','宪宪接住了，慢慢眨了一下眼'],3:['q','烁烁歪着头看了看便签'],4:['q','小狸花把便签从头看到尾，才接了过去'],5:['bang','斑斑兴奋地扑了上来'],6:['q','金哥醒了，慢吞吞地接住']};
 function receive(o,y,from){
   if(o.me){if(o.hold||o.hidden){say('你嘴里已经有东西了，球滚回去了');throwTo(o,from,y,()=>giveBack(from,y));return}o.hold=y;y.knit=false;say('接住了！');return}
   if(o.hold||o.hidden||o.gone||o.riding){throwTo(o,from,y,()=>{giveBack(from,y);if(from.me)say(`${o.name}现在腾不出嘴，球滚回来了`)});return}
@@ -255,7 +255,7 @@ tick(()=>{for(const f of S.floorToys){if(f.by)continue;const age=now()-f.t0;
   if(age>40&&!f.asked){f.asked=1;const c=S.cats.filter(c=>!c.me&&!c.desk&&idle(c)&&!c.place&&!c.hidden&&!c.working&&!c.hold&&!c.toy&&c.z==null&&near(c,f,520)).sort((a,b)=>dist(a,f)-dist(b,f))[0];if(c){tidy(c,f);if(atMe(f,200))speak(c,'我来收拾',2)}}
   if(age>90){const i=S.floorToys.indexOf(f);S.floorToys.splice(i,1);const o=S.toys.find(q=>q.kind===f.kind);o.on=true;S.puffs.push({x:o.tx,y:TOPY-4,t0:now()});if(atMe(P.table,160))say('不知道谁又把'+TOY_NAMES[o.kind]+'摆回了桌上');break}}});
 T({id:'table',n:'小桌子',hit:[P.table.x,P.table.y-8,P.table.w,36],at:{x:P.table.x+28,y:P.table.y+36},near:[P.table.x-6,P.table.y+26,P.table.w+12,22],label:'跳上桌子推东西',
-  ok:c=>!c.hold&&S.toys.some(o=>o.on)&&!S.cats.some(o=>o!==c&&o.onTable),no:c=>c.hold?'先把嘴里的东西放下':S.toys.some(o=>o.on)?'桌上已经有猫了':'桌上的东西都被推下去了。把地上的叼回去吧',ai:{mood:'play',w:c=>c.pal===4?5:1},
+  ok:c=>!c.hold&&S.toys.some(o=>o.on)&&!S.cats.some(o=>o!==c&&o.onTable),no:c=>c.hold?'先把嘴里的东西放下':S.toys.some(o=>o.on)?'桌上已经有猫了':'桌上的东西都被推下去了。把地上的叼回去吧',ai:{mood:'play',w:1},
   go(c){const o=rnd(S.toys.filter(o=>o.on)),floor={x:o.tx-6,y:P.table.y+36};
     run(c,[{go:floor},{fn:c=>{c.onTable=true;c.onLeave=c=>{c.onTable=false}}},{jump:{x:o.tx-7,y:TOPY,z:TOPZ}},{fn:c=>{c.face='R'}},{k:'sit',dur:.8,ex:'smug'},{k:'maneki',dur:.7},
       {fn:c=>{if(!o.on)return;o.on=false;const x1=o.tx+rr(8,18),y1=P.table.y+36+rr(0,8);S.flying.push({x0:o.tx,y0:TOPY,x1,y1,t0:now(),dur:.45,arc:8,draw:f=>toy(o.kind,Math.round(f.x),Math.round(f.y),1),done:()=>{S.floorToys.push({kind:o.kind,x:x1,y:y1,t0:now()});if(atMe(o,200))sfx('clack')}});
