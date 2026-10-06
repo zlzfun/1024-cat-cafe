@@ -1,15 +1,9 @@
 /* 1024 猫咖 · 场景 v4 前台猫：不知道玩什么、不知道找谁的时候，问它。依赖 world4-things.js、world4-quest.js、world4-guide.js（在它们后面加载）。
    对应猫猫咖啡馆正在做的"猫猫球"（F229）：前台猫是一个岗位，不是一只新猫；默认长相是布偶猫，名字由全家投票起。
-   - 前台：入场纸箱左上方一张小桌子，桌上一只服务铃。点它就能问：
-     听说店里有棵大树（没去过中庭时才有这一问，它带你去）、这附近有什么好玩的（它带你走过去）、我是哪只猫、毛线球怎么解、猫猫咖啡馆是什么、你是谁、打开图鉴
+   - 前台：门厅西边一张小桌子（位置在 map-1f.js），桌上一只服务铃。点它就能问：
+     听说店里有棵大树（没爬过时才有这一问，它带你去咖啡厅）、这附近有什么好玩的（这一层里挑，它带你走过去）、楼上有什么、我是哪只猫、毛线球怎么解、猫猫咖啡馆是什么、你是谁、打开图鉴
    - 店猫搭话：你在一间房里待了一会儿、什么都没碰，附近醒着的店猫偶尔朝一样你没玩过的东西看过去，说一句。至少隔 50 秒，一样东西只说一次
    画面上不给东西加记号：鼠标移到能玩的东西上会变成猫爪（页面里做）；走近了，按 E 会用到的那一样头上有 E 键帽（world4-guide.js）。 */
-(()=>{const M=WORLD,P=WP;
-Object.assign(P,{fdesk:{x:160,y:176},fdeskTop:{x:172,y:180,z:198.5,face:'R'},fdeskFloor:{x:176,y:208},bell:{x:184,y:172}});
-M.BLOCK.push([160,190,36,8]);
-M.props.push({x:156,y:166,w:44,h:34,base:198,draw:(t,S)=>{frontDesk(P.fdesk.x,P.fdesk.y);serviceBell(P.bell.x,P.bell.y,t,S.bellT||0)},ver:S=>S.bellT>0?Math.floor(S.now*12)%2+1:0});
-})();
-
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,rnd,pickW,run,setK,idle,emote,speak,say,sfx,T,TH,dist,findPath,roomAt,faceTo,land}=A;
 const now=()=>A.t,near=(a,b,d)=>Math.hypot(a.x-b.x,a.y-b.y)<d,tick=f=>A.tickers.push(f),val=(v,...a)=>typeof v==='function'?v(...a):v;
@@ -26,7 +20,7 @@ const SKIP=['treatBit','pop','dot','fly','paper','sunA','sunB','bath','pile','to
 const center=th=>{const h=val(th.hit,me);if(h)return{x:h[0]+h[2]/2,y:h[1]+h[3]/2};return val(th.at,me)};
 function thingOf(id){const L=TH.filter(t=>GID(t.id)===id&&!(t.hidden&&t.hidden(me))&&(!t.ok||t.ok(me)));return L.sort((a,b)=>dist(center(a),me)-dist(center(b),me))[0]||null}
 // 推荐三样没玩过的：同一间房、近的优先，和猫猫咖啡馆特性有关的再往前挪一点；一间房最多两样
-function suggest(n=3){const L=[],here=roomAt(me.x,me.y).id;for(const k in GUIDE){if(G.disc[k]||SKIP.includes(k))continue;const th=thingOf(k);if(!th||!val(th.at,me))continue;const g=GUIDE[k],at=val(th.at,me);
+function suggest(n=3){const L=[],here=roomAt(me.x,me.y).id,fl=A.floorOf(me.y);for(const k in GUIDE){if(G.disc[k]||SKIP.includes(k))continue;const th=thingOf(k);if(!th||!val(th.at,me))continue;const g=GUIDE[k],at=val(th.at,me);if(A.floorOf(at.y)!==fl)continue;   // 只带你逛这一层
     L.push({k,g,th,d:dist(center(th),me)-(g.tie?110:0)-(g.tip?50:0)+(roomAt(at.x,at.y).id===here?0:160)})}
   L.sort((a,b)=>a.d-b.d);const out=[],per={};for(const s of L){const r=roomAt(val(s.th.at,me).x,val(s.th.at,me).y).id;if((per[r]||0)>=2)continue;per[r]=(per[r]||0)+1;out.push(s);if(out.length>=n)break}return out}
 
@@ -68,7 +62,7 @@ const say1=t=>({k:'say',pal:DESK_PAL,name:NAME,t});
 const BACK=[{id:'back',t:'回去'},{id:'close',t:'再逛逛',key:'Esc'}];
 function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick=null;
   if(id==='menu'){const items=[...(q&&ball?[{id:'quest',t:'我叼着的这颗球，该怎么解？',sub:'再看一眼便签'}]:[]),
-      ...(G.disc.yarntree?[]:[{id:'tree',t:'听说店里有棵大树？',sub:'就在店的正中间，我带你去'}]),{id:'fun',t:'这附近有什么好玩的？',sub:'我带你过去'},{id:'me',t:'我是哪只猫？'},{id:'ball',t:'毛线球是什么？怎么解？'},
+      ...(G.disc.yarntree?[]:[{id:'tree',t:'听说店里有棵大树？',sub:'就在咖啡厅正中间，我带你去'}]),{id:'fun',t:'这附近有什么好玩的？',sub:'我带你过去'},{id:'floors',t:'楼上有什么？',sub:'二楼、屋顶'},{id:'me',t:'我是哪只猫？'},{id:'ball',t:'毛线球是什么？怎么解？'},
       {id:'cafe',t:'猫猫咖啡馆是什么？',sub:'官网、GitHub、内源主页'},{id:'who',t:'你是谁？'},{id:'book',t:'把图鉴给我看看',sub:'全店能玩的都在里面（B）'}];
     const hi=G.count()?rnd(['又见面啦～今天想玩点什么？','想去哪儿？我带你去。','有什么想问的？']):'欢迎光临！第一次来吧？想玩什么、想找谁，问我就好。';
     spec={blocks:[say1(hi),{k:'choices',cols:2,items}],tip:tipOf('concierge'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]};pick=i=>go(items[i].id)}
@@ -78,9 +72,13 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
     pick=i=>{const s=L[i];if(!s)return;A.dlg.close();startLead(s.k,s.th)}}
   else if(id==='ball'){const items=ball?[]:[{t:'带我去毛线篮'}];
     spec={blocks:[say1('门缝里塞进来的便签，就是一颗毛线球：人类想请猫帮的忙。'),
-      {k:'steps',items:[{t:'叼一颗',sub:'前厅的毛线篮里就有'},{t:'看便签',sub:'对话框会告诉你这颗球怎么解'},{t:'解开',sub:'有时要找对的猫，有时要去图书馆翻书，有时要几只猫一起'},
+      {k:'steps',items:[{t:'叼一颗',sub:'门厅的毛线篮里就有'},{t:'看便签',sub:'对话框会告诉你这颗球怎么解'},{t:'解开',sub:'有时要找对的猫，有时要去图书馆翻书，有时要几只猫一起'},
         {t:'挂进橱窗',sub:'织好的东西叼去橱窗长廊'},{t:'等回信',sub:'人类取走以后，会回一封信'}]},...(items.length?[{k:'choices',items}]:[])],tip:tipOf('ball'),acts:BACK};
     pick=()=>{const th=thingOf('basket')||thingOf('knock');A.dlg.close();if(th)startLead(GID(th.id),th)}}
+  else if(id==='floors')spec={blocks:[say1('这是一栋三层的小楼。'),
+      {k:'steps',items:[{t:'一楼',sub:'你在这儿：门厅、橱窗长廊、1024 舞台、吧台、咖啡厅；后门出去是后院和河'},{t:'二楼',sub:'猫自己的房间：1024 工坊、图书馆、大客厅、午睡角；巨树的六根家族横枝在回廊上'},
+        {t:'屋顶',sub:'永远是晴天的夜里：屋脊上坐一排猫，观星毯上看满天星，巨树的树冠和瞭望台'}]},
+      {k:'text',t:'上楼走楼梯间的楼梯，走进楼梯口就上去了；也可以在咖啡厅爬上巨树，一路爬到屋顶。右上角的小地图只画你在的那一层。'}],tip:tipOf('concierge'),acts:BACK};
   else if(id==='cafe')spec={blocks:[say1('这家店，是照着猫猫咖啡馆开的。'),
       {k:'text',t:'猫猫咖啡馆（Clowder AI）把一个个孤立的 AI agent 变成一个团队：Claude、GPT、Gemini……每只猫有自己的身份、能力画像和长期记忆，互相 @、互相 review；你只管愿景、拍板和反馈。'},
       {k:'links',items:['inner','site','github'].map(k=>({key:k,...LINKS[k]}))}],tip:tipOf('multi'),acts:BACK};
@@ -109,10 +107,12 @@ const HEY={basket:'篮子里有毛线球，叼一颗？',knock:'扒拉一下门�
   post:'猫抓柱，磨磨爪子超解压',plant:'那盆草，蹭一下会晃',coffee:'咖啡机会自己咕嘟',bigbox:'大纸箱能挤三只',bed:'那个猫窝可软了',
   win:'空着嘴也能趴在窗台上，看看街对面',board:'小黑板记着今天交付了几件',paw:'墙边有印泥，按个爪印吧',stage:'背景板前拍张照？',camera:'相机能拍合照',
   desk:'CI 红了就去踩键盘',duck:'叼着球跟小黄鸭讲讲，解得快',printer:'打印机能打出纸团',rack:'机柜顶上最暖',tools:'工具墙上是咱们的家伙什',merge:'合并门禁：三盏灯全亮才放行',giant:'大毛线团要几只猫一起扒拉',bean:'懒人沙发，陷进去就不想起',
-  feed:'饿了去喂食器',fountain:'流水饮水机，喝口水',plate:'零食机要三只猫同时踩爪垫',treat:'零食机，研究一下？',table:'桌上的小东西，推下去！',grass:'猫草，啃两口',tank:'鱼缸里有鱼……',
+  feed:'饿了去喂食器',fountain:'流水饮水机，喝口水',plate:'零食机要三只猫同时踩爪垫',treat:'零食机，研究一下？',table:'咖啡桌上的杯子，推下去！',grass:'猫草，啃两口',tank:'鱼缸里有鱼……',
   kotatsu:'暖桌里能钻六只',fire:'壁炉前最舒服',sofa:'沙发最左边是宪宪的位置',tree:'爬架能一层层跳上去',piano:'地板钢琴，踩上去就响',bubbler:'泡泡机，打开试试',laser:'激光逗猫器！',tunnel:'隧道从这头钻到那头',catnip:'猫薄荷鱼，闻一下',
-  wheel:'跑轮跑起来，串灯会亮',hammock:'吊床晃呀晃',toyback:'地上那个，叼回桌上吧',winseat:'窗边软座，夜里能等流星',
-  yarntree:'爬到树顶，能看整条街',treeplaque:'树下的铭牌，写着这棵树的来历'};
+  wheel:'跑轮跑起来，那串大灯泡会亮',hammock:'吊床晃呀晃，头顶就是星星',toyback:'地上那个，叼回桌上吧',winseat:'窗边软座，夜里能等流星',
+  yarntree:'顺着树干爬上去，一路能爬到屋顶',treeplaque:'树下的铭牌，写着这棵树的来历',treebench:'树下的长凳，坐一会儿',chair:'椅子空着，坐下等杯咖啡',stool:'高脚凳，跳上去',
+  coffee:'按一下咖啡机，有拉花',cake:'蛋糕柜，隔着玻璃闻一闻',fish:'栈桥尽头能钓鱼，浮漂一沉就收竿',boat:'小船坐满两只就开',branch:'跳上一根家族横枝窝着',treeslide:'抱着树干，能一路滑回一楼',
+  ridge:'跳上屋脊，背后就是星空',stargaze:'躺在观星毯上看星星',scope:'望远镜里是月亮',treetop:'爬到树顶，能看夜里的整条街'};
 let roomId=null,inRoom=0,quiet=0,heyT=-40,chk=0;const heard=new Set();
 A.on('use',()=>{quiet=0});
 tick(dt=>{if(!A.play)return;const r=roomAt(me.x,me.y).id;if(r!==roomId){roomId=r;inRoom=0}inRoom+=dt;quiet+=dt;if((chk-=dt)>0)return;chk=1;

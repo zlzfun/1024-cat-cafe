@@ -7,10 +7,10 @@
    - 地址后面加 ?dev 出一条开发用的工具条（机器人数量、时段、天气、触发事件）。 */
 const App=(()=>{
 const CFG=window.CAT1024_CONFIG||{},DEV=/[?&]dev\b/.test(location.search);
-const $=id=>document.getElementById(id),dpr=Math.min(2,window.devicePixelRatio||1),WW=WORLD.w,WH=WORLD.h;
+const $=id=>document.getElementById(id),dpr=Math.min(2,window.devicePixelRatio||1),WW=Math.min(...WORLD.floors.map(f=>f.w)),WH=Math.min(...WORLD.floors.map(f=>f.h));   // 画面最大不超过最小的那一层
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 if(CFG.links)for(const k in CFG.links)if(LINKS[k]&&CFG.links[k])LINKS[k].url=CFG.links[k];
-let game=null,cat=null,pctx,octx,mctx,VW=480,VH=270,SC=3,zoomPref=0,toastT=0,discT=0,replyT=0,banT=0,playing=false,asleep=false,veil=null;
+let game=null,cat=null,pctx,octx,mctx,VW=480,VH=270,SC=3,zoomPref=0,toastT=0,discT=0,replyT=0,zoneT=0,playing=false,asleep=false,veil=null,curFloor=null;
 const sfx=(k,a)=>Sound.sfx(k,a);
 
 /* ---------- 存档：跟着账号 ---------- */
@@ -23,9 +23,13 @@ function flush(keep){if(!cat||asleep||!playing)return;dirty=false;Account.save(s
 /* ---------- 界面回调（和样页 v4 一样，去掉了说明页的部分） ---------- */
 const NEWS=[];
 const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s&&!dlg.open&&playing?'block':'none'},toast:s=>{$('toast').textContent=s;$('toast').style.opacity=1;toastT=3.2},
-  room:r=>{$('room').firstChild.textContent=r.n;if(!playing||!(game&&game.A.firstRoom&&game.A.firstRoom(r.id)))return;
-    if(r.id==='atrium'){game.A.reveal();bigTitle('巨树中庭','毛线巨树','猫猫咖啡馆的家族树 · 爬到树顶，能看整条街');return}
-    $('roomban').innerHTML=`<h5>第一次来：${esc(r.n)}</h5><p>${esc(r.d)}</p>`;$('roomban').classList.add('show');banT=5},
+  // 换了房间：左上角的地名牌换掉，画面正上方淡入房间名；第一次来，下面多一行这间房有什么
+  room:r=>{const f=WORLD.floors.find(x=>x.id===r.f)||WORLD.floors[0];$('rfl').textContent=f.n;$('rfl').dataset.f=f.id;$('rnm').textContent=r.n;drawFloors(f.id);if(!playing)return;
+    const first=!!(game&&game.A.firstRoom&&game.A.firstRoom(r.id));
+    if(first&&r.id==='cafe'){bigTitle('咖啡厅','毛线巨树','它从这里长上去，穿过二楼，树冠在屋顶上 · 爬上去试试');zone(r,null);return}
+    if(first&&r.id==='roof'){game.A.reveal&&game.A.reveal();bigTitle('屋顶','星空','这里永远是晴天的夜里 · 跳上屋脊，或者躺在观星毯上',900,5200);zone(r,null);return}
+    zone(r,first?r.d:null)},
+  floor:f=>{if(!playing)return;bigTitle(f.n,f.n,f.sub,200,2600)},
   vista:v=>{$('game').classList.toggle('vista',!!v);if(v){$('vcap').innerHTML=`<b>${esc(v.n)}</b><span>${esc(v.sub)}</span><span class="sc" id="vsc"></span><span>${esc(v.hint)}</span><span><kbd>Esc</kbd> 回到店里</span>`;$('tip').style.display='none';closeMenu()}},
   vistaCap:s=>{const e=$('vsc');if(e)e.textContent=s},
   news:s=>{NEWS.push({s,t:performance.now()});if(NEWS.length>5)NEWS.shift();drawNews()},sfx,photo:showPhoto,
@@ -33,6 +37,12 @@ const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s&&!dlg
   discover:d=>{sfx('disc');$('disc').innerHTML=`<h5>新发现 · ${esc(d.n)}</h5><p>${esc(d.what)}</p>${d.tie?`<p class="tie">${esc(d.tie)}</p>`:''}`;$('disc').classList.add('show');discT=6},
   reply:r=>{sfx('bell');$('reply').innerHTML=`<h5>📮 人类回信 · 毛线球 #${r.no}</h5><q>${esc(r.thx)}</q><div class="chain">球权链：${r.chain.map(esc).join(' → ')}</div>`;$('reply').classList.add('show');replyT=8;drawStamps()},
   stamps:()=>{sfx('stamp');drawStamps();touch()},camp:()=>{panelKey=''},book:()=>openGuide(),renamed:n=>{if(cat)cat.name=n;meKey=''},prizes:L=>L.forEach(queuePrize)};
+// 房间名：画面正上方淡入，一秒半后淡出；第一次来多一行描述（多停一会儿）。在两间房的交界来回走，同一间房 8 秒内不再弹
+const zoneSeen={};
+function zone(r,desc){const t=performance.now();if(!desc&&t-(zoneSeen[r.id]||-1e9)<8000)return;zoneSeen[r.id]=t;
+  const el=$('zone');el.innerHTML=`<b>${esc(r.n)}</b>`+(desc?`<p>${esc(desc)}</p>`:'');el.classList.add('show');zoneT=desc?5.5:1.8}
+// 右上角小地图上面那一排楼层签：你在的那层亮着
+function drawFloors(id){if(curFloor===id)return;curFloor=id;$('floors').innerHTML=WORLD.floors.slice().reverse().map(f=>`<span class="${f.id===id?'on':''}">${esc(f.n)}</span>`).join('')}
 let bigT1=0,bigT2=0;function bigTitle(a,b,c,delay=1600,hold=4400){const el=$('vtitle');el.innerHTML=`<small>${esc(a)}</small><b>${esc(b)}</b><span>${esc(c)}</span>`;clearTimeout(bigT1);clearTimeout(bigT2);
   bigT1=setTimeout(()=>el.classList.add('show'),delay);bigT2=setTimeout(()=>el.classList.remove('show'),delay+hold)}
 function drawNews(){const now=performance.now();$('news').innerHTML=NEWS.filter(n=>now-n.t<12000).map(n=>`<div style="opacity:${now-n.t>9000?.4:1}">${esc(n.s)}</div>`).join('')}
@@ -48,7 +58,7 @@ function layout(){const aw=innerWidth,ah=innerHeight,auto=aw>=1300&&ah>=700?3:2;
 
 /* ---------- 左上：头像卡、任务条 / 训练营；右上：集章卡 ---------- */
 let meKey='',panelKey='';
-function drawMe(){const m=game.me,h=m.hold,G=game.A.guide,st=h?(h.knit?'叼着织好的'+KNIT_NAMES[h.kind][0]:'叼着一颗毛线球'):m.toy?'叼着'+TOY_NAMES[m.toy]:m.place?'窝着':m.hidden?'躲起来了':'空着嘴',k=m.pal+'|'+st+'|'+G.balls()+'|'+G.count()+'|'+m.name;if(k===meKey)return;meKey=k;
+function drawMe(){const m=game.me,h=m.hold,G=game.A.guide,st=h?(h.knit?'叼着织好的'+KNIT_NAMES[h.kind][0]:'叼着一颗毛线球'):m.ctoy?'叼着'+CTOY_NAMES[m.ctoy.kind]:m.place?'窝着':m.hidden?'躲起来了':'空着嘴',k=m.pal+'|'+st+'|'+G.balls()+'|'+G.count()+'|'+m.name;if(k===meKey)return;meKey=k;
   drawPortrait($('mec'),m.pal,0,m.myFace);$('mename').textContent=m.name;$('mest').textContent=st;$('stBall').textContent=G.balls();$('stDisc').textContent=G.count()+' / '+G.total}
 function drawPanel(){const A=game.A,tr=A.Q.tracker();let html='';
   if(tr){html=`<h4>🧶 毛线球 #${tr.no}<i>${esc(tr.type)} · E 打开便签</i></h4><div class="q">「${esc(tr.q)}」</div>`+(tr.steps?'<ul>'+tr.steps.map(s=>`<li class="${s.done?'done':s.cur?'cur':''}">${esc(s.t)}</li>`).join('')+'</ul>':`<div class="ln">${esc(tr.line)}</div>`)}
@@ -60,7 +70,7 @@ function drawStamps(){const s=game.S.stamps,n=(s.ball?1:0)+(s.inner?1:0)+(s.site
 function findMe(){game.A.findMe();$('game').focus()}
 
 /* ---------- 图鉴 ---------- */
-const ROOM_ORDER=['hall','gallery','atrium','lab','library','kitchen','lounge','yard','path'];
+const ROOM_ORDER=['hall','gallery','stage','bar','cafe','stairs','yard','river','lab','well','library','lounge','nap','roof'];
 function openGuide(){const G=game.A.guide,all=Object.entries(GUIDE),rn=id=>WORLD.rooms.find(x=>x.id===id).n,got=all.filter(([k])=>G.disc[k]).sort((a,b)=>G.disc[b[0]]-G.disc[a[0]]),lock=all.filter(([k])=>!G.disc[k]);
   const when=ts=>ts>1?' · '+new Date(ts).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
   let html=`<div class="top"><b>图鉴</b><span class="prog"><i style="width:${Math.round(got.length/all.length*100)}%"></i></span><span class="num">${got.length} / ${all.length}</span><button id="bookx">关掉（B）</button></div>`;
@@ -118,7 +128,7 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
     openMenu(e.clientX,e.clientY,`<div class="t">${head}</div><button data-a="rub">蹭蹭它</button><button data-a="follow">跟着它走</button><button data-a="pass" ${ball?'':'disabled'}>把毛线球传给它${ball?'':'（嘴里没有）'}</button>`)});
   menu.addEventListener('pointerdown',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b||b.disabled)return;
     if(b.dataset.ph!=null)game.cmd.say(phrasesList[+b.dataset.ph]);else if(menuCat){const a=b.dataset.a;if(a==='follow')game.cmd.follow(menuCat);game.cmd.social(menuCat,a==='follow'?'follow':a)}closeMenu();gameEl.focus()});
-  $('mm').addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const r=$('mm').getBoundingClientRect();game.tap((e.clientX-r.left)/r.width*WW,(e.clientY-r.top)/r.height*WH)});
+  $('mm').addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const m=$('mm'),r=m.getBoundingClientRect(),w=game.miniTo((e.clientX-r.left)/r.width*m.width,(e.clientY-r.top)/r.height*m.height);if(w)game.tap(w.x,w.y)});
   $('mecard').onclick=e=>{e.stopPropagation();findMe()};$('stBook').onclick=e=>{e.stopPropagation();openGuide()};$('panel').onclick=e=>{e.stopPropagation();if(game.A.Q.cur)game.A.Q.open();gameEl.focus()};$('stamps').onclick=e=>{e.stopPropagation();if(cat&&full()){openLotto();return}game.A.openWelcome();gameEl.focus()};
   $('bookov').addEventListener('pointerdown',e=>{e.stopPropagation();const d=e.target.closest('[data-go]');if(!d)return;const id=d.dataset.go,th=game.A.TH.find(t=>t.id===id||t.id.replace(/\d$/,'')===id);closeGuide();if(!th)return;
     const h=typeof th.hit==='function'?th.hit(game.me):th.hit,at=typeof th.at==='function'?th.at(game.me):th.at;if(h&&h[2])game.tap(h[0]+h[2]/2,h[1]+h[3]/2);else if(at)game.tap(at.x,at.y)});
@@ -195,13 +205,13 @@ function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));la
     if(vf.show==='vista'){V.draw(pctx,VW,VH);octx.clearRect(0,0,$('oc').width,$('oc').height)}else{const v=game.camera(VW,VH,dt,dlg.open?Math.round(VH*.3):0);game.render(pctx,v.x,v.y,VW,VH);game.hud(octx,SC*dpr,dpr)}
     if(vf.black>0){pctx.fillStyle=`rgba(0,0,0,${vf.black.toFixed(3)})`;pctx.fillRect(0,0,VW,VH);if(vf.black>.4)octx.clearRect(0,0,$('oc').width,$('oc').height)}
     if(veil)drawVeil(t);
-    if(fno%4===0)game.mini(mctx,336,108);
+    if(fno%4===0){const m=$('mm'),z=game.miniSize(200);if(m.width!==z.w||m.height!==z.h){m.width=z.w;m.height=z.h}game.mini(mctx,z.w,z.h)}
     if(fno%10===0){$('online').textContent='店里 '+game.S.cats.filter(c=>!c.gone).length+' 只猫'+(Net.on?' · 在线 '+(1+game.A.live.count()):'');drawMe();drawPanel()}
     if(fno%30===0){tryPrize();tryLotto()}
     if(fno%1800===0&&!devTod){game.S.tod=clockTod();game.S.weather=weatherNow()}
     if(playing&&(saveT+=dt)>(dirty?3:20)){saveT=0;flush()}}
   jsT+=performance.now()-t0;
-  if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');if(banT>0&&(banT-=dt)<=0)$('roomban').classList.remove('show');
+  if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');if(zoneT>0&&(zoneT-=dt)<=0)$('zone').classList.remove('show');
   if(fno%30===0)drawNews();
   if(DEV){fpsT+=dt;fpsN++;if(fpsT>=1){const s=game.stats(),e=$('dvP');if(e)e.textContent=`${Math.round(fpsN/fpsT)} 帧/秒 · 引擎 ${(jsT/fpsN).toFixed(1)} ms · 同屏 ${s.drawn} 只`;fpsT=0;fpsN=0;jsT=0}}
   requestAnimationFrame(loop)}
@@ -229,10 +239,10 @@ function enter({cat:c,how}){cat=c;const me=game.me,st=c.state||{};SAVE={g:st.g||
   // 补位的猫是在认出你之前生成的：要是有一只刚好和你同名，给它改个名
   const U=game.A.usedNames;if(U){for(const b of game.S.cats)if(b!==me&&b.kind==='bot'&&b.name===c.name){U.delete(b.name);let n;do n=c.name+(2+Math.floor(Math.random()*98));while(U.has(n));b.name=n;U.add(n)}U.add(c.name)}
   game.A.guide.load(SAVE.g);Object.assign(game.S.stamps,st.stamps||{});drawStamps();meKey='';panelKey='';(c.prizes||[]).forEach(queuePrize);
-  if(how==='drop'){game.A.guide.mark('move');game.A.firstRoom('atrium')}
+  if(how==='drop'){game.A.guide.mark('move');game.A.firstRoom('cafe')}
   Entry.leave();veil={how,t0:performance.now()};playing=true;dirty=true;claim();startNet();$('game').classList.add('on');
   game.A.arrive(how,{...(st.pos||{}),onLand:()=>{},onDone:()=>{flush();$('game').focus()}});
-  if(how==='drop')bigTitle('1024 猫咖营业中','欢迎，'+c.name,'你落在了毛线巨树下 · 前台猫在前厅，有事可以问它',1900,4600);
+  if(how==='drop')bigTitle('1024 猫咖营业中','欢迎，'+c.name,'你落在了一楼咖啡厅的毛线巨树下 · 前台猫在门厅，有事可以问它',1900,4600);
   else bigTitle('欢迎回来',c.name,(c.prev?'上次来是 '+Entry.ago(c.prev):'又见面了')+(st.g&&st.g.balls?` · 解开过 ${st.g.balls} 颗毛线球`:''),1400,3800);
   $('game').focus();
   addEventListener('pagehide',()=>flush(true));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush(true)})}

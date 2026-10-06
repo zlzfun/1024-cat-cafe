@@ -27,6 +27,10 @@ const SFX={bell:()=>{tone(1318,.5,{vol:.04});tone(1046,.6,{vol:.035,delay:.12})}
   engrave:()=>{noise(.06,{vol:.03,hp:5000});tone(1568,.05,{type:'triangle',vol:.02,delay:.03})},
   whoosh:()=>noise(.5,{vol:.05,hp:700}),land:()=>{tone(90,.18,{slide:.6,vol:.08});noise(.2,{vol:.05,hp:900})},
   step:()=>tone(1318,.12,{type:'triangle',vol:.03}),ok:()=>arp([988,1318],.14,'triangle',.035,.08),no:()=>tone(220,.16,{type:'square',vol:.015,slide:.8}),
-  yawn:()=>tone(520,.7,{type:'sine',vol:.03,slide:.55})};
+  yawn:()=>tone(520,.7,{type:'sine',vol:.03,slide:.55}),
+  // 咖啡机、钓鱼、划船
+  pour:()=>{noise(.9,{vol:.02,hp:900});tone(330,.25,{type:'sine',vol:.02,slide:1.4,delay:.6})},splash:()=>{noise(.25,{vol:.05,hp:1400});tone(240,.12,{type:'sine',vol:.03,slide:.6})},
+  bite:()=>{tone(1200,.06,{type:'square',vol:.02});tone(1500,.08,{type:'square',vol:.02,delay:.08})},reel:()=>{for(let i=0;i<8;i++)tone(900+i*60,.03,{type:'square',vol:.012,delay:i*.04})},
+  row:()=>{noise(.18,{vol:.03,hp:1000});tone(180,.15,{type:'sine',vol:.02,slide:.7,delay:.05})}};
 function sfx(k,a){if(!on||!SFX[k])return;init();if(!AC)return;const now=performance.now();if(now-(lastSfx[k]||0)<45)return;if(now-sfxWin>1000){sfxWin=now;sfxN=0}if(++sfxN>16)return;lastSfx[k]=now;try{SFX[k](a)}catch(e){}}
 return{sfx,get on(){return on},set(v){on=!!v;try{localStorage.setItem('cat1024.sound',on?'1':'0')}catch(e){}if(on)init()},init:()=>{if(on)init()}}})();

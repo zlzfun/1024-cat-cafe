@@ -19,7 +19,7 @@ function pickQuest(){if(Q.force){const d=def(Q.force);Q.force=null;if(d)return d
   // 先按类型分：每类机会差不多（闲聊多给一点），同一类里再平分——闲聊题多，但不会刷屏
   return A.pickBy(L,q=>{let w=(q.type==='chat'?1.6:1)/per[q.type]/(1+(Q.types[q.type]||0)*1.2);
     if(q.type==='route'){const c=npc(q.ans);w*=c?(dist(c,me)<320?1.6:dist(c,me)<640?1:.5):.2}
-    if(q.type==='memory')w*=me.x>1320?1.8:.9;if(q.type==='flow')w*=me.x>1000&&me.x<1380&&me.y<260?1.8:.8;   // 在图书馆附近多出查记忆的题，在工坊附近多出走流程的题
+    const here=A.roomAt(me.x,me.y).id;if(q.type==='memory')w*=here==='library'?2:A.floorOf(me.y).id==='f2'?1.3:.9;if(q.type==='flow')w*=here==='lab'?2:A.floorOf(me.y).id==='f2'?1.3:.8;   // 在图书馆、工坊附近多出查记忆、走流程的题
     if(q.type==='coop')w*=S.cats.filter(c=>isBot(c)&&near(c,me,260)).length>=2?1.4:.6;return w})}
 // 联机时别的真人传过来的球带着题号（qid）和它经过谁（chain）：接着做同一道题
 function assign(y){const d=(y.qid&&def(y.qid))||pickQuest();Q.seen[d.id]=1;Q.types[d.type]=(Q.types[d.type]||0)+1;
@@ -31,10 +31,10 @@ function assign(y){const d=(y.qid&&def(y.qid))||pickQuest();Q.seen[d.id]=1;Q.typ
 /* ---------- 对话框的内容 ---------- */
 const TASK={quiz:'你替猫回答：该怎么做？',guard:'这颗球有点危险。你会怎么回？',tool:'挑一样合适的本事：',care:'人类有点累了。你想怎么陪它？',chat:'人类只是想聊两句。你替猫回一句：',
   route:'这颗球该交给谁？@ 一只最合适的猫，它会自己跑过来接球。',
-  memory:'答案在图书馆里（工坊右边那间）。五架书：决策日志、教训沉淀、证据库、人物关系、事件记忆——翻对的那一架。不知道在哪一架？先拉开检索柜查一查。',
+  memory:'答案在二楼的图书馆里（走楼梯间的楼梯，或者爬巨树上去）。五架书：决策日志、教训沉淀、证据库、人物关系、事件记忆——翻对的那一架。不知道在哪一架？先拉开检索柜查一查。',
   coop:'这颗球太大，一只猫解不开。',flow:'按猫咖的规矩走一遍：'};
 const card=pal=>{const k=CAT_CARDS[pal];return{pal,t:`${k.name} · ${k.breed}`,sub:`${k.cli} · ${k.at} · 擅长：${k.good}`}};
-const flowSteps=q=>[['写测试','去工坊，跳上桌踩键盘',q.flow.test],['跑 CI','按一下 CI，等它变绿',q.flow.ci],['Review','请一只别的猫看一眼（Q 传给它）',q.flow.review],['合并','去合并门禁，拉一下闸',q.st==='solving'||q.st==='done']];
+const flowSteps=q=>[['写测试','去二楼工坊，跳上桌踩键盘',q.flow.test],['跑 CI','按一下 CI，等它变绿',q.flow.ci],['Review','请一只别的猫看一眼（Q 传给它）',q.flow.review],['合并','去合并门禁，拉一下闸',q.st==='solving'||q.st==='done']];
 const flowAt=()=>{const q=Q.cur;return q&&q.d.type==='flow'&&q.st==='flow'?(!q.flow.test?'test':!q.flow.ci?'ci':!q.flow.review?'review':'merge'):null};
 function spec(q){const d=q.d,b=[],acts=[];let tip=tipOf(d.tip);const kn=A.kindOne(q.y),result=`织成了${kn}。叼去橱窗长廊，挂到夹子上。`;
   if(q.st==='pick'){
@@ -94,7 +94,7 @@ function act(q,id){
   // 织好了：猫自己走去最近的那扇橱窗，挂上
   if(id==='hang'){A.dlg.close();if(me.hold!==q.y)return true;const w=[0,1].map(i=>A.TID('win'+i)).sort((a,b)=>dist(a.at(me),me)-dist(b.at(me),me))[0];A.run(me,[{go:w.at(me)},{fn:()=>A.act(me,w)}]);return true}
   if(id==='review'){const o=S.cats.filter(c=>!c.me&&!c.gone&&!c.hidden&&!c.leaving&&!c.riding&&!c.place&&!c.hold&&(c.z==null||c.kind==='npc'&&c.atHome)&&near(c,me,170)).sort((a,b)=>dist(a,me)-dist(b,me))[0];
-    if(!o){say('附近没有猫。去找一只吧——砚砚在工坊的机柜顶上');return true}A.pass(me,o);return true}
+    if(!o){say('附近没有猫。去找一只吧——砚砚在二楼工坊的机柜顶上');return true}A.pass(me,o);return true}
   return false}
 // 自己解：扑一下 → 随机一种玩法 → 织好
 function solve(q,pre=[]){const easy=q.y.easy;q.st='solving';q.s0=now();q.sdur=pre.reduce((s,x)=>s+(x.dur||0),0)+(easy?0:DUR.pounce)+(easy?1.2:1.8);
@@ -143,16 +143,17 @@ A.Q.onShelf=(c,i)=>{const q=memQ();if(!q)return false;q.st='go';
 A.Q.onCatalog=c=>{const q=memQ();if(!q)return false;q.st='go';q.hint=true;open(q);return true};
 
 /* ---------- 走流程：工坊里的几个临时"按钮"，只有你在对应那一步时才出现 ---------- */
-T({id:'q_test',n:'写测试',hidden:c=>!(c.me&&flowAt()==='test'),hit:()=>null,near:[P.desk.x-4,88,P.desk.w+8,24],at:()=>P.kbdFloor[1],label:'写测试（跳上桌踩键盘）',
+T({id:'q_test',n:'写测试',hidden:c=>!(c.me&&flowAt()==='test'),hit:()=>null,near:[P.desk.x-4,P.desk.y+26,P.desk.w+8,24],at:()=>P.kbdFloor[1],label:'写测试（跳上桌踩键盘）',
   go(c){const i=[0,1,2].sort((a,b)=>Math.abs(P.kbdFloor[a].x-c.x)-Math.abs(P.kbdFloor[b].x-c.x))[0],k=P.kbds[i],q=Q.cur;
     run(c,[{go:P.kbdFloor[i]},{jump:{x:k.x+11,y:P.desk.y+10,z:P.desk.y+32.5}},{fn:c=>{c.face='R'}},{k:'knead',dur:2.4,ex:'focus'},
       {fn:()=>{if(Q.cur!==q)return;q.flow.test=1;say('测试写好了：先红，再绿 ✓ 下一步：跑 CI');refresh(q)}},{jump:{...P.kbdFloor[i]}},{fn:c=>{c.z=undefined}}])}});
-T({id:'q_ci',n:'跑 CI',hidden:c=>!(c.me&&flowAt()==='ci'),hit:()=>null,near:[P.desk.x-4,88,P.desk.w+8,24],at:{x:1106,y:100},label:'跑 CI（按一下，等它变绿）',
-  go(c){const q=Q.cur;run(c,[{go:{x:1106,y:100}},{fn:c=>{c.face='R'}},{k:'maneki',dur:.6,fn:()=>{S.ci.state='run';S.ci.t=2.4;S.ci.p=0}},{k:'sit',dur:2.6,ex:'lookUp'},
+const CIAT={x:P.ci.x+6,y:P.kbdFloor[0].y};
+T({id:'q_ci',n:'跑 CI',hidden:c=>!(c.me&&flowAt()==='ci'),hit:()=>null,near:[P.desk.x-4,P.desk.y+26,P.desk.w+8,24],at:CIAT,label:'跑 CI（按一下，等它变绿）',
+  go(c){const q=Q.cur;run(c,[{go:CIAT},{fn:c=>{c.face='R'}},{k:'maneki',dur:.6,fn:()=>{S.ci.state='run';S.ci.t=2.4;S.ci.p=0}},{k:'sit',dur:2.6,ex:'lookUp'},
     {fn:()=>{if(Q.cur!==q)return;q.flow.ci=1;say('CI 绿了 ✓ 下一步：请一只别的猫 review（靠近它按 Q）');refresh(q)}}])}});
 A.Q.mergeLabel=c=>{const q=Q.cur;if(!c.me||!q||q.d.type!=='flow'||q.st!=='flow')return null;return flowAt()==='merge'?'过门禁，合并':'门禁（还差：'+['测试','CI','Review'].filter((n,i)=>!q.flow[['test','ci','review'][i]]).join('、')+'）'};
 A.Q.onMerge=c=>{const q=Q.cur;if(!c.me||flowAt()!=='merge')return false;
-  run(c,[{go:{x:P.merge.x+10,y:166}},{fn:c=>{c.face='L'}},{k:'maneki',dur:.6,fn:()=>{S.mergeT=now()+3;sfx('goal')}},{k:'sit',dur:.9,ex:'happy'},{fn:()=>{q.chain.push('门禁');q.reply='合进主干了，main 还是绿的。';solve(q)}}]);return true};
+  run(c,[{go:P.mergeAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.6,fn:()=>{S.mergeT=now()+3;sfx('goal')}},{k:'sit',dur:.9,ex:'happy'},{fn:()=>{q.chain.push('门禁');q.reply='合进主干了，main 还是绿的。';solve(q)}}]);return true};
 tick(()=>{const q=Q.cur,f=q&&q.d.type==='flow'&&(q.st==='flow'||q.st==='solving')?q.flow:null;S.merge.lights=f?[f.test,f.ci,f.review]:[0,0,0];const o=S.mergeT>now()?1:0;S.merge.open+=(o-S.merge.open)*.15});
 // review 的猫在看球的时候算"在忙"：别的事（大毛线团、CI 红了）不会把它叫走；15 秒还没还回来就兜底还给你
 function review(q,o){const y=q.y;if(o.hold||o.hidden||o.gone){say(`${o.name}现在腾不出嘴，换一只猫吧`);return}me.hold=null;q.rev={o,t0:now()};A.throwTo(me,o,y,()=>{o.hold=y;const keep=o.place||o.working;o.working=true;o.doing='在帮你 review';
@@ -218,9 +219,9 @@ Q.tracker=()=>{const q=Q.cur;if(!q)return null;const d=q.d,C=q.coop;let line='',
   return{no:q.no,q:d.q,type:QTYPE[d.type],line,steps}};
 Q.target=()=>{const q=Q.cur;if(!q)return null;const d=q.d;
   if(q.st==='npc'&&q.npc&&q.npcState==='coming')return{x:q.npc.x,y:q.npc.y,label:q.npc.name,cat:1};
-  if(d.type==='memory'&&(q.st==='go'||q.st==='pick'))return q.hint?{x:P.shelves[d.shelf].x+23,y:82,label:SHELF_NAMES[d.shelf]}:{x:P.catalogAt.x,y:P.catalogAt.y,label:'检索柜'};
-  if(q.st==='flow'){const s=flowAt();if(s==='test')return{...P.kbdFloor[1],label:'键盘'};if(s==='ci')return{x:1106,y:100,label:'CI'};
-    if(s==='review'){const c=npc(2);return c?{x:c.x,y:c.y,label:'砚砚',cat:1}:null}if(s==='merge')return{x:P.merge.x+10,y:166,label:'合并门禁'}}
+  if(d.type==='memory'&&(q.st==='go'||q.st==='pick'))return q.hint?{x:P.shelves[d.shelf].x+23,y:P.shelves[0].y+76,label:SHELF_NAMES[d.shelf]}:{x:P.catalogAt.x,y:P.catalogAt.y,label:'检索柜'};
+  if(q.st==='flow'){const s=flowAt();if(s==='test')return{...P.kbdFloor[1],label:'键盘'};if(s==='ci')return{...CIAT,label:'CI'};
+    if(s==='review'){const c=npc(2);return c?{x:c.x,y:c.y,label:'砚砚',cat:1}:null}if(s==='merge')return{...P.mergeAt,label:'合并门禁'}}
   if(q.st==='done'&&me.hold===q.y&&q.y.knit){const W=P.wins,x=Math.max(W[0].x+10,Math.min(W[1].x+W[1].w-10,me.x));return{x,y:P.hangY,label:`把${KNIT_NAMES[q.y.kind][0]}挂进橱窗`}}
   return null};
 });

@@ -23,7 +23,7 @@ function pillar(x,y,h){R(x,y,10,h,OL);R(x+1,y,8,h,'#e8dccb');R(x+1,y,2,h,'#fff4d
 function fenceH(x,y,w){R(x,y+5,w,2,'#7a4c36');R(x,y+12,w,2,'#7a4c36');for(let i=x;i<x+w-3;i+=6){R(i,y+1,5,17,OL);P1(i+2,y,OL);R(i+1,y+2,3,15,'#d9b98a');P1(i+2,y+1,'#d9b98a');R(i+1,y+2,1,15,'#ecd2a4')}}
 function fenceV(x,y,h){R(x,y,6,h,OL);R(x+1,y,4,h,'#c4a26f');for(let j=y;j<y+h;j+=14){R(x,j,6,4,OL);R(x+1,j+1,4,2,'#ecd2a4')}}
 
-/* ---------- 前厅 ---------- */
+/* ---------- 门厅 ---------- */
 // 分球机：投递口掉进来的毛线球被吸进玻璃罩，再从前面的出球口弹进毛线篮。(x,y) 左上 28×40，base=y+40
 // balls 罩里排队的颜色；pop 出球口在吐球；suck {ci,k} 正从左边的管子吸上来（k 0→1）
 function sorter(x,y,t,{balls=[],pop=0,suck=null}={}){
@@ -126,7 +126,7 @@ function giantYarn(cx,cy,t,p=0,cols=[0,1,4]){const r=Math.round(13-p*6),y0=cy-r-
 // 懒人沙发：陷进去。30×18，base=y+18，落脚 y+12
 function beanbag(x,y,col=['#5B9BD5','#34618f','#a8d0f0']){const [a,d,l]=col;disc(x+15,y+11,15,7,OL);disc(x+15,y+11,14,6,a);disc(x+10,y+6,8,6,OL);disc(x+10,y+6,7,5,a);disc(x+9,y+4,4,2,l);disc(x+19,y+11,7,3,d);R(x+3,y+17,24,1,OL)}
 
-/* ---------- 厨房 ---------- */
+/* ---------- 吧台那头（猫的饭碗）、楼梯间的零食机 ---------- */
 function fridge(x,y){box(x,y,28,58,'#eef2f4');R(x+1,y+1,26,2,'#ffffff');R(x+1,y+19,26,1,OL);R(x+22,y+8,2,8,'#9aa3ad');R(x+22,y+24,2,14,'#9aa3ad');R(x+1,y+56,26,1,'#c8cdd2');
   [[5,6,'#e0533d'],[10,10,'#5B9BD5'],[6,28,'#e8b83a'],[12,34,'#9B7EBD']].forEach(([a,b,c])=>R(x+a,y+b,3,3,c));pawPrint(x+8,y+42,'#f4a6b8')}   // 28×58，base=y+58
 // 零食机：前面三块爪垫同时有猫踩着才出零食。lit 亮了几块，drop 出零食中。36×56，base=y+56

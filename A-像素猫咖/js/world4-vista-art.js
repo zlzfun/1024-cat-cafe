@@ -283,7 +283,7 @@ function topBack(w,h,S){const G=topGeo(w,h),tod=S.tod||'day',wx=S.weather||'sun'
   const bY=G.hz+40,bcx=Math.round(w*.5+Math.sin(40*.05)*w*.08-40*.6);R(bcx-18,bY,36,3,OL);R(bcx-17,bY+1,34,1,'#cfc6b8');for(let k=-14;k<=14;k+=7)R(bcx+k,bY+3,2,4,OL);
   // 钟楼
   const ct=Math.round(w*.34);house(ct,G.hz+34,12,40,'#5c4436','#e8dcc8',night,99);lit(()=>disc(ct+6,G.hz+2,3,3,night?'#ffe08a':'#fff4dc'));P1(ct+6,G.hz+1,OL);P1(ct+6,G.hz+2,OL);
-  // 猫咖这一排：OPEN、1024 的招牌，后院的串灯
+  // 猫咖这一排：OPEN、1024 的招牌，屋顶的串灯
   const rw=Math.round(Math.min(56,w*.11)),rx0=Math.round(w*.42);R(rx0-4,G.cafe-30,rw*6+8,48,land[0]);ROOFS.forEach(([a,l,sign,sc],i)=>{const x=rx0+i*rw,rh=18,peak=6+(i%3)*2;R(x,G.cafe-rh,rw-1,rh+14,OL);R(x+1,G.cafe+1,rw-3,12,'#f2dcc2');
     for(let j=0;j<rh;j++){const ins=Math.max(0,Math.round((peak-j)*1.4));R(x+1+ins,G.cafe-rh+1+j,rw-3-2*ins,1,j%3?a:l)}for(let q=x+4;q<x+rw-6;q+=7){R(q,G.cafe+4,4,5,OL);if(night)lit(()=>R(q+1,G.cafe+5,2,3,'#ffd98a'));else R(q+1,G.cafe+5,2,3,'#8fc8f0')}
     if(sign){const tw=txtW(sign);R(x+Math.round((rw-tw)/2)-2,G.cafe-rh-9,tw+4,8,'#2a2238');lit(()=>txt(sign,x+Math.round((rw-tw)/2),G.cafe-rh-7,sc))}
@@ -374,5 +374,37 @@ function tankFrame(E){const {w,h,t,S,V}=E,G=tankGeo(w,h);if(!V.fish||V.W!==w||V.
 const REACH=128;
 function tankReach(V,w,h){const cx=V.cx??w/2,px=V.px??cx,py=V.py??h*.5,sx=Math.round(cx+(px<cx?-1:1)*28),sy=h+8,dx=px-sx,dy=py-sy,d=Math.hypot(dx,dy)||1,k=Math.min(1,REACH/d);return{x:Math.round(sx+dx*k),y:Math.round(sy+dy*k),sx}}
 
+/* ================= 5. 屋顶的观星毯：躺着往上看，整屏都是天 ================= */
+const starsGeo=(w,h)=>({x0:Math.round(w*.1),x1:Math.round(w*.9),y0:Math.round(h*.06),y1:Math.round(h*.68),ridge:Math.round(h*.84)});
+function starsBack(w,h){const G=starsGeo(w,h);vGrad(0,0,w,h,SKYV.night,10);
+  lit(()=>{const ax=0,ay=h*.78,bx=w,by=h*.06,L=Math.hypot(bx-ax,by-ay),nx=-(by-ay)/L,ny=(bx-ax)/L;
+    for(let y=0;y<G.ridge;y++)for(let x=0;x<w;x++){const d=Math.abs((x-ax)*nx+(y-ay)*ny);if(d<46){const lv=(1-d/46)*.5;if(bay(x,y)<lv)P1(x,y,d<16?'#3c4488':d<30?'#2e346e':'#232a5a')}}
+    for(let i=0;i<420;i++){const u=hsh(i,601),v=(hsh(i,602)-.5)*70,x=Math.round(ax+(bx-ax)*u+nx*v),y=Math.round(ay+(by-ay)*u+ny*v);if(y<G.ridge)P1(x,y,i%5?'#c8ccff':'#ffffff')}
+    for(let i=0;i<260;i++)starPx(Math.floor(hsh(i,603)*w),Math.floor(hsh(i,604)*G.ridge),i%13===0,i%4?'#e8e8ff':i%3?'#fff4dc':'#ffe0a8');
+    const mx=Math.round(w*.16),my=Math.round(h*.16);glow(mx,my,70,'#c8d4ff',.4);disc(mx,my,18,18,'#fff4dc');disc(mx+5,my-6,4,3,'#e8e0c8');disc(mx-6,my+4,3,3,'#e8e0c8');disc(mx+6,my+7,3,2,'#e8e0c8')});
+  // 下沿：屋脊的剪影、烟囱，屋顶上的一串小灯
+  for(let x=0;x<w;x+=6){disc(x+3,G.ridge-1,4,3,'#0e1024')}R(0,G.ridge,w,h-G.ridge,'#0e1024');const cx=Math.round(w*.82);R(cx,G.ridge-34,16,34,'#0e1024');R(cx-2,G.ridge-36,20,4,'#0e1024');
+  lit(()=>{for(let i=0;i<14;i++){const x=Math.round(w*.05+i*w*.065),y=G.ridge+10+Math.round(Math.sin(i/13*Math.PI)*8);P1(x,y,FEST_COL[i%5]);P1(x,y+1,FEST_COL[i%5])}})}
+function starsFrame(E){const {w,h,t,V}=E,G=starsGeo(w,h);C.drawImage(cached('starsBack',w,h,()=>starsBack(w,h)),0,0);
+  lit(()=>{for(let i=0;i<30;i++)if(Math.floor(t*1.3+i*.61)%6===0)starPx(Math.floor(hsh(i,603)*w),Math.floor(hsh(i,604)*G.ridge),1,'#ffffff');
+    const c=V.con;if(c){const K=CONS[c.i],k=t-c.t0,cw=G.x1-G.x0,ch=G.y1-G.y0,P2=K.p.map(([u,v])=>[Math.round(G.x0+u*cw),Math.round(G.y0+v*ch)]);
+      P2.forEach(([x,y],i)=>{if(k>i*.12)starPx(x,y,1,'#fff8d0')});K.e.forEach(([a,b],i)=>{const q=Math.max(0,Math.min(1,(k-1.4-i*.28)/.28));if(!q)return;const [x0,y0]=P2[a],[x1,y1]=P2[b],n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0));
+        for(let j=2;j<=n*q-2;j+=2)P1(Math.round(x0+(x1-x0)*j/n),Math.round(y0+(y1-y0)*j/n),'#9fb4ff')})}
+    const s=V.star;if(s){const a=t-s.t0;if(a<1)for(let i=0;i<22;i++){const q=a*1.4-i*.012;if(q<0||bay(i,Math.floor(a*20))>1-i/22)continue;P1(Math.round(s.x+s.dx*q),Math.round(s.y+s.dy*q),i<3?'#ffffff':'#fff8d0')}}});
+  cat(E.pal,Math.round(w*.5),h+6,{...idle(t),look:1,rim:'#c8d4ff'})}
+/* ================= 6. 屋顶的望远镜：镜筒里一轮大月亮 ================= */
+function moonBack(w,h){R(0,0,w,h,'#05060e');const cx=Math.round(w/2),cy=Math.round(h*.47),r=Math.round(Math.min(w,h)*.42);disc(cx,cy,r,r,'#0c1230');
+  lit(()=>{for(let i=0;i<60;i++){const a=hsh(i,611)*Math.PI*2,d=Math.sqrt(hsh(i,612))*r*.95;P1(Math.round(cx+Math.cos(a)*d),Math.round(cy+Math.sin(a)*d),'#c8ccff')}
+    const mr=Math.round(r*.68);glow(cx,cy,mr+30,'#c8d4ff',.35);disc(cx,cy,mr,mr,'#f4ecd6');for(let i=0;i<24;i++){const a=hsh(i,613)*Math.PI*2,d=Math.sqrt(hsh(i,614))*mr*.85,cr=2+Math.round(hsh(i,615)*mr*.16);
+      const x=Math.round(cx+Math.cos(a)*d),y=Math.round(cy+Math.sin(a)*d);disc(x,y,cr,Math.max(1,Math.round(cr*.85)),'#ddd2b4');disc(x-1,y-1,Math.max(1,cr-1),Math.max(1,cr-2),'#e8dfc4');P1(x+cr-1,y+1,'#c8bc9c')}
+    for(let y=cy-mr;y<=cy+mr;y++)for(let x=cx-mr;x<=cx+mr;x++){const d=Math.hypot(x-cx,y-cy);if(d<=mr&&d>mr-3&&bay(x,y)<.5)P1(x,y,'#d8ccb0')}});
+  // 镜筒：一圈黄铜框，外面是黑的
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const d=Math.hypot(x-cx,y-cy);if(d>r+6)P1(x,y,'#05060e');else if(d>r+3)P1(x,y,'#8a6a2a');else if(d>r)P1(x,y,'#c8a050')}}
+function moonFrame(E){const {w,h,t}=E,cx=Math.round(w/2),cy=Math.round(h*.47),r=Math.round(Math.min(w,h)*.42),mr=Math.round(r*.68);C.drawImage(cached('moonBack',w,h,()=>moonBack(w,h)),0,0);
+  // 一只猫的影子从月亮前面走过去（每 9 秒一次），三倍大的像素，翘着尾巴
+  const k=(t%9)/9;if(k<.6){const u=k/.6,f=Math.floor(t*5)%2,G2=["..............o..o","..............oooo","o.............oooo","o............ooooo",".o..ooooooooooooo.","..ooooooooooooooo.","...oooooooooooo...",
+    f?"...o.o......o.o...":"....o.o....o.o...."],sc=3,gw=G2[0].length*sc;
+    const x=Math.round(cx-mr-gw+u*(2*mr+gw*2)),y=cy+Math.round(mr*.3);C.save();C.beginPath();C.arc(cx,cy,mr,0,Math.PI*2);C.clip();
+    G2.forEach((row,j)=>{for(let i=0;i<row.length;i++)if(row[i]==='o')R(x+i*sc,y+j*sc,sc,sc,'#1a1428')});C.restore()}}
 return{get tint(){return TINT},set tint(v){TINT=v},tctx,lit,mulHex,CONS,
-  draw:{window:winFrame,sky:skyFrame,treetop:topFrame,tank:tankFrame},geo:{tank:tankGeo,sky:skyGeo},tankReach}})();
+  draw:{window:winFrame,sky:skyFrame,treetop:topFrame,tank:tankFrame,stars:starsFrame,moon:moonFrame},geo:{tank:tankGeo,sky:skyGeo,stars:starsGeo},tankReach}})();

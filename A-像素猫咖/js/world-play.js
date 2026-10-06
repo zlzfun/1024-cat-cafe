@@ -4,7 +4,9 @@
    别的猫：店猫和补位的机器人（world-acts.js），它们和玩家走同一套接口（走到 / 用某个东西 / 表情 / 传球 / 蹭蹭）；
    联机时真人的猫（world-online.js）带 puppet 标记：位置和姿态只跟着网络走，引擎不给它排动作、不替它想事情、也不推它让路。
    动作队列同 v2：{go 走到 / chase 追着走} {jump 跳到} {k 姿态, dur 秒} {when 等到} {fn 回调}；soft 可被玩家打断，lock 不可。
-   画猫走缓存：同一姿态、同一帧、同一毛色只画一次，之后直接贴图——100 只猫同屏也只是 100 次 drawImage。 */
+   画猫走缓存：同一姿态、同一帧、同一毛色只画一次，之后直接贴图——100 只猫同屏也只是 100 次 drawImage。
+   楼层：一楼、二楼、屋顶是同一张大图上互不相连的三块（WORLD.floors），镜头只在你所在的那一层里动。
+   上下楼走 WORLD.portals：楼梯口自己会上下（auto），巨树要按 E；不在同一层的目的地，寻路先走到楼梯口，换层以后再接着走。 */
 const rnd=a=>a[Math.floor(Math.random()*a.length)],rr=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const pickW=w=>{const e=Object.entries(w).filter(([,v])=>v>0),s=e.reduce((a,[,v])=>a+v,0);if(!e.length)return null;let r=Math.random()*s;for(const [k,v] of e)if((r-=v)<=0)return k;return e[0][0]};
 const WORLD_MODS=[];
@@ -49,7 +51,8 @@ function catImg(k,T,tf,o,e,pi,yi,flip){const f=FK[k],key=k+'|'+(f?f(T,tf,o,e):T.
 // 画一只猫（脚底 x,y 为整数），返回头顶的 y
 function drawCat3(ctx,c,x,y,t,ol){const k=c.k,loc=WLOCAL.has(k)&&c.t0!=null,tt=loc?t-c.t0:t,o=loc?0:(c.o||0),tf=(Math.floor(tt*2)+c.pal)%2,T=tt+o,e=c.ex??c.def;
   const f0=k==='walkL'||(c.face==='L'&&FACING.has(k)),flip=c.mirror?!f0:f0,yi=c.yarn!=null&&k!=='sit'?c.yarn:null,s=catImg(k,T,tf,o,e,c.pal,yi,flip);
-  const top=Math.round(y-s.h+s.dy),dx=flip?Math.round(x+s.cx-1)-(s.w-1):Math.round(x-s.cx);if(ol)ctx.drawImage(outlineOf(s,ol),dx-1,top-1);ctx.drawImage(s.cv,dx,top);if(ol)c._ring=[ringOf(s,ol),dx-1,top-1];return top}
+  const top=Math.round(y-s.h+s.dy),dx=flip?Math.round(x+s.cx-1)-(s.w-1):Math.round(x-s.cx),a=c.alpha??1;if(a<1)ctx.globalAlpha=a;
+  if(ol)ctx.drawImage(outlineOf(s,ol),dx-1,top-1);ctx.drawImage(s.cv,dx,top);if(a<1)ctx.globalAlpha=1;if(ol)c._ring=[ringOf(s,ol),dx-1,top-1];return top}
 // v4：给"你"描一圈 1px 的边（按贴图算一次，存在贴图上）
 function outlineOf(s,col){if(s.ol&&s.olc===col)return s.ol;const cv=mkCanvas(s.w+2,s.h+2),x=cv.getContext('2d');for(const [a,b] of [[0,1],[2,1],[1,0],[1,2]])x.drawImage(s.cv,a,b);
   x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,cv.width,cv.height);s.ol=cv;s.olc=col;return cv}
@@ -61,6 +64,14 @@ function meMark3(x,y){R(x-2,y,5,1,'#e0533d');R(x-1,y+1,3,1,'#e0533d');P1(x,y+2,'
 
 function makeWorld(canvas,{play=true,ui={},bots=60,hi=false}={}){   // hi：v4 的"我是哪只猫"加强（描边、光圈、名牌），v3 不开
 const M=WORLD,P=M.P,W=M.w,H=M.h;
+/* ---------- 楼层：y 落在哪一块就是哪一层（两层之间的空隙算离得近的那层） ---------- */
+const FL=M.floors,FLID={};FL.forEach(f=>FLID[f.id]=f);
+function floorOf(y){for(const f of FL)if(y>=f.y&&y<f.y+f.h)return f;let b=FL[0],bd=1e9;for(const f of FL){const d=Math.min(Math.abs(y-f.y),Math.abs(y-f.y-f.h));if(d<bd){bd=d;b=f}}return b}
+const PORT=M.portals||[];
+const inPortal=(x,y)=>PORT.some(p=>p.auto&&x>=p.zone[0]&&x<p.zone[0]+p.zone[2]&&y>=p.zone[1]&&y<p.zone[1]+p.zone[3]);
+// 从 fa 到 fb 先走哪个口子（只走 walk 的：楼梯；爬树要你自己去按）
+function nextPortal(fa,fb){const via=new Map([[fa.id,null]]),q=[fa.id];while(q.length){const f=q.shift();if(f===fb.id)break;for(const p of PORT)if(p.walk&&p.from===f&&!via.has(p.to)){via.set(p.to,p);q.push(p.to)}}
+  if(!via.has(fb.id))return null;let p=via.get(fb.id);while(p&&p.from!==fa.id)p=via.get(p.from);return p}
 const S={tod:'day',weather:'sun',count:0,pending:0,cats:[],hearts:[],puffs:[],flying:[],now:0};
 let now=0,timers=[];
 const after=(s,f)=>timers.push({s,f}),say=s=>ui.toast&&ui.toast(s),sfx=(k,a)=>ui.sfx&&ui.sfx(k,a),news=s=>ui.news&&ui.news(s);
@@ -71,7 +82,8 @@ const blocked=(x,y,m)=>M.BLOCK.some(([bx,by,bw,bh])=>x>bx-m&&x<bx+bw+m&&y>by-1&&
 const HW=W>>1,HH=H>>1,FM=new Uint8Array(HW*HH);
 for(let j=0;j<HH;j++)for(let i=0;i<HW;i++){const x=i*2+1,y=j*2+1;FM[j*HW+i]=M.WALK.some(r=>inR(x,y,r))&&!blocked(x,y,4)?1:0}
 const free=(x,y)=>{const i=x>>1,j=y>>1;return i>=0&&j>=0&&i<HW&&j<HH&&FM[j*HW+i]===1};
-const FREE={cat:free,vacA:(x,y)=>y>=66&&y<=244&&inR(x,y,M.WALK[0])&&!blocked(x,y,9),vacB:(x,y)=>y>=312&&x<=624&&(inR(x,y,M.WALK[1])||inR(x,y,M.WALK[2])||inR(x,y,M.WALK[7]))&&!blocked(x,y,9)};
+// 扫地机器人：各在自己那一片里转（M.vac[i].area，几块矩形），离家具远一点
+const FREE={cat:free};(M.vac||[]).forEach((v,i)=>{FREE['vac'+i]=(x,y)=>v.area.some(r=>inR(x,y,r))&&!blocked(x,y,9)&&!inPortal(x,y)});
 const G=4,GW=W/G,GH=H/G,N=GW*GH,GRID={};
 for(const k in FREE){const g=new Uint8Array(N);for(let j=0;j<GH;j++)for(let i=0;i<GW;i++)g[j*GW+i]=FREE[k](i*G+2,j*G+2)?1:0;GRID[k]=g}
 function nearCell(g,i,j){i=Math.max(0,Math.min(GW-1,i));j=Math.max(0,Math.min(GH-1,j));if(g[j*GW+i])return j*GW+i;
@@ -81,10 +93,13 @@ const cellPt=k=>({x:(k%GW)*G+2,y:((k/GW)|0)*G+2});
 // 走到一半停下（跟着别的猫走、near 提前结束）偶尔会停在家具边上的一小格里：挪到最近的空地
 function snapFree(c){for(let r=1;r<14;r++)for(let a=0;a<16;a++){const q=a*Math.PI/8,x=c.x+Math.cos(q)*r,y=c.y+Math.sin(q)*r;if(free(x,y)){c.x=x;c.y=y;return}}}
 function los(fr,a,b){const n=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/2);for(let i=1;i<=n;i++)if(!fr(a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n))return false;return true}
-const gs=new Float32Array(N),from=new Int32Array(N),mark=new Uint32Array(N),shut=new Uint32Array(N),HK=new Int32Array(N*8),HF=new Float32Array(N*8);let gen=0,hn=0,pathN=0;
+const gs=new Float32Array(N),from=new Int32Array(N),mark=new Uint32Array(N),shut=new Uint32Array(N),HK=new Int32Array(N*4),HF=new Float32Array(N*4);let gen=0,hn=0,pathN=0;
 function hpush(f,k){if(hn>=HK.length)return;let i=hn++;while(i){const p=(i-1)>>1;if(HF[p]<=f)break;HK[i]=HK[p];HF[i]=HF[p];i=p}HK[i]=k;HF[i]=f}
 function hpop(){const top=HK[0],lk=HK[--hn],lf=HF[hn];let i=0;for(;;){let c=2*i+1;if(c>=hn)break;if(c+1<hn&&HF[c+1]<HF[c])c++;if(HF[c]>=lf)break;HK[i]=HK[c];HF[i]=HF[c];i=c}HK[i]=lk;HF[i]=lf;return top}
-function findPath(x0,y0,x1,y1,kind='cat'){pathN++;const g=GRID[kind],fr=FREE[kind],s=nearCell(g,Math.floor(x0/G),Math.floor(y0/G)),goal=nearCell(g,Math.floor(x1/G),Math.floor(y1/G));
+function findPath(x0,y0,x1,y1,kind='cat'){if(kind==='cat'){const fa=floorOf(y0),fb=floorOf(y1);
+    if(fa!==fb){const p=nextPortal(fa,fb);if(!p)return null;const L=findPath1(x0,y0,p.at.x,p.at.y,kind);if(!L)return null;L.push({x:p.at.x,y:p.at.y,portal:p});return L}}
+  return findPath1(x0,y0,x1,y1,kind)}
+function findPath1(x0,y0,x1,y1,kind){pathN++;const g=GRID[kind],fr=FREE[kind],s=nearCell(g,Math.floor(x0/G),Math.floor(y0/G)),goal=nearCell(g,Math.floor(x1/G),Math.floor(y1/G));
   const end=fr(x1,y1)?{x:x1,y:y1}:cellPt(goal),start={x:x0,y:y0};if(s===goal||los(fr,start,end))return[end];
   gen++;hn=0;const gi=goal%GW,gj=(goal/GW)|0,h=k=>{const dx=Math.abs(k%GW-gi),dy=Math.abs(((k/GW)|0)-gj);return Math.max(dx,dy)+.414*Math.min(dx,dy)};
   mark[s]=gen;gs[s]=0;from[s]=-1;hpush(h(s),s);let found=false;
@@ -95,8 +110,8 @@ function findPath(x0,y0,x1,y1,kind='cat'){pathN++;const g=GRID[kind],fr=FREE[kin
   const pts=[];for(let k=goal;k!==s&&k!==-1;k=from[k])pts.push(cellPt(k));pts.reverse();if(!pts.length)return[end];pts[pts.length-1]=end;
   const out=[];let cur=start,i=0;while(i<pts.length){let j=Math.min(pts.length-1,i+40);while(j>i&&!los(fr,cur,pts[j]))j--;out.push(pts[j]);cur=pts[j];i=j+1}return out}
 const roomAt=(x,y)=>M.rooms.find(r=>inR(x,y,[r.x,r.y,r.w,r.h]))||M.rooms[0];
-function randFree(rect){const [x0,y0,w,h]=rect||[8,58,W-16,478];for(let n=0;n<60;n++){const x=rr(x0,x0+w),y=rr(y0,y0+h);if(free(x,y))return{x,y}}return{x:400,y:150}}
-const randIn=id=>{const r=M.rooms.find(q=>q.id===id);return randFree([r.x+8,r.y+(r.y?56:60),r.w-16,r.h-(r.y?60:66)])};
+function randFree(rect){const [x0,y0,w,h]=rect||rnd(M.rooms).in;for(let n=0;n<60;n++){const x=rr(x0,x0+w),y=rr(y0,y0+h);if(free(x,y)&&!inPortal(x,y))return{x,y}}return{...M.home}}
+const randIn=id=>randFree(M.rooms.find(q=>q.id===id).in);
 
 /* ---------- 猫 ---------- */
 let nid=0;
@@ -114,30 +129,43 @@ function startStep(c,s){
   if(s.jump){const j=typeof s.jump==='function'?s.jump():s.jump;s.j=j;s.t0=now;s.x0=c.x;s.y0=c.y;s.dur=s.dur||.42;s.h=s.h??Math.max(5,Math.abs(j.y-c.y)*.35);
     const dx=j.x-c.x;if(Math.abs(dx)>8){c.face=dx>0?'R':'L';setK(c,'leap')}else setK(c,'sit');c.z=Math.max(c.z??c.y,j.z??j.y)}
   if(s.k){setK(c,s.k,s.ex);if(s.face)c.face=s.face;if(s.yarn&&c.hold)c.yarn=c.hold.ci;c.mirror=!!s.mirror}
+  if(s.portal){transit(c,s.portal,s);return}
   if(s.dur!=null&&!s.jump)s.until=now+s.dur}
-function stepCat(c,dt){
+function stepCat(c,dt){if(c.transit)return stepTransit(c,dt);
   if(!c.cur){if(!c.q.length)return;c.cur=c.q.shift();startStep(c,c.cur);if(!c.cur)return}
   const s=c.cur;let fin=false;
   if(s.go||s.chase){if(s.chase&&now>s.re){const t2=s.chase();if(t2&&Math.hypot(t2.x-s.tgt.x,t2.y-s.tgt.y)>5){s.tgt=t2;s.path=findPath(c.x,c.y,t2.x,t2.y)}s.re=now+.6}
     if(!s.path||!s.path.length)fin=true;
     else{const p=s.path[0],dx=p.x-c.x,dy=p.y-c.y,d=Math.hypot(dx,dy),st=Math.min(d,(s.sp||c.sp*(c.run?1.6:1))*dt);
       if(d>.01){c.x+=dx/d*st;c.y+=dy/d*st;if(Math.abs(dx)>.5)c.face=dx>0?'R':'L'}const wk=s.pose||(c.face==='L'?'walkL':'walkR');if(c.k!==wk)setK(c,wk);
-      if(d-st<.3){s.path.shift();if(!s.path.length)fin=true}
+      if(d-st<.3){const q=s.path.shift();if(q.portal){transit(c,q.portal,s);return}if(!s.path.length)fin=true}
       if(s.near&&Math.hypot(s.tgt.x-c.x,s.tgt.y-c.y)<s.near)fin=true}
-    if(fin&&!s.keepPose)setK(c,restPose(c));if(fin&&c.z==null&&!free(c.x,c.y))snapFree(c)}
+    if(fin&&!s.keepPose)setK(c,restPose(c));if(fin&&c.z==null&&!free(c.x,c.y))snapFree(c);
+    // 你点了楼梯口（走到了口子里）：接着上下楼
+    if(fin&&c.me&&c.cur===s&&!c.q.length){const p=PORT.find(p=>p.auto&&p.from===floorOf(c.y).id&&inR(c.x,c.y,p.zone));if(p){c.cur=null;transit(c,p,null);return}}}
   else if(s.jump){const k=Math.min(1,(now-s.t0)/s.dur);c.x=s.x0+(s.j.x-s.x0)*k;c.y=s.y0+(s.j.y-s.y0)*k;c.dy=-Math.sin(k*Math.PI)*s.h;
     if(k>=1){c.dy=0;c.z=s.j.z;if(s.j.face)c.face=s.j.face;setK(c,restPose(c));fin=true}}
   else if(s.until!=null)fin=now>=s.until;
   else if(s.when)fin=s.when(c);
   else fin=true;
   if(fin&&c.cur===s){c.cur=null;if(s.then)s.then(c)}}
+/* ---------- 换层：往楼梯（树干）方向走两步、淡出 → 换到另一层的口子外面 → 淡入，接着走 ---------- */
+const T_OUT=.3,T_IN=.3;
+function transit(c,p,s){c.transit={p,s,t0:now,ph:0};c.place=null;if(p.k==='walk')setK(c,(p.dir&&p.dir.x<0)||c.face==='L'?'walkL':'walkR')}
+function stepTransit(c,dt){const T=c.transit,p=T.p,k=now-T.t0;
+  if(T.ph===0){const v=p.dir||{x:0,y:0};c.x+=v.x*22*dt;c.y+=v.y*22*dt;c.alpha=Math.max(0,1-k/T_OUT);if(k<T_OUT)return;
+    c.x=p.out.x;c.y=p.out.y;c.z=p.out.z;c.dy=0;if(p.out.face)c.face=p.out.face;c.alpha=0;T.ph=1;T.t0=now;if(c.me)c.portalLock=1;setK(c,p.k==='walk'?(c.face==='L'?'walkL':'walkR'):'sit');
+    if(c.me&&A.onFloor)A.onFloor(floorOf(c.y),p);return}
+  const v=p.outDir||{x:0,y:0};c.x+=v.x*22*dt;c.y+=v.y*22*dt;c.alpha=Math.min(1,k/T_IN);if(k<T_IN)return;
+  c.alpha=1;c.transit=null;if(c.z==null&&!free(c.x,c.y))snapFree(c);setK(c,restPose(c));const s=T.s;if(!s||c.cur!==s)return;
+  if((s.go||s.chase)&&!s.portal){s.path=findPath(c.x,c.y,s.tgt.x,s.tgt.y);if(s.path&&s.path.length)return}c.cur=null;if(s.then)s.then(c)}
 function borrow(c,k,dur,ex){if(!idle(c)||c.riding||c.hidden||c.place)return false;const pk=c.k,pe=c.ex;run(c,[{k,dur,ex},{k:pk,dur:0,ex:pe}],true);return true}
 function emote(c,kind,sec=1.6){c.emote=kind;c.emoteUntil=now+sec}
 function speak(c,text,sec=3){c.say=text;c.sayUntil=now+sec}
 // 待在某个地方：玩家待到按方向键；别的猫待 dur 秒再走
-function settle(c,{k='sit',ex,leave,face}={}){c.place={leave};if(face)c.face=face;setK(c,k,ex)}
-function leavePlace(c){const p=c.place;c.place=null;run(c,p&&p.leave?p.leave(c):[])}
-function stay(c,{k='sit',ex,face,dur=rr(6,12),leave}){if(c.me){settle(c,{k,ex,leave,face});return}run(c,[{k,dur,ex,face},...(leave?leave(c):[]),{fn:unclaim}],true)}
+function settle(c,{k='sit',ex,leave,face,act,prompt}={}){c.place={leave,act,prompt};if(face)c.face=face;setK(c,k,ex)}
+function leavePlace(c){const p=c.place;if(p&&p.stay&&p.stay(c))return;c.place=null;run(c,p&&p.leave?p.leave(c):[])}
+function stay(c,{k='sit',ex,face,dur=rr(6,12),leave,act,prompt}){if(c.me){settle(c,{k,ex,leave,face,act,prompt});return}run(c,[{k,dur,ex,face},...(leave?leave(c):[]),{fn:unclaim}],true)}
 
 /* ---------- 东西：每个可交互的东西在 world-acts.js 里用 T({...}) 注册 ---------- */
 const TH=[];
@@ -151,7 +179,7 @@ function thingAt(x,y){let best=null,bb=-1;for(const th of TH){if(th.hidden&&th.h
 function act(c,th){if(th.ok&&!th.ok(c)){if(c.me&&th.no)say(th.no(c));return false}th.go(c);if(c.me&&A.onUse)A.onUse(th);return true}
 
 /* ---------- 给 world-acts.js 用的接口 ---------- */
-const A={S,P,M,me,play,ui,after,say,sfx,news,rnd,rr,pickW,dist,run,setK,idle,emote,speak,borrow,settle,stay,leavePlace,unclaim,restPose,findPath,free,FREE,randFree,randIn,roomAt,inR,
+const A={S,P,M,me,play,ui,after,say,sfx,news,rnd,rr,pickW,dist,run,setK,idle,emote,speak,borrow,settle,stay,leavePlace,unclaim,restPose,findPath,free,FREE,randFree,randIn,roomAt,inR,floorOf,FL,FLID,PORT,nextPortal,transit,
   T,TH,act,thingNear,thingAt:(x,y)=>thingAt(x,y),mkCat,byName,tickers:[],floors:[],drawers:[],overs:[],marks:[],lights:[],huds:[],hi,think:()=>{},social:()=>{},pass:()=>{},solveHere:()=>{},onEmote:()=>{}};
 Object.defineProperty(A,'t',{get:()=>now});
 WORLD_MODS.forEach(m=>m(A));
@@ -160,7 +188,6 @@ A.nearCatOf=nearCatOf;
 
 /* ---------- 画 ---------- */
 const BG=mkCanvas(W,H);{const o=C;use(BG.getContext('2d'));M.bg();use(o)}
-let MINI=null;
 function bake(p,v){const cv=mkCanvas(p.w,p.h),x=cv.getContext('2d'),o=C;use(x);x.translate(-p.x,-p.y);p.draw(0,S);use(o);p._v=v;return cv}
 function drawProp(p){if(p.live){p.draw(now,S);return}const v=p.ver?String(p.ver(S)):'';if(!p._c||p._v!==v)p._c=bake(p,v);C.drawImage(p._c,p.x,p.y)}
 function drawCarry(c,x,y,top){if(!c.carry)return;const walk=c.k.startsWith('walk'),mx=x+(walk?(c.k==='walkL'?-7:7):0),my=walk?y-8:top+11;
@@ -182,7 +209,9 @@ function render(cx,vx,vy,vw,vh,{marker=true}={}){vx=Math.round(vx);vy=Math.round
   (S.flying||[]).forEach(f=>{if(f.draw)f.draw(f);else if(f.kind)knit(f.kind,Math.round(f.x),Math.round(f.y)-4,f.ci);else yarnBall(Math.round(f.x),Math.round(f.y),f.r||2,f.ci,Math.floor(now*8))});
   S.puffs.forEach(p=>{if(p.k>=0)puff(p.x,p.y,p.k)});S.hearts.forEach(h=>heartUp(h.x,h.y,h.k));M.over(now,S,vis);A.overs.forEach(f=>f(vis));over.forEach(f=>f());
   cx.restore();
-  applyTod(vw,vh,S.tod,[...M.lights,...A.lights].filter(l=>(!l.when||l.when===S.tod)&&vis(l.x-l.r,l.y-l.r,l.r*2,l.r*2)).map(l=>({...l,x:l.x-vx,y:l.y-vy})));
+  const fv=floorOf(vy+vh/2),tod=fv.tod||S.tod;
+  applyTod(vw,vh,tod,[...M.lights,...A.lights].filter(l=>(!l.when||l.when===tod)&&vis(l.x-l.r,l.y-l.r,l.r*2,l.r*2)).map(l=>({...l,x:l.x-vx,y:l.y-vy})),fv.tint);
+  if(marker&&me.transit){const T=me.transit,k=(now-T.t0)/(T.ph?T_IN:T_OUT),a=T.ph?1-k:k;if(a>0){cx.fillStyle=`rgba(10,6,16,${Math.min(1,a).toFixed(3)})`;cx.fillRect(0,0,vw,vh)}}
   lastView={x:vx,y:vy,w:vw,h:vh};use(o)}
 // 高清层：名字、说的话（像素字只有英文，名字用系统字体画在另一张画布上）
 let hoverCat=null;
@@ -199,31 +228,39 @@ function hud(hx,scale,dpr=1){const v=lastView,W2=hx.canvas.width,H2=hx.canvas.he
     hx.fillStyle='#241a2e';hx.fillRect(x0-2*dpr,y0-2*dpr,w+4*dpr,h+4*dpr);hx.fillStyle='#ffd84a';hx.fillRect(x0,y0,w,h);hx.beginPath();hx.moveTo(sx-6*dpr,y0+h);hx.lineTo(sx,y0+h+7*dpr);hx.lineTo(sx+6*dpr,y0+h);hx.fill();
     hx.fillStyle='#241a2e';hx.fillText(text,sx,y0+h/2+.5)}
   A.huds.forEach(f=>f(hx,scale,dpr,v))}
-// 小地图：整店缩小，点是猫（红点是你）
-function mini(mx,mw,mh){if(!MINI){MINI=mkCanvas(mw,mh);const x=MINI.getContext('2d');x.imageSmoothingEnabled=true;x.drawImage(BG,0,0,mw,mh)}
-  const k=mw/W;mx.drawImage(MINI,0,0);for(const c of S.cats){if(c.gone||hi&&c.me)continue;mx.fillStyle=c.me?'#e0533d':c.kind==='npc'?'#ffd84a':'#fff4dc';mx.fillRect(Math.round(c.x*k)-1,Math.round(c.y*k)-2,c.me?3:2,c.me?3:2)}
-  if(hi){const x=Math.round(me.x*k),y=Math.round(me.y*k)-1,on=Math.floor(now*3)%2;mx.fillStyle='#241a2e';mx.fillRect(x-3,y-3,7,7);mx.fillStyle=on?'#ffd84a':'#fff4dc';mx.fillRect(x-2,y-2,5,5);mx.fillStyle='#e0533d';mx.fillRect(x-1,y-1,3,3)}
-  A.marks.forEach(m=>{const p=m();if(!p)return;mx.fillStyle=p.col||'#7ee08a';mx.fillRect(Math.round(p.x*k)-2,Math.round(p.y*k)-2,4,4)});
-  const v=lastView;mx.strokeStyle='#ffd84a';mx.lineWidth=1;mx.strokeRect(Math.round(v.x*k)+.5,Math.round(v.y*k)+.5,Math.round(v.w*k),Math.round(v.h*k))}
+// 小地图：只画你所在的这一层（缩小的底图），你在的那间房描一圈；点是猫（红黄方块是你）
+const MINIS={};let miniT=null;
+const miniSize=w=>{const f=floorOf(me.y);return{w,h:Math.round(w*f.h/f.w),f}};
+function mini(mx,mw,mh){const f=floorOf(me.y),k=mw/f.w,key=f.id+'|'+mw+'|'+mh;
+  if(!MINIS[key]){const cv=mkCanvas(mw,mh),x=cv.getContext('2d');x.imageSmoothingEnabled=true;x.drawImage(BG,f.x,f.y,f.w,f.h,0,0,mw,mh);MINIS[key]=cv}
+  miniT={f,k};const X=x=>Math.round((x-f.x)*k),Y=y=>Math.round((y-f.y)*k),on=c=>c.y>=f.y-40&&c.y<f.y+f.h+40;
+  mx.clearRect(0,0,mw,mh);mx.drawImage(MINIS[key],0,0);
+  const r=roomAt(me.x,me.y);mx.strokeStyle='#ffd84ab0';mx.lineWidth=1;mx.strokeRect(X(r.x)+.5,Y(r.y)+.5,Math.round(r.w*k)-1,Math.round(r.h*k)-1);
+  for(const c of S.cats){if(c.gone||hi&&c.me||!on(c))continue;mx.fillStyle=c.me?'#e0533d':c.kind==='npc'?'#ffd84a':'#fff4dc';mx.fillRect(X(c.x)-1,Y(c.y)-2,c.me?3:2,c.me?3:2)}
+  if(hi){const x=X(me.x),y=Y(me.y)-1,blink=Math.floor(now*3)%2;mx.fillStyle='#241a2e';mx.fillRect(x-3,y-3,7,7);mx.fillStyle=blink?'#ffd84a':'#fff4dc';mx.fillRect(x-2,y-2,5,5);mx.fillStyle='#e0533d';mx.fillRect(x-1,y-1,3,3)}
+  A.marks.forEach(m=>{const p=m();if(!p||!on(p))return;mx.fillStyle=p.col||'#7ee08a';mx.fillRect(X(p.x)-2,Y(p.y)-2,4,4)});
+  const v=lastView;mx.strokeStyle='#ffd84a';mx.strokeRect(X(v.x)+.5,Y(v.y)+.5,Math.round(v.w*k),Math.round(v.h*k))}
+// 点小地图：换算回大图上的坐标
+const miniTo=(px,py)=>miniT?{x:miniT.f.x+px/miniT.k,y:miniT.f.y+py/miniT.k}:null;
 
 /* ---------- 玩家 ---------- */
 const keys={};let pendingTap=null,run2=false;
-const busy=()=>{const s=me.cur||me.q[0];return !!s&&(s.lock||!s.go&&!s.chase&&!s.soft)};
+const busy=()=>{if(me.transit)return true;const s=me.cur||me.q[0];return !!s&&(s.lock||!s.go&&!s.chase&&!s.soft)};
 function catAt(x,y){let best=null,bz=-1e9;for(const c of S.cats){if(c.hidden||c.gone||c.me)continue;const top=c.top??c.y-22;if(x>c.x-10&&x<c.x+10&&y>top-2&&y<c.y+(c.dy||0)+2){const z=c.z??c.y;if(z>bz){bz=z;best=c}}}return best}
-function pressE(){if(!play||busy())return;if(me.place){leavePlace(me);return}if(me.hidden)return;me.follow=null;
+function pressE(){if(!play||busy())return;if(me.place){if(me.place.act&&me.place.act(me)!==false)return;leavePlace(me);return}if(me.hidden)return;me.follow=null;
   // 人多的时候旁边总有猫，所以 E 不自动传球：传球要按 Q、右键点猫或者直接点猫
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me));if(ok)return act(me,th);
   if(me.hold&&!me.hold.knit)return A.solveHere(me);
   if(th)return act(me,th);
   const c=nearCatOf(me,24);if(c)return A.social(me,c,'rub');
   if(me.hold)say('叼着织好的东西，去橱窗挂上吧')}
-function promptText(){if(me.place)return 'WASD / 方向键 · 离开';if(busy()||me.hidden)return '';if(me.follow)return '跟着'+me.follow.name+' · Esc 不跟了';
+function promptText(){if(me.place)return me.place.prompt?me.place.prompt(me):'WASD / 方向键 · 离开';if(busy()||me.hidden)return '';if(me.follow)return '跟着'+me.follow.name+' · Esc 不跟了';
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me)),ball=me.hold&&!me.hold.knit;if(ok)return 'E · '+lab(th,me);
   if(ball){const o=nearCatOf(me,120);return 'E · '+(A.ballPrompt?A.ballPrompt(me):'就地解开')+(o?' · Q 传给'+o.name:'')}
   if(th)return 'E · '+lab(th,me)+'（'+(th.no?th.no(me):'现在不行')+'）';
   if(me.hold)return '叼着'+KNIT_NAMES[me.hold.kind][0]+' · 去橱窗长廊挂上';
   const c=nearCatOf(me,24);if(c)return 'E · 蹭蹭'+c.name;return ''}
-function tap(mx,my){if(!play)return;poke();if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving)leavePlace(me);if(me.hidden&&!leaving)return;
+function tap(mx,my){if(!play)return;poke();if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving){leavePlace(me);if(me.place)return}if(me.hidden&&!leaving)return;
   const go=steps=>run(me,steps,leaving);me.follow=null;
   const o=catAt(mx,my);if(o){go([{chase:()=>({x:o.x+(me.x<o.x?-16:16),y:o.z!=null?o.z+6:o.y+2}),near:22},{fn:()=>A.social(me,o,'auto')}]);return}
   if(!leaving&&A.vacAt){const v=A.vacAt(mx,my);if(v&&!me.hold){A.ride(me,v);return}}
@@ -236,10 +273,12 @@ let afkT=0,afkDid=false;const poke=()=>{afkT=0;afkDid=false};
 function afk(dt,moving){if(moving){poke();return}if(me.place||me.hidden||!idle(me)||me.follow)return;afkT+=dt;
   if(afkT>12&&!afkDid&&!me.hold){afkDid=true;const k=rnd(['lick','meow']);run(me,[{k,dur:k==='lick'?DUR.lick:1.6,soft:1}])}
   if(afkT>35&&!me.hold){settle(me,{k:'sleep'});poke()}}
-function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(!dx&&!dy)return false;
-  if(busy())return true;if(me.place){leavePlace(me);return true}if(me.hidden)return true;me.follow=null;if(me.q.length||me.cur)run(me,[]);
+function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(!dx&&!dy){keyMove.held=0;me.portalLock=0;return false}
+  if(busy())return true;if(me.place){if(!keyMove.held)leavePlace(me);keyMove.held=1;return true}keyMove.held=0;if(me.hidden)return true;me.follow=null;if(me.q.length||me.cur)run(me,[]);
   const l=Math.hypot(dx,dy),sp=me.sp*(keys.shift?1.6:1),nx=me.x+dx/l*sp*dt,ny=me.y+dy/l*sp*dt;if(free(nx,me.y))me.x=nx;if(free(me.x,ny))me.y=ny;if(dx)me.face=dx>0?'R':'L';
-  const wk=me.face==='L'?'walkL':'walkR';if(me.k!==wk)setK(me,wk);return true}
+  const wk=me.face==='L'?'walkL':'walkR';if(me.k!==wk)setK(me,wk);
+  // 换层以后要先松开方向键：一直按着走，不会刚上来又走回楼梯口
+  const p=!me.portalLock&&PORT.find(p=>p.auto&&p.from===floorOf(me.y).id&&inR(me.x,me.y,p.zone));if(p){run(me,[]);transit(me,p,null)}return true}
 const KEYMAP={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r'};
 const EMOTES=[{n:'喵',k:'meow',dur:1.6,e:'note'},{n:'爱心',k:'sit',ex:'love',dur:1.8,e:'heart'},{n:'惊讶',k:'alert',dur:1.2,e:'bang'},{n:'疑问',k:'sit',ex:'curious',dur:1.6,e:'q'},
   {n:'开心',k:'happy',dur:1.6},{n:'生气',k:'sit',ex:'angry',dur:1.6,e:'anger'},{n:'睡觉',k:'sleep'},{n:'伸懒腰',k:'stretch',dur:DUR.stretch}];
@@ -276,13 +315,14 @@ function tick(t,dt){now=t;S.now=t;
     const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<7){const ux=d>.01?dx/d:1,uy=d>.01?dy/d:0,st=10*dt;if(free(b.x+ux*st,b.y+uy*st)&&!b.me){b.x+=ux*st;b.y+=uy*st}else if(free(a.x-ux*st,a.y-uy*st)&&!a.me){a.x-=ux*st;a.y-=uy*st}}}}
   if(play&&ui.prompt)ui.prompt(promptText());
   const r=roomAt(me.x,me.y);if(r!==room){room=r;ui.room&&ui.room(r)}}
-// oy：v4 对话框开着时，把"你"往画面上方挪一点；A.camHook：v4 的运镜（第一次走进中庭时镜头摇上树冠），返回画面中心 {x,y}
-function camera(vw,vh,dt,oy=0){const ov=A.camHook&&A.camHook(vw,vh),cx=ov?ov.x:me.x,cy=ov?ov.y:me.y-12+oy;
-  const tx=Math.max(0,Math.min(W-vw,cx-vw/2)),ty=Math.max(0,Math.min(H-vh,cy-vh/2)),k=Math.min(1,dt*(ov?ov.k||3:5));camX+=(tx-camX)*k;camY+=(ty-camY)*k;
-  if(!ov){if(Math.abs(tx-camX)>vw)camX=tx;if(Math.abs(ty-camY)>vh)camY=ty}return{x:Math.round(camX),y:Math.round(camY)}}
+// oy：v4 对话框开着时，把"你"往画面上方挪一点；A.camHook：运镜（第一次上屋顶时镜头摇上树冠和星空、进店时从天花板掉下来），返回画面中心 {x,y}
+const clampIn=(v,a,len,vlen)=>len<=vlen?a+(len-vlen)/2:Math.max(a,Math.min(a+len-vlen,v));
+function camera(vw,vh,dt,oy=0){const ov=A.camHook&&A.camHook(vw,vh),f=floorOf(ov?ov.y:me.y),cx=ov?ov.x:me.x,cy=ov?ov.y:me.y-12+oy+(f.camDy||0)*vh;
+  const tx=clampIn(cx-vw/2,f.x,f.w,vw),ty=clampIn(cy-vh/2,f.y,f.h,vh),k=Math.min(1,dt*(ov?ov.k||3:5));camX+=(tx-camX)*k;camY+=(ty-camY)*k;
+  if(!ov||ov.k>=1000){if(Math.abs(tx-camX)>vw||Math.abs(ty-camY)>vh||floorOf(camY+vh/2)!==f){camX=tx;camY=ty}}return{x:Math.round(camX),y:Math.round(camY)}}
 
 const cmd={face:()=>{const f=Object.keys(FACE_NAMES),i=f.indexOf(me.myFace||'normal');me.myFace=me.ex=f[(i+1)%f.length];return FACE_NAMES[me.myFace]},
   coat:()=>{const i=me.pal<7?0:Math.floor((me.pal-7)/6)+1;me.pal=i>=COATS.length?0:7+i*6;return i>=COATS.length?'白色（原来的）':COATS[i].name},
   emote:i=>doEmote(me,i),event:k=>A.events[k]&&A.events[k](),say:s=>{speak(me,s,3.5);A.onSay&&A.onSay(me,s)},social:(c,kind)=>{poke();A.social(me,c,kind)},follow:c=>{me.follow=c}};
-return{S,me,A,tick,render,hud,mini,camera,cmd,bots:(n,inst)=>A.setBots(n,inst),online:()=>A.online||1,findPath,free,tap,hover,catAt,key,blurKeys,poke,EMOTES,
+return{S,me,A,tick,render,hud,mini,miniSize,miniTo,camera,cmd,floorOf,bots:(n,inst)=>A.setBots(n,inst),online:()=>A.online||1,findPath,free,tap,hover,catAt,key,blurKeys,poke,EMOTES,
   stats:()=>({cats:S.cats.length,drawn:drawN,sprites:SPR.size,paths:pathN}),toWorld:(sx,sy)=>({x:lastView.x+sx,y:lastView.y+sy}),view:()=>lastView}}

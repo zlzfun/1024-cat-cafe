@@ -31,7 +31,7 @@ function rugOval(cx,cy,rx,ry,a,b){disc(cx,cy,rx+1,ry+1,b);disc(cx,cy,rx,ry,a);di
   for(let i=-rx+6;i<=rx-6;i+=6)P1(cx+i,cy,b)}
 
 /* ---------- 墙 ---------- */
-const WALLS={cream:['#f2dcc2','#ead0b2'],pink:['#f4d6d2','#eec4c2'],mint:['#d4eada','#c2dfca'],navy:['#3c4670','#353e64'],butter:['#f5e4b2','#eed89c']};
+const WALLS={cream:['#f2dcc2','#ead0b2'],pink:['#f4d6d2','#eec4c2'],mint:['#d4eada','#c2dfca'],navy:['#3c4670','#353e64'],butter:['#f5e4b2','#eed89c'],peach:['#f2c8a2','#e8b88e'],lilac:['#e2d6ee','#d6c8e6']};
 function wall(x,y,w,h,style='cream'){const [a,b]=WALLS[style];R(x,y,w,h,a);for(let i=x+2;i<x+w;i+=8)R(i,y+2,3,h-12,b);R(x,y,w,2,'#5a3a2a');
   const wy=y+h-10;R(x,wy,w,8,'#9a6448');R(x,wy,w,1,'#b87a58');for(let i=x+3;i<x+w-12;i+=16){R(i,wy+2,12,1,'#7a4c36');R(i,wy+6,12,1,'#7a4c36');R(i,wy+2,1,5,'#7a4c36');R(i+11,wy+2,1,5,'#7a4c36')}
   R(x,y+h-2,w,2,'#4a2e22')}
@@ -187,5 +187,5 @@ function cat(k,bi,x,y,t,o=0,face='R',ex,yarn,mirror){return drawCat(C,k,bi,x,y,t
 const GLOW={};
 function glowTex(r,col){const k=r+col;if(GLOW[k])return GLOW[k];const c=document.createElement('canvas');c.width=c.height=r*2;const g=c.getContext('2d'),gr=g.createRadialGradient(r,r,0,r,r,r);
   gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,r*2,r*2);return GLOW[k]=c}
-function applyTod(w,h,tod,lights=[]){if(tod==='day')return;C.save();C.globalCompositeOperation='multiply';C.fillStyle=tod==='dusk'?'#ffd6b4':'#6c68a8';C.fillRect(0,0,w,h);
+function applyTod(w,h,tod,lights=[],tint){if(tod==='day')return;C.save();C.globalCompositeOperation='multiply';C.fillStyle=tod==='dusk'?'#ffd6b4':tint||'#6c68a8';C.fillRect(0,0,w,h);
   C.globalCompositeOperation='lighter';lights.forEach(l=>{if(l.when&&l.when!==tod)return;C.globalAlpha=(tod==='dusk'?.35:.55)*(l.a||1);C.drawImage(glowTex(l.r,l.col),l.x-l.r,l.y-l.r)});C.restore()}

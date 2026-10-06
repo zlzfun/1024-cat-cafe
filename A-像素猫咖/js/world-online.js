@@ -17,8 +17,8 @@ A.shared=false;
 const okPose=k=>has(POSE,k),okFace=e=>has(FACES,e);
 function holdOf(h){if(typeof h!=='string')return{hold:null,toy:null};let m=/^y([0-4])$/.exec(h);if(m)return{hold:{ci:+m[1],kind:null,knit:false},toy:null};
   m=/^(\w+):([0-4])$/.exec(h);if(m&&has(KNIT_NAMES,m[1]))return{hold:{ci:+m[2],kind:m[1],knit:true},toy:null};
-  m=/^t:(\w+)$/.exec(h);if(m&&has(TOY_NAMES,m[1]))return{hold:null,toy:m[1]};return{hold:null,toy:null}}
-function holdCode(c){const y=c.hold;if(y)return y.knit?y.kind+':'+y.ci:'y'+y.ci;return c.toy?'t:'+c.toy:0}
+  m=/^t:(\w+)$/.exec(h);if(m&&has(CTOY_NAMES,m[1]))return{hold:null,toy:m[1]};return{hold:null,toy:null}}
+function holdCode(c){const y=c.hold;if(y)return y.knit?y.kind+':'+y.ci:'y'+y.ci;return c.ctoy?'t:'+c.ctoy.kind:0}
 // 只发服务端认得的：姿态、表情脸不在表里就换成默认的（服务端会整条丢掉认不得的状态）
 const myState=()=>[Math.round(me.x),Math.round(me.y),me.z==null?null:Math.round(me.z*2)/2,Math.max(-300,Math.min(20,Math.round(me.dy||0))),okPose(me.k)?me.k:'sit',me.face==='L'?1:0,okFace(me.ex)?me.ex:'',holdCode(me),(me.hidden?1:0)|(me.mirror?2:0)];
 let lastSent='',lastView='',sendT=0;
@@ -35,7 +35,7 @@ function dropCat(id,quiet){const c=L.cats.get(id);if(!c)return;L.cats.delete(id)
 // 停了很久再动：先补一份"刚才还停着"，免得它从很远慢慢滑过来
 function push(c,s){const t=now(),B=c.buf,last=B[B.length-1];if(last&&t-last.t>.3)B.push({t:t-.1,s:last.s});B.push({t,s});if(B.length>40)B.splice(0,B.length-40)}
 function put(c,s,x,y,dy){c.x=x;c.y=y;c.dy=dy;c.z=typeof s[2]==='number'?s[2]:null;const k=okPose(s[4])?s[4]:'sit',e=okFace(s[6])?s[6]:c.myFace;
-  if(c.k!==k)setK(c,k,e);c.ex=e;c.face=s[5]?'L':'R';const H=holdOf(s[7]);c.hold=H.hold;c.toy=H.toy;c.yarn=H.hold&&!H.hold.knit&&PLAYS.includes(k)?H.hold.ci:null;
+  if(c.k!==k)setK(c,k,e);c.ex=e;c.face=s[5]?'L':'R';const H=holdOf(s[7]);c.hold=H.hold;c.ctoy=H.toy?{kind:H.toy}:null;c.yarn=H.hold&&!H.hold.knit&&PLAYS.includes(k)?H.hold.ci:null;
   const hid=!!(s[8]&1);if(c.hidden&&!hid)S.puffs.push({x:x,y:y-4,t0:now()});c.hidden=hid;c.mirror=!!(s[8]&2)}
 // 画 0.25 秒以前的那一刻：前后两份之间按时间插值（相差 200 像素以上就直接跳过去）
 tick(()=>{const rt=now()-DELAY;for(const c of L.cats.values()){const B=c.buf;if(!B.length)continue;while(B.length>=2&&B[1].t<=rt)B.shift();
@@ -87,7 +87,7 @@ tick(()=>{if(!L.on&&L.cats.size&&now()-downT>10){for(const id of [...L.cats.keys
 
 /* ---------- 传球 ---------- */
 const okBall=b=>b&&Number.isInteger(b.ci)&&b.ci>=0&&b.ci<5&&has(KNIT_NAMES,b.kind);
-const busy=()=>!!(me.hold||me.toy||me.hidden||A.arriving&&A.arriving());
+const busy=()=>!!(me.hold||me.ctoy||me.hidden||A.arriving&&A.arriving());
 // 收到球：一收到就回话（接住了 / 还回去），不等飞行动画——这样对方那边不会一直悬着，也不会一颗球变成两颗
 function incoming(m){const c=L.cats.get(m.id),b=m.ball;if(!c||!okBall(b))return;const ball={ci:b.ci};
   // 请你 review：看一眼就把球还回去，你什么都不用做
@@ -104,7 +104,7 @@ A.pass=(c,o)=>{if(!o||!o.puppet)return pass1(c,o);if(!c.me)return;const y=c.hold
   if(rv)say(`请${o.name}帮忙 review`);else if(q){q.abandoned=true;if(A.Q.cur===q)A.Q.cur=null;say(`你把便签也一起交给了${o.name}`)}else say(`传给${o.name}`);
   c.hold=null;A.run(c,[{k:'happy',dur:.6,soft:1}]);sfx('toss');A.throwTo(c,o,y);
   const p=++pseq;pend.set(p,{y,o,rv,t:now()});L.send({t:'pass',to:o.rid,p,ball:{ci:y.ci,kind:y.kind,qid:q?q.d.id:null,...(rv?{rv:1}:{})}})};
-function giveBack(e,why){const o=L.cats.get(e.o.rid)||e.o;A.throwTo(o,me,e.y,()=>{if(me.hold||me.toy){S.baskets[0].push(e.y);say('嘴里有东西了，球滚回了门口的毛线篮');return}
+function giveBack(e,why){const o=L.cats.get(e.o.rid)||e.o;A.throwTo(o,me,e.y,()=>{if(me.hold||me.ctoy){S.baskets[0].push(e.y);say('嘴里有东西了，球滚回了门口的毛线篮');return}
   me.hold=e.y;if(why==='reviewed')A.Q.reviewDone(e.y.qs,o.name);else say(why==='busy'?`${o.name}现在腾不出嘴，球滚回来了`:`${o.name}不在了，球滚回来了`)})}
 // 球回来了：只认这笔传球的接球方（服务端也只转它的回话）；why 是 busy / gone / reviewed
 function returned(m){const e=pend.get(m.p);if(!e||m.id!==e.o.rid)return;pend.delete(m.p);giveBack(e,e.rv&&m.why==='reviewed'?'reviewed':m.why==='busy'?'busy':'gone')}

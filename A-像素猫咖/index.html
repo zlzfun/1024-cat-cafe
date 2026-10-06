@@ -86,10 +86,17 @@
   .hud{position:absolute;font-size:13px;pointer-events:none}
   .tl{left:10px;top:8px;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
   .tl>*{pointer-events:auto}
-  .room{background:#241a2ecc;border-radius:3px;padding:2px 10px;pointer-events:none!important}
-  .room b{color:var(--acc);font-weight:600;margin-right:6px}
-  .room span{color:var(--sub)}
-  .game .mini{left:auto;right:10px;top:10px;border:1px solid #ffd84a88;border-radius:3px;cursor:pointer;image-rendering:auto;opacity:.92}
+  .room{display:flex;align-items:center;gap:8px;background:#241a2ee6;border:1px solid #ffd84a66;border-radius:3px;padding:2px 10px 2px 3px;pointer-events:none!important}
+  .room i{font-style:normal;font-size:12px;font-weight:600;color:#241a2e;background:#9ccc98;border-radius:2px;padding:0 6px;line-height:20px}
+  .room i[data-f="f2"]{background:#a8d0f0}.room i[data-f="roof"]{background:#c8b8ff}
+  .room b{color:var(--acc);font-weight:600;font-size:15px}
+  .room span{color:var(--sub);font-size:12px}
+  .tr{right:10px;top:8px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+  .tr>*{pointer-events:auto}
+  .floors{display:flex;gap:3px;pointer-events:none!important}
+  .floors span{font-size:12px;line-height:18px;padding:0 8px;border-radius:2px;background:#241a2ecc;color:var(--dim);border:1px solid #4a3a5c}
+  .floors span.on{color:#241a2e;background:var(--acc);border-color:var(--acc);font-weight:600}
+  .game .mini{position:static;border:1px solid #ffd84a88;border-radius:3px;cursor:pointer;image-rendering:auto;opacity:.95;width:200px}
   .prompt{left:50%;bottom:14px;transform:translateX(-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:3px;padding:1px 12px;white-space:nowrap;display:none}
   .cstack{top:10px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:min(560px,50%)}
   .toast{background:var(--acc);color:var(--bg);border-radius:3px;padding:1px 12px;opacity:0;transition:opacity .3s;text-align:center}
@@ -125,14 +132,18 @@
   .panel li.done{color:var(--ok)}.panel li.done:before{background:#7ee08a;border-color:#7ee08a}
   .panel li.cur{color:var(--acc)}.panel li.cur:before{border-color:var(--acc)}
   .panel small{color:#8a7a9a}
-  .stamps{right:10px;top:124px;width:258px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:4px 10px 5px;font-size:12px;line-height:1.4;pointer-events:auto;cursor:pointer}
+  .stamps{position:static;width:258px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:4px 10px 5px;font-size:12px;line-height:1.4;pointer-events:auto;cursor:pointer}
   .stamps h4{margin:0 0 3px;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
   .stamps h4 i{font-style:normal;color:var(--sub);font-weight:400}
   .stamps .row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;color:var(--sub)}
   .stamps .lt{margin:4px 0 1px;text-align:center;color:var(--acc)}.stamps .lt.done{color:var(--ok)}
   .stamps .s{border:2px dashed #4a3a5c;border-radius:50%;width:30px;height:30px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6a5a7a;transform:rotate(-8deg)}
   .stamps .s.on{border:2px solid #e0533d;color:#e0533d;background:#e0533d18;font-weight:700}
-  #roomban b{color:var(--acc)}
+  .zone{text-align:center;opacity:0;transition:opacity .5s,transform .5s;transform:translateY(-4px)}
+  .zone.show{opacity:1;transform:none}
+  .zone b{display:inline-block;font-size:16px;font-weight:600;letter-spacing:4px;color:#fff4dc;padding:1px 14px 1px 18px;background:linear-gradient(90deg,transparent,#241a2ee6 18%,#241a2ee6 82%,transparent);text-shadow:0 1px 4px #000}
+  .zone b:before,.zone b:after{content:"";display:inline-block;width:14px;height:1px;background:#ffd84a99;vertical-align:middle;margin:0 10px 0 0}.zone b:after{margin:0 0 0 6px}
+  .zone p{margin:4px auto 0;max-width:520px;font-size:12px;line-height:1.6;color:#d8cce4;background:#241a2ecc;border-radius:3px;padding:2px 10px}
   .tipbox{position:absolute;pointer-events:none;background:#241a2ef0;border:1px solid var(--line);border-radius:3px;padding:3px 9px;font-size:12px;line-height:1.6;display:none;max-width:300px;z-index:4}
   .tipbox b{color:var(--ink);font-weight:600}.tipbox .how{color:var(--acc)}.tipbox .what{color:#d8cce4}.tipbox .tie{color:var(--ok)}.tipbox .st{float:right;color:var(--sub);margin-left:10px}
   .menu{position:absolute;display:none;background:#2f2340;border:1px solid var(--acc);border-radius:4px;padding:4px;min-width:170px;max-width:280px;z-index:7}
@@ -171,7 +182,7 @@
   .bookov .e.off .ic{color:#6a5a7a}
   .bookov .e.off small{color:#6a5a7a}
   .bookov .e.off:hover{border-color:var(--sub);color:var(--sub)}
-  .game.vista .tl,.game.vista .mini,.game.vista .stamps,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle,.game.vista #roomban{display:none!important}
+  .game.vista .tl,.game.vista .tr,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle,.game.vista .zone{display:none!important}
   .vcap{left:50%;bottom:12px;transform:translateX(-50%);display:none;align-items:baseline;gap:12px;background:#241a2ecc;border-radius:3px;padding:3px 14px;font-size:12px;color:var(--sub);white-space:nowrap}
   .game.vista .vcap{display:flex}
   .vcap b{color:var(--acc);font-weight:600;font-size:13px}.vcap .sc{color:var(--ink)}.vcap .sc:empty{display:none}
@@ -183,7 +194,7 @@
   .replydemo{background:#241a2ef0;border:1px solid #f4a6b8;border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;max-width:520px}
   .replydemo h5{margin:0;font-size:13px;color:#f4a6b8;font-weight:600}.replydemo q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}.replydemo .chain{color:var(--ok);font-size:12px}
   .game{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0}
-  .game:not(.on) .hud,.game:not(.on) .mini,.game:not(.on) .corner{display:none!important}
+  .game:not(.on) .hud,.game:not(.on) .corner{display:none!important}
   .corner{position:absolute;right:10px;bottom:10px;display:flex;gap:4px;z-index:3}
   .corner button{background:#241a2ecc;border:1px solid var(--line);color:var(--sub);font-size:12px;padding:1px 9px;border-radius:3px}.corner button:hover{color:var(--ink);border-color:var(--sub)}.corner button.on{color:var(--acc)}
   .game.vista .corner{display:none}
@@ -214,14 +225,14 @@
 <!-- 店里（加载时就在后台建好，进店以后才露出来） -->
 <div class="game" id="game" tabindex="0">
   <canvas id="pc"></canvas><canvas id="oc"></canvas>
-  <div class="hud tl"><div class="room" id="room"><b>前厅</b><span id="online"></span></div>
+  <div class="hud tl"><div class="room" id="room"><i id="rfl" data-f="f1">一楼</i><b id="rnm">门厅</b><span id="online"></span></div>
     <div class="mecard" id="mecard" title="点一下，找到你自己（C）"><canvas id="mec" width="22" height="20"></canvas><div><b id="mename">你</b><span id="mest">空着嘴</span><span class="st"><em title="一共解开了几颗毛线球"><canvas id="icYarn" width="7" height="7"></canvas>毛线球 <b id="stBall">0</b></em><em class="bk" id="stBook" title="点一下打开图鉴（B）"><canvas id="icPaw" width="7" height="7"></canvas>装置 <b id="stDisc">0</b></em></span></div></div>
     <div class="panel" id="panel"></div></div>
-  <canvas class="mini" id="mm" width="336" height="108" title="小地图：点一下，猫就走过去"></canvas>
-  <div class="hud stamps" id="stamps" title="集章卡：点一下看入口"></div>
+  <div class="hud tr"><div class="floors" id="floors"></div><canvas class="mini" id="mm" width="200" height="188" title="小地图（你所在的这一层）：点一下，猫就走过去"></canvas>
+    <div class="stamps" id="stamps" title="集章卡：点一下看入口"></div></div>
   <div class="hud news" id="news"></div>
   <div class="hud prompt" id="prompt"></div>
-  <div class="hud cstack"><div class="toast" id="toast"></div><div class="disc" id="roomban"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
+  <div class="hud cstack"><div class="zone" id="zone"></div><div class="toast" id="toast"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
   <div class="hud vtitle" id="vtitle"></div><div class="hud vcap" id="vcap"></div>
   <div class="tipbox" id="tip"></div>
   <div class="menu" id="menu"></div>
@@ -234,6 +245,7 @@
     <div>鼠标点地面走过去，点东西、点猫也行</div><div>右键点猫：看名片 / 蹭蹭 / 传球</div>
     <div><kbd>Q</kbd> 把毛线球传给鼠标下（或最近）的猫</div><div><kbd>F</kbd> 跟着一只猫走，<kbd>Esc</kbd> 不跟</div>
     <div><kbd>C</kbd> 找到我 · <kbd>B</kbd> 图鉴</div><div><kbd>T</kbd> 快捷短语 · <kbd>1</kbd>–<kbd>8</kbd> 表情</div>
+    <div>走进楼梯口就上下楼；也可以爬巨树</div><div>右上角小地图只画你在的这一层</div>
     <div>对话框里：<kbd>↑↓</kbd> 或数字键选，<kbd>E</kbd> 确定，<kbd>Esc</kbd> 收起</div><div>看风景时：<kbd>E</kbd> 做画面里的事，<kbd>Esc</kbd> 回到店里</div>
     <div><kbd>Z</kbd> 缩放 · <kbd>H</kbd> 这张说明</div></div><button class="lbtn">知道了</button></div></div>
 </div>
@@ -259,9 +271,9 @@
 <script>
 /* 加载器：并行下载、按顺序执行；进度是真的（脚本到齐 → 建好店 → 认出你），显示上最快也要走一秒，让小猫把线球追完 */
 (()=>{
-const FILES=[['cat-sprites.js','把猫叫醒……'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['world-map.js','铺地板、刷墙……'],['world4-map.js'],
-  ['quest-bank.js','把毛线球装进篮子……'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world4-desk.js'],
-  ['world4-atrium.js','给巨树缠毛线……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
+const FILES=[['cat-sprites.js','把猫叫醒……'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['house-kit.js'],['outdoor-kit.js'],['quest-bank.js','把毛线球装进篮子……'],
+  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world4-desk.js'],
+  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
   ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['app.js']];
 const msg=document.getElementById('bootmsg'),cv=document.getElementById('bootcv'),x=cv.getContext('2d');let real=0,shown=0,label='开门……',ready=false,failed=false,t0=performance.now(),doneCb=null;
 const say=s=>{if(s!=null)label=s;if(!failed)msg.textContent=label};

@@ -12,11 +12,14 @@ if(typeof WebSocket==='undefined'){console.log('要 Node 22 以上');process.exi
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),rnd=a=>a[Math.floor(Math.random()*a.length)],rr=(a,b)=>a+Math.random()*(b-a);
 const post=async(p,b,h={})=>{const r=await fetch(BASE+p,{method:'POST',headers:{'Content-Type':'application/json',...h},body:JSON.stringify(b)});return{status:r.status,...await r.json().catch(()=>({}))}};
 // 店里几块大空地（前厅、橱窗长廊、中庭、工坊、后院、图书馆、花园小径），假玩家在这些点之间走
-const SPOTS=[[150,150],[300,170],[470,150],[560,210],[760,300],[900,470],[820,500],[980,420],[1100,150],[1250,200],[1120,400],[1280,450],[1450,160],[1560,200],[1450,420],[1600,380],[200,420],[480,420]];
+// 三层楼各几个落脚点（和 js/map-*.js 的房间对应）：一楼 y 0～900，二楼 1400～1940，屋顶 2400～2940
+const FLOORS=[[[150,150],[480,160],[810,190],[120,420],[380,380],[600,500],[800,420],[200,680],[620,700],[500,850]],
+  [[160,1560],[480,1600],[780,1600],[160,1800],[480,1910],[720,1800]],[[400,2860],[600,2880],[700,2900],[300,2820]]];
 const KINDS=['scarf','hat','mitten','sock','sweater','flag'],POSES=['sit','lick','lie','sleep','knead','meow'];
 const lat=[],cnt={in:0,bytes:0,sent:0,catch:0},sentAt=new Map(),cats=[],idOf=new Map();   // idOf：连接短编号 → 猫的 id
-function bot(i,token,id){const c={i,id,ws:null,x:rr(100,1600),y:rr(100,500),tx:0,ty:0,k:'sit',f:0,hold:0,rest:rr(0,4),last:'',emoT:rr(5,40),phT:rr(10,60),passT:rr(20,90),hangT:rr(30,120),seen:new Map()};
-  const tgt=()=>{const s=rnd(SPOTS);c.tx=s[0]+rr(-40,40);c.ty=Math.max(60,Math.min(520,s[1]+rr(-30,30)))};tgt();
+function bot(i,token,id){const fl=i%5<3?0:i%5<4?1:2,s0=rnd(FLOORS[fl]);const c={i,id,ws:null,fl,x:s0[0],y:s0[1],tx:0,ty:0,k:'sit',f:0,hold:0,rest:rr(0,4),last:'',emoT:rr(5,40),phT:rr(10,60),passT:rr(20,90),hangT:rr(30,120),seen:new Map()};
+  // 在自己那一层的几个落脚点之间走；偶尔换一层（像走了楼梯：直接出现在另一层）
+  const tgt=()=>{if(Math.random()<.05){c.fl=(c.fl+1+Math.floor(Math.random()*2))%3;const p=rnd(FLOORS[c.fl]);c.x=p[0];c.y=p[1]}const s=rnd(FLOORS[c.fl]);c.tx=Math.max(20,Math.min(940,s[0]+rr(-40,40)));c.ty=s[1]+rr(-20,20)};tgt();
   c.send=o=>{if(c.ws&&c.ws.readyState===1){c.ws.send(JSON.stringify(o));cnt.sent++}};
   c.open=()=>new Promise(r=>{const ws=new WebSocket(BASE.replace(/^http/,'ws')+'/ws');c.ws=ws;ws.onopen=()=>ws.send(JSON.stringify({t:'hi',token}));
     ws.onmessage=e=>{cnt.in++;cnt.bytes+=e.data.length;const m=JSON.parse(e.data);if(m.t==='welcome'){r();c.send({t:'v',v:rnd([[480,287],[480,287],[640,360],[720,430]])})}

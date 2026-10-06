@@ -1,6 +1,6 @@
 /* 1024 猫咖 · 场景 v4 新零件。依赖 scene-kit.js（R、P1、box、disc、txt、grid、OL、YARN…）和 world-kit.js（hsh…）。
-   图书馆（长期记忆）：书墙、高书架、滚梯、检索柜、阅读桌、扶手椅、说明书讲台、窗边软座；花园小径：许愿池、石桌象棋、长椅、路标、邮筒、小门；
-   工坊加了工具墙、合并门禁，前厅加了星星罐子、迎宾立牌和前台（桌子 + 服务铃）；还有 E 键帽、往下指的箭头、梦泡泡。
+   图书馆（长期记忆）：书墙、高书架、滚梯、检索柜、阅读桌、扶手椅、说明书讲台、窗边软座；后院和河边：许愿池、石桌象棋、长椅、路标、邮筒、小门；
+   工坊的工具墙、合并门禁，门厅的星星罐子、迎宾立牌和前台（桌子 + 服务铃）；还有 E 键帽、往下指的箭头、梦泡泡。新地图的零件在 house-kit.js、outdoor-kit.js。
    写法同前：(x,y) 是左上角，注释里的 base 是和猫一起排序用的底边 y。 */
 
 /* ---------- 图书馆 ---------- */
@@ -47,7 +47,7 @@ function windowSeat(x,y,w){box(x,y,w,10,'#6e4430','#2e1e18');box(x+1,y-3,w-2,6,'
 function dreamBubble(x,y,t,icon=0){const k=Math.floor(t*1.5)%3;P1(x,y,'#fff4dc');if(k>0)R(x+2,y-3,2,2,'#fff4dc');if(k>1){disc(x+8,y-9,7,4,OL);disc(x+8,y-9,6,3,'#fff8e8');
   const ix=x+5,iy=y-11;if(icon===0)yarnBall(ix+3,iy+2,2,Math.floor(t)%5);else if(icon===1){R(ix,iy+1,5,2,'#f0a352');P1(ix+5,iy,'#f0a352');P1(ix+5,iy+3,'#f0a352')}else if(icon===2){R(ix,iy,7,4,OL);R(ix+1,iy+1,5,2,'#8fc8f0')}else{P1(ix+1,iy,'#e0533d');P1(ix+3,iy,'#e0533d');R(ix,iy+1,5,1,'#e0533d');R(ix+1,iy+2,3,1,'#e0533d');P1(ix+2,iy+3,'#e0533d')}}}
 
-/* ---------- 花园小径 ---------- */
+/* ---------- 后院、河边 ---------- */
 function pond(cx,cy,t,tod){disc(cx,cy,36,15,'#8a8278');disc(cx,cy,35,14,'#cfc6b8');disc(cx,cy+1,32,11,'#3e6e8e');disc(cx,cy+2,30,9,'#4f86a8');
   if(tod==='night'){[[-18,-2],[6,3],[20,-3],[-6,6],[26,4]].forEach(([a,b],i)=>{if((Math.floor(t*2)+i)%4)P1(cx+a,cy+2+b,'#fff4dc')});disc(cx+12,cy+1,2,1,'#fff4dc')}
   else{R(cx-20,cy-2,8,1,'#8fc8f0');R(cx+6,cy+5,6,1,'#8fc8f0')}
@@ -74,7 +74,7 @@ function gardenGate(x,y,w){R(x,y+5,w,2,'#5c3a28');R(x,y+12,w,2,'#5c3a28');for(le
 // 小径两旁的灯柱
 function lampPost(x,y,on){R(x+2,y+6,2,30,OL);R(x,y+34,6,2,OL);R(x-1,y,8,7,OL);R(x,y+1,6,5,on?'#ffe08a':'#efdcb8');R(x+1,y-1,4,1,OL)}   // base=y+36
 
-/* ---------- 工坊：工具墙、合并门禁；前厅：星星罐子、迎宾立牌 ---------- */
+/* ---------- 工坊：工具墙、合并门禁；门厅：星星罐子、迎宾立牌 ---------- */
 const TOOLS_PX={
   wrench:[" oo  ","o..o ","o..oo"," oo.o","  o.o","  o.o","  ooo"],glass:[" ooo ","o...o","o...o"," ooo ","   oo","    o"],
   globe:[" ooo ","obgbo","oggbo","obbgo"," ooo "],cam:[" oo  ","ooooo","o.o.o","ooooo"],brush:["   oo","  ooo"," ooo "," oo  ","oo   ","o    "],

@@ -1,14 +1,14 @@
 /* 1024 猫咖 · 场景 v4 进店的那一下（进店流程的最后一步，接在 entry-tutorial.js 的"跳进光里"后面）。
-   - drop（第一次来）：镜头停在毛线巨树的树冠上，你的猫从树叶里掉下来，一路带下几片叶子，落在树下的空地上——压扁一下、扬起一圈灰；
+   - drop（第一次来）：镜头停在一楼咖啡厅的天花板下，你的猫从巨树的叶子里掉下来，一路带下几片叶子，落在树下——压扁一下、扬起一圈灰；
      旁边的猫吓一跳回头看，你的猫开心地蹦一下。
    - wake（来过）：画面从黑里一圈圈亮开，你的猫在上次离开的地方蜷着睡觉，醒来、伸个懒腰。
    - 第一颗毛线球送到面前：第一次来、落地以后，一只闲着的店猫（先找斑斑）叼着一颗毛线球从画面外跑过来，传给你——
-     训练营第二步不用先穿过半个店去前厅找毛线篮，也是第一次看到"传球"。
+     训练营第二步不用先去门厅找毛线篮，也是第一次看到"传球"。
    A.arrive(how, {x,y, onLand, onDone})；到结束之前 A.arriving() 为真，页面这时不接玩家的操作。 */
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,run,emote,speak,sfx,after,idle}=A;
 const now=()=>A.t,tick=f=>A.tickers.push(f);
-const LAND={x:872,y:462},TOP=46,G=560,D=.45,fy=k=>TOP+.5*G*Math.max(0,k-D)**2;
+const LAND={x:TREE.cx+44,y:TREE.f1.base+40},TOP=TREE.f1.top+6,G=560,D=.45,fy=k=>TOP+.5*G*Math.max(0,k-D)**2;   // 从咖啡厅天花板的洞口、树叶里掉下来，落在树下
 let ar=null;const leaves=[];
 function spotNear(x,y){if(A.free?A.free(x,y):true)return{x,y};for(let r=4;r<60;r+=4)for(let a=0;a<12;a++){const q=a/12*Math.PI*2,px=x+Math.cos(q)*r,py=y+Math.sin(q)*r;if(A.free(px,py))return{x:px,y:py}}return{...LAND}}
 A.arrive=(how,o={})=>{const p=how==='wake'&&o.x!=null?spotNear(o.x,o.y):spotNear(LAND.x,LAND.y);me.x=p.x;me.y=p.y;run(me,[]);me.place=null;me.follow=null;A.poke();
@@ -29,7 +29,7 @@ tick(()=>{if(!ar)return;const k=now()-ar.t0;
     if(k>1.2+DUR.stretch+.9)end()}});
 function end(){const o=ar.o,how=ar.how;ar=null;me.hidden=false;A.poke();o.onDone&&o.onDone();if(how==='drop')after(2.4,greet)}
 function greet(){const s=A.camp&&A.camp.cur();if(!s||s.id!=='take'||me.hold||me.hidden||me.place)return;
-  const c=[5,4,3].map(p=>S.cats.find(o=>o.kind==='npc'&&o.pal===p)).find(o=>o&&!o.working&&!o.hold&&!o.toy&&!o.place&&!o.riding&&!o.hidden&&o.z==null);if(!c)return;
+  const c=[5,4,3].map(p=>S.cats.find(o=>o.kind==='npc'&&o.pal===p)).find(o=>o&&!o.working&&!o.hold&&!o.ctoy&&!o.place&&!o.riding&&!o.hidden&&o.z==null);if(!c)return;
   // 从画面外跑进来：离得远就先挪到画面边上外头一点（能站的地方），省得跑半个店
   const v=A.view(),out=p=>p.x<v.x-8||p.x>v.x+v.w+8||p.y<v.y-8||p.y>v.y+v.h+30;
   if(Math.hypot(c.x-me.x,c.y-me.y)>320||!out(c)){const side=me.x-v.x<v.w/2?1:-1;for(const dx of [side,-side]){const p=A.land(me.x+dx*(v.w/2+26),me.y-6);if(out(p)&&A.findPath(p.x,p.y,me.x,me.y)){A.run(c,[]);c.x=p.x;c.y=p.y;c.z=undefined;c.atHome=false;break}}}

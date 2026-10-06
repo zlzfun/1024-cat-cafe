@@ -33,7 +33,7 @@ tick(dt=>{
   const s=S.sorter;if(s.suck){s.suck.k+=dt/.8;if(s.suck.k>=1){s.balls.push(s.suck.ball);s.suck=null}}s.pop=Math.max(0,s.pop-dt);
   if(s.balls.length&&(nextPop-=dt)<=0){nextPop=.5;const room=S.baskets.map((b,i)=>[b.length+S.flying.filter(f=>f.toBasket===i+1).length,i]).filter(([n])=>n<6).sort((a,b)=>a[0]-b[0]||Math.random()-.5);
     if(room.length){const i=room[0][1],b=P.baskets[i],ball=s.balls.shift();s.pop=.35;if(atMe(P.chute,160))sfx('pop');
-      S.flying.push({x0:P.chute.x,y0:P.chute.y,x1:b.x+14,y1:b.y+2,t0:now(),dur:.5+Math.abs(b.x-P.chute.x)/400,arc:26,ci:ball.ci,toBasket:i+1,done:()=>S.baskets[i].push(ball)})}}
+      S.flying.push({x0:P.chute.x,y0:P.chute.y,x1:b.x+20,y1:b.y+8,t0:now(),dur:.5+Math.abs(b.x-P.chute.x)/400,arc:26,ci:ball.ci,toBasket:i+1,done:()=>S.baskets[i].push(ball)})}}
   S.pending=pendingN();['ring','flap'].forEach(k=>S.door[k]=Math.max(0,S.door[k]-dt));
   ['goal','party','xl','brew','plantShake','fishPaw','catnipUsed','scratch','grassChew','spawnPop','print','flash','banner'].forEach(k=>S[k]=Math.max(0,(S[k]||0)-dt));
   S.lines.forEach((L,w)=>L.forEach((it,i)=>{if(it&&now()>=it.until)pickup(w,i)}));
@@ -41,7 +41,7 @@ tick(dt=>{
     if(b){if(!b.fly&&now()>b.until)b.fly=now();if(b.fly&&now()-b.fly>1.2)S.birds[w]=null}})});
 A.drawers.push((L,vis)=>rolling.forEach(a=>{if(vis(a.x-4,a.y-4,8,8))L.push([a.y+3,()=>yarnBall(Math.round(a.x),Math.round(a.y),2,a.ci,a.spin)])}));
 function takeYarn(c,i){const b=S.baskets[i];if(!b.length)return false;c.hold=b.pop();c.hold.knit=false;c.hold.easy=false;return true}
-P.baskets.forEach((b,i)=>T({id:'basket'+i,n:'毛线篮',hit:[b.x-2,b.y-12,32,30],at:()=>({x:b.x+14+rr(-10,10),y:b.y+26+rr(0,6)}),near:[b.x-12,b.y+8,52,28],
+P.baskets.forEach((b,i)=>T({id:'basket'+i,n:'毛线篮',hit:[b.x-2,b.y-4,44,30],at:()=>({x:b.x+20+rr(-10,10),y:b.y+32+rr(0,4)}),near:[b.x-8,b.y+18,56,24],
   label:'叼一颗毛线球',ok:c=>!c.hold&&S.baskets[i].length>0,no:c=>c.hold?'嘴里已经叼着一个了':'这个篮子空了，看看别的篮子',
   go(c){if(!takeYarn(c,i))return;run(c,[{k:'hold',dur:.8,soft:1}]);if(c.me){if(A.onTake)A.onTake(c);else say(`叼起一颗毛线球。便签上写着：「${c.hold.note}」`)}}}));
 // 解开：扑过去 → 随机一种玩法 → 冒一团烟织成小物件（跟小黄鸭讲过一遍的，解得快）
@@ -73,9 +73,8 @@ P.wins.forEach((Wn,w)=>T({id:'win'+w,n:'橱窗',hit:[Wn.x-2,Wn.y,Wn.w+4,Wn.h+30]
   go(c){if(c.hold&&c.hold.knit)run(c,deliverSteps(c));else watchWindow(c,w)},ai:{mood:'rest',w:c=>S.birds[w]&&!S.birds[w].fly?3:.5}}));
 T({id:'knock',n:'门 · 投递口',hit:[P.door.x-2,P.door.y,26,42],at:P.knock,near:[P.knock.x-14,58,34,22],label:'扒拉一下投递口',ok:c=>!c.hold,no:()=>'先把嘴里的放下',
   go(c){run(c,[{k:'maneki',dur:1,soft:1}]);after(.6,()=>{if(!arrive()){if(c.me)say('篮子都满了，先解几颗吧')}else if(c.me)say('门外好像有人……叮铃')})}});
-T({id:'cork',n:'委托看板',hit:[196,8,60,36],at:{x:226,y:66},label:'看看委托看板',go(){say(`看板上钉着 ${S.pending} 张便签。今天已经交付 ${S.count} 件`)}});
-T({id:'board',n:'小黑板',hit:[P.aBoard.x,P.aBoard.y,24,28],at:{x:P.aBoard.x+12,y:92},label:'看看小黑板',go(){say(`今天已经交付 ${S.count} 件，篮子里和路上还有 ${S.pending} 颗`)}});
-A.drawers.push((L,vis)=>{if(S.goal>0&&vis(440,50,40,40))L.push([85,()=>{spark(452,58,A.t);spark(472,78,A.t+.3)}])});
+T({id:'cork',n:'委托看板',hit:[168,10,60,34],at:{x:198,y:70},label:'看看委托看板',go(){say(`看板上钉着 ${S.pending} 张便签。今天已经交付 ${S.count} 件`)}});
+T({id:'board',n:'小黑板',hit:[P.board.x,P.board.y,P.board.w,P.board.h],at:{x:P.board.x+P.board.w/2,y:P.hangY+6},label:'看看小黑板',go(){say(`今天已经交付 ${S.count} 件，篮子里和路上还有 ${S.pending} 颗`)}});
 A.overs.push(vis=>{for(const p of fx){if(!vis(p.x-4,p.y-40,8,48))continue;const k=(now()-p.t0)/p.life;
   if(p.kind==='confetti')R(Math.round(p.x),Math.round(p.y),2,1+(Math.floor(now()*8+p.ci)%2),YARN[p.ci][Math.floor(now()*6+p.ci)%2?0:2]);
   else if(p.kind==='note')alpha(Math.max(0,1-k),()=>drawEmote(C,Math.round(p.x+Math.sin(k*9)*2),Math.round(p.y-k*18),'note',0));
@@ -142,14 +141,16 @@ function seatThing(o){const occ=o.spots.map(()=>null);
   th.occ=occ;return th}
 const napK=()=>S.tod==='night'||Math.random()<.5?'sleep':'lie';
 const SOFA=P.sofaSeats,TREE=TREE_TALL.map(([a,b],i)=>({x:P.tree.x+a,y:P.tree.y+b,z:P.tree.y+124.5,face:i%2?'R':'L'}));
-seatThing({id:'sofa',n:'沙发',hit:[P.sofa.x,P.sofa.y,70,30],at:{x:386,y:518},near:[344,506,70,20],label:'跳上沙发睡一觉',spots:SOFA.slice(1).map(s=>({...s,z:508.5,face:'L'})),
-  up:i=>[{...SOFA[i+1],z:508.5}],down:i=>[{x:SOFA[i+1].x,y:520}],floor:i=>({x:SOFA[i+1].x,y:520}),k:napK,ex:'content',doing:'在沙发上睡觉',ai:{mood:'rest',w:2}});
+const SZ=P.sofa.y+30.5,SF=P.sofa.y+42;
+seatThing({id:'sofa',n:'沙发',hit:[P.sofa.x,P.sofa.y,70,30],at:{x:P.sofa.x+46,y:SF-2},near:[P.sofa.x+4,P.sofa.y+28,70,20],label:'跳上沙发睡一觉',spots:SOFA.slice(1).map(s=>({...s,z:SZ,face:'L'})),
+  up:i=>[{...SOFA[i+1],z:SZ}],down:i=>[{x:SOFA[i+1].x,y:SF}],floor:i=>({x:SOFA[i+1].x,y:SF}),k:napK,ex:'content',doing:'在沙发上睡觉',ai:{mood:'rest',w:2}});
 seatThing({id:'tree',n:'高猫爬架',hit:[P.tree.x,P.tree.y,44,124],at:{x:P.tree.x+24,y:P.tree.y+132},near:[P.tree.x-4,P.tree.y+116,52,24],label:'爬上猫爬架',spots:TREE,
   up:i=>TREE.slice(i).reverse(),down:()=>[{x:P.tree.x+24,y:P.tree.y+134}],floor:()=>({x:P.tree.x+24,y:P.tree.y+132}),k:'lie',doing:'在爬架上',ai:{mood:'rest',w:2}});
 seatThing({id:'bean',n:'懒人沙发',hit:[P.beanbag.x,P.beanbag.y,30,18],at:{x:P.beanbag.x+15,y:P.beanbag.y+26},near:[P.beanbag.x-4,P.beanbag.y+10,38,24],label:'陷进懒人沙发',
   spots:[{...P.beanSeat,face:'R'},{x:P.beanSeat.x+10,y:P.beanSeat.y+1,z:P.beanSeat.z,face:'L'}],up:i=>[i?{x:P.beanSeat.x+10,y:P.beanSeat.y+1,z:P.beanSeat.z}:P.beanSeat],down:()=>[{x:P.beanbag.x+15,y:P.beanbag.y+26}],floor:()=>({x:P.beanbag.x+15,y:P.beanbag.y+26}),k:'lie',ex:'content',doing:'陷在懒人沙发里',ai:{mood:'rest',w:1.5}});
 const HAM={x:P.hammock.x+32,y:P.hammock.y+16,z:P.hammock.y+20};
-seatThing({id:'hammock',n:'吊床',hit:[P.hammock.x,P.hammock.y,64,34],at:{x:HAM.x,y:518},near:[P.hammock.x+8,504,48,18],label:'躺进吊床',spots:[{...HAM,face:'R'}],up:()=>[HAM],down:()=>[{x:HAM.x,y:518}],floor:()=>({x:HAM.x,y:518}),
+const HF=P.hammock.y+40;
+seatThing({id:'hammock',n:'吊床',hit:[P.hammock.x,P.hammock.y,64,34],at:{x:HAM.x,y:HF},near:[P.hammock.x+8,P.hammock.y+30,48,18],label:'躺进吊床',spots:[{...HAM,face:'R'}],up:()=>[HAM],down:()=>[{x:HAM.x,y:HF}],floor:()=>({x:HAM.x,y:HF}),
   k:'sleep',doing:'在吊床里睡觉',ai:{mood:'rest',w:1.5},inn:c=>{S.hamBy=c},out:()=>{S.hamBy=null}});
 seatThing({id:'bed',n:'猫窝',hit:[P.bed.x,P.bed.y,34,12],at:P.bedAt,label:'钻进猫窝',spots:[{x:P.bed.x+13,y:P.bed.y+8,z:P.bed.y+7,face:'R'}],up:()=>[{x:P.bed.x+13,y:P.bed.y+8,z:P.bed.y+7}],down:()=>[P.bedAt],floor:()=>P.bedAt,k:'sleep',doing:'在猫窝里睡觉',ai:{mood:'rest',w:1}});
 seatThing({id:'bigbox',n:'大纸箱',hit:[P.bigBox.x,P.bigBox.y,40,18],at:P.bigBoxAt,label:'挤进大纸箱',spots:[0,1,2].map(i=>({x:P.bigBox.x+9+i*11,y:P.bigBox.y+15,z:P.bigBox.y+10,face:i?'L':'R'})),
@@ -157,12 +158,12 @@ seatThing({id:'bigbox',n:'大纸箱',hit:[P.bigBox.x,P.bigBox.y,40,18],at:P.bigB
 const yan=()=>A.byName('砚砚');
 seatThing({id:'rack',n:'服务器机柜',hit:[P.rack.x,P.rack.y,30,64],at:P.rackFloor,label:'跳上机柜顶（暖和）',spots:[{...P.rackTop,face:'L'}],up:()=>[P.rackTop],down:()=>[P.rackFloor],floor:()=>P.rackFloor,
   ok2:()=>!(yan()&&yan().atHome),no2:()=>'那是砚砚的地盘',k:napK,doing:'在机柜顶上取暖',ai:{mood:'rest',w:.6}});
-seatThing({id:'fire',n:'壁炉',hit:[P.fire.x-3,P.fire.y,64,44],at:{x:541,y:326},near:[510,306,64,26],label:'在壁炉前趴一会儿',spots:P.fireSpots.map(s=>({...s,face:'R'})),k:()=>S.tod==='night'?'sleep':'lie',ex:'content',doing:'在壁炉前烤火',ai:{mood:'rest',w:2}});
+seatThing({id:'fire',n:'壁炉',hit:[P.fire.x-3,P.fire.y,64,44],at:{x:P.fire.x+29,y:P.fire.y+68},near:[P.fire.x-2,P.fire.y+48,64,26],label:'在壁炉前趴一会儿',spots:P.fireSpots.map(s=>({...s,face:'R'})),k:()=>S.tod==='night'?'sleep':'lie',ex:'content',doing:'在壁炉前烤火',ai:{mood:'rest',w:2}});
 // 阳光是地上的一块光斑：点不到（点地面永远是走路），走路经过也不算；站进最亮的那一块、停下来，才能按 E 趴下
 const sunny=()=>S.tod!=='night'&&S.weather==='sun';
-seatThing({id:'sunA',n:'橱窗下的阳光',at:P.sunA,near:[376,84,86,22],quiet:1,label:'晒太阳',hide:()=>!sunny(),spots:[-34,-17,0,17,34].map((d,i)=>({x:P.sunA.x+18+d,y:P.sunA.y+(i%2)*6,face:i%2?'L':'R'})),
+seatThing({id:'sunA',n:'橱窗下的阳光',at:P.sunA,near:[P.sunA.x-16,P.sunA.y-8,104,22],quiet:1,label:'晒太阳',hide:()=>!sunny(),spots:[-34,-17,0,17,34].map((d,i)=>({x:P.sunA.x+18+d,y:P.sunA.y+(i%2)*6,face:i%2?'L':'R'})),
   ok2:sunny,no2:()=>'现在没有太阳',k:'lie',ex:'content',doing:'在晒太阳',ai:{mood:'rest',w:c=>sunny()?2:0}});
-seatThing({id:'sunB',n:'客厅的阳光',at:P.sunB,near:[574,322,40,22],quiet:1,label:'晒太阳',hide:()=>!sunny(),spots:[[-10,0],[10,6],[-4,16]].map(([a,b],i)=>({x:P.sunB.x+a,y:P.sunB.y+b,face:i%2?'L':'R'})),
+seatThing({id:'sunB',n:'客厅的阳光',at:P.sunB,near:[P.sunB.x-22,P.sunB.y-8,44,24],quiet:1,label:'晒太阳',hide:()=>!sunny(),spots:[[-10,0],[10,6],[-4,16]].map(([a,b],i)=>({x:P.sunB.x+a,y:P.sunB.y+b,face:i%2?'L':'R'})),
   ok2:sunny,no2:()=>'现在没有太阳',k:'lie',ex:'content',doing:'在晒太阳',ai:{mood:'rest',w:c=>sunny()?1.5:0}});
 
 /* ================= 暖桌：钻进去只露尾巴 ================= */
@@ -182,7 +183,7 @@ T({id:'tunnel',n:'猫隧道',hit:[P.tunnel.x,P.tunnel.y,62,18],at:c=>c.x<P.tunne
 tick(()=>{const k=tun?Math.min(1,(now()-tun.t0)/1.6):0;S.tunnelBulge=tun?(tun.L?k:1-k):-1;if(tun&&tun.c.gone)tun=null});
 
 /* ================= 扫地机器人 ×2：上排一台、下排一台，猫可以跳上去兜风 ================= */
-const VACS=[{grid:'vacA',home:P.vacHomeA,room:[20,70,920,170]},{grid:'vacB',home:P.vacHomeB,room:[20,316,600,210]}].map(v=>({...v,x:v.home.x,y:v.home.y,dir:-1,mode:'dock',timer:rr(3,10),a:0,moving:0,charging:1,led:'#7ee08a',path:null,rider:null,pause:0}));
+const VACS=(M.vac||[]).map((v,i)=>({grid:'vac'+i,home:v.home,x:v.home.x,y:v.home.y,dir:-1,mode:'dock',timer:rr(3,10),a:0,moving:0,charging:1,led:'#7ee08a',path:null,rider:null,pause:0}));
 S.vacs=VACS;S.floorToys=[];
 function vacGo(V,mode){if(mode==='clean'){V.mode='clean';V.timer=rr(30,45);V.a=Math.PI/2+rr(-.6,.6);V.charging=0}else{V.mode='home';V.path=findPath(V.x,V.y,V.home.x,V.home.y,V.grid)||[{...V.home}]}}
 tick(dt=>VACS.forEach(V=>{V.moving=0;const fr=A.FREE[V.grid];
@@ -202,7 +203,7 @@ A.ride=(c,V,sec)=>run(c,[{chase:()=>({x:V.x+(c.x<V.x?-10:10),y:V.y+2}),near:13},
 function hopSteps(V){let p=null;for(const dx of [14,-14,0])for(const dy of [6,-6,10])if(!p&&free(V.x+dx,V.y+dy))p={x:V.x+dx,y:V.y+dy};return[{jump:p||randFree()},{fn:c=>{c.z=undefined}}]}
 function hopOff(c){const V=VACS.find(v=>v.rider===c);if(c.place){A.leavePlace(c);return}if(!V){c.riding=false;return}run(c,hopSteps(V))}
 
-/* ================= 厨房：喂食器 ×2、饮水机、零食机、小桌、猫草、鱼缸 ================= */
+/* ================= 吧台这头：喂食器 ×2、饮水机、猫草、鱼缸；楼梯间的零食机（咖啡桌、吧台在 world-cafe.js） ================= */
 S.feeds=P.feeds.map(()=>({level:3,drop:0,food:1,eater:null,next:rr(20,40)}));
 function dispense(i){const F=S.feeds[i];if(F.food)return;F.drop=1.3;F.level=F.level>1?F.level-1:3;after(1.3,()=>F.food=1)}
 tick(dt=>S.feeds.forEach((F,i)=>{F.drop=Math.max(0,F.drop-dt);if(!F.food&&(F.next-=dt)<=0){dispense(i);F.next=rr(25,40)}}));
@@ -228,38 +229,10 @@ tick(dt=>{S.plates=P.plates.map(p=>S.cats.some(c=>onPlate(c,p))?1:0);S.treat.lit
 function treatBit(x,y,ci){x=Math.round(x);y=Math.round(y);R(x-2,y-1,4,2,YARN[ci][0]);P1(x+2,y-2,YARN[ci][0]);P1(x+2,y+1,YARN[ci][0]);P1(x-1,y-1,YARN[ci][2])}
 function eatTreat(c,tr){tr.by=c;run(c,[{go:{x:tr.x-8,y:tr.y+1}},{fn:c=>{c.face='R'}},{k:'lie',dur:1.4,ex:'lookDown'},{fn:c=>{const i=S.treats.indexOf(tr);if(i>=0)S.treats.splice(i,1);S.hearts.push({x:Math.round(c.x),y:Math.round(c.y-14),t0:now()})}},{k:'happy',dur:.8,soft:1}]);
   c.onLeave=()=>{if(tr.by===c)tr.by=null}}
-A.floors.push(vis=>{S.treats.forEach(t=>{if(vis(t.x-3,t.y-3,6,6))treatBit(t.x,t.y,t.ci)});S.floorToys.forEach(o=>{if(vis(o.x-6,o.y-8,12,10))toy(o.kind,o.x,o.y,1)})});
+A.floors.push(vis=>{S.treats.forEach(t=>{if(vis(t.x-3,t.y-3,6,6))treatBit(t.x,t.y,t.ci)})});
 T({id:'treatBit',n:'零食',hidden:()=>!S.treats.some(t=>!t.by&&near(me,t,30)),near:()=>{const t=S.treats.find(t=>!t.by&&near(me,t,30));return t?[t.x-30,t.y-20,60,40]:null},hit:()=>null,
   label:'吃零食',go(c){const t=S.treats.find(t=>!t.by&&near(c,t,30));if(t)eatTreat(c,t)}});
 T({id:'treat',n:'零食机',hit:[P.treat.x,P.treat.y,36,56],at:{x:P.treat.x+18,y:P.treat.y+64},label:'看看零食机',go(){say('零食机前面有三块爪垫，三只猫同时踩住就会出零食。站上去以后可以按 T 喊人来帮忙')}});
-// 桌上的小东西：推下去；掉在地上的，谁都可以叼回桌上摆好（你也可以），下一只猫还能再推。放着不管，过一阵会有闲着的猫来收拾
-S.toys=[{kind:'pen',tx:P.table.x+10},{kind:'globe',tx:P.table.x+24},{kind:'mouse',tx:P.table.x+38},{kind:'cactus',tx:P.table.x+48}].map(o=>({...o,on:true}));
-const TOPZ=P.table.y+28.5,TOPY=P.table.y+5;
-const onFloor=kind=>S.floorToys.find(f=>f.kind===kind&&!f.by);
-function tidy(c,f){const o=S.toys.find(q=>q.kind===f.kind);f.by=c;
-  const drop=c=>{if(!c.toy)return;S.floorToys.push({kind:c.toy,x:c.x,y:c.y+2,t0:now()});c.toy=null};
-  run(c,[{go:{x:f.x-7,y:f.y+1}},{fn:c=>{c.face='R';c.onLeave=c=>{if(f.by===c)f.by=null;drop(c)}}},{k:'lie',dur:.5,ex:'lookDown'},
-    {fn:c=>{const i=S.floorToys.indexOf(f);if(i<0){c.q=[];return}S.floorToys.splice(i,1);c.toy=f.kind;c.doing='把'+TOY_NAMES[f.kind]+'叼回桌上';if(c.me)say(`叼起了${TOY_NAMES[f.kind]}`)}},
-    {go:{x:o.tx-6,y:P.table.y+36}},{jump:{x:o.tx-7,y:TOPY,z:TOPZ}},{fn:c=>{c.face='R'}},{k:'sit',dur:.4},
-    {fn:c=>{o.on=true;c.toy=null;c.doing=null;c.onLeave=null;S.puffs.push({x:o.tx,y:TOPY-4,t0:now()});if(atMe(o,200))sfx('clack');if(c.me)say(`把${TOY_NAMES[o.kind]}摆回了桌上。下一只猫还能再推一次`)}},
-    {k:'sit',dur:.7,ex:'content'},{jump:{x:o.tx-4,y:P.table.y+38}},{fn:c=>{c.z=undefined}}])}
-// 叼在嘴里的小东西
-A.drawers.push((L,vis)=>{for(const c of S.cats){if(!c.toy||c.hidden||c.gone||!vis(c.x-12,c.y-30,24,32))continue;L.push([(c.z??c.y)+.2,()=>{const w=c.k.startsWith('walk'),d=w?(c.k==='walkL'?-1:1):(c.face==='L'?-1:1);
-  toy(c.toy,Math.round(c.x)+d*(w?8:4),w?Math.round(c.y+(c.dy||0))-5:Math.round((c.top??c.y-20))+15,1)}])}});
-S.toys.forEach((o,k)=>{const f=()=>onFloor(o.kind);
-  T({id:'toyback'+k,n:'掉在地上的'+TOY_NAMES[o.kind],hidden:()=>!f(),hit:()=>{const q=f();return q?[q.x-7,q.y-7,14,10]:null},at:()=>{const q=f();return q?{x:q.x-7,y:q.y+1}:null},near:()=>{const q=f();return q?[q.x-22,q.y-14,40,26]:null},
-    label:'把'+TOY_NAMES[o.kind]+'叼回桌上',ok:c=>!c.hold&&!c.toy,no:c=>c.hold?'嘴里叼着东西呢':'一次只能叼一样',ai:{mood:'play',w:c=>{const q=f();return q&&now()-q.t0>8?(c.pal===6?4:2):0}},
-    go(c){const q=f();if(q)tidy(c,q)}})});
-// 放着不管 40 秒：附近闲着的猫过来收拾；再过一阵还没有猫，就有谁悄悄摆回去了
-tick(()=>{for(const f of S.floorToys){if(f.by)continue;const age=now()-f.t0;
-  if(age>40&&!f.asked){f.asked=1;const c=S.cats.filter(c=>!c.me&&!c.desk&&idle(c)&&!c.place&&!c.hidden&&!c.working&&!c.hold&&!c.toy&&c.z==null&&near(c,f,520)).sort((a,b)=>dist(a,f)-dist(b,f))[0];if(c){tidy(c,f);if(atMe(f,200))speak(c,'我来收拾',2)}}
-  if(age>90){const i=S.floorToys.indexOf(f);S.floorToys.splice(i,1);const o=S.toys.find(q=>q.kind===f.kind);o.on=true;S.puffs.push({x:o.tx,y:TOPY-4,t0:now()});if(atMe(P.table,160))say('不知道谁又把'+TOY_NAMES[o.kind]+'摆回了桌上');break}}});
-T({id:'table',n:'小桌子',hit:[P.table.x,P.table.y-8,P.table.w,36],at:{x:P.table.x+28,y:P.table.y+36},near:[P.table.x-6,P.table.y+26,P.table.w+12,22],label:'跳上桌子推东西',
-  ok:c=>!c.hold&&S.toys.some(o=>o.on)&&!S.cats.some(o=>o!==c&&o.onTable),no:c=>c.hold?'先把嘴里的东西放下':S.toys.some(o=>o.on)?'桌上已经有猫了':'桌上的东西都被推下去了。把地上的叼回去吧',ai:{mood:'play',w:1},
-  go(c){const o=rnd(S.toys.filter(o=>o.on)),floor={x:o.tx-6,y:P.table.y+36};
-    run(c,[{go:floor},{fn:c=>{c.onTable=true;c.onLeave=c=>{c.onTable=false}}},{jump:{x:o.tx-7,y:TOPY,z:TOPZ}},{fn:c=>{c.face='R'}},{k:'sit',dur:.8,ex:'smug'},{k:'maneki',dur:.7},
-      {fn:c=>{if(!o.on)return;o.on=false;const x1=o.tx+rr(8,18),y1=P.table.y+36+rr(0,8);S.flying.push({x0:o.tx,y0:TOPY,x1,y1,t0:now(),dur:.45,arc:8,draw:f=>toy(o.kind,Math.round(f.x),Math.round(f.y),1),done:()=>{S.floorToys.push({kind:o.kind,x:x1,y:y1,t0:now()});if(atMe(o,200))sfx('clack')}});
-        if(c.me)say(`啪嗒。${TOY_NAMES[o.kind]}掉下去了`)}},{k:'sit',dur:1,ex:'smug',soft:1},{jump:{x:o.tx-4,y:P.table.y+38}},{fn:unclaim}])}});
 T({id:'grass',n:'猫草',hit:[P.grass.x,P.grass.y,12,17],at:P.grassAt,label:'啃两口猫草',ok:c=>!c.hold&&!(S.grassChew>0),no:()=>'刚被啃过，等它长长',ai:{mood:'rest',w:.6},
   go(c){run(c,[{go:P.grassAt},{k:'lie',dur:2,ex:'lookDown',face:'R'},{fn:()=>{S.grassChew=25}},{k:'lick',dur:DUR.lick,soft:1}])}});
 T({id:'tank',n:'鱼缸',hit:[P.tank.x,P.tank.y,28,30],at:P.tankView,label:'看鱼',ok:c=>!c.hold,ai:{mood:'play',w:c=>c.pal===3?5:1},
@@ -267,18 +240,18 @@ T({id:'tank',n:'鱼缸',hit:[P.tank.x,P.tank.y,28,30],at:P.tankView,label:'看�
 
 /* ================= 工坊：踩键盘和 CI 灯、调试鸭、打印机和纸团 ================= */
 S.ci={state:'pass',p:0,glow:0,next:rr(40,80)};S.kbd=[null,null,null];
-T({id:'desk',n:'键盘',hit:[P.desk.x,P.mons[0].y,P.desk.w,52],at:c=>P.kbdFloor[Math.max(0,nearKbd(c))],near:[P.desk.x-2,94,P.desk.w-18,18],label:()=>S.ci.state==='fail'?'跳上桌踩键盘（CI 红了！）':'跳上桌踩键盘',
+T({id:'desk',n:'键盘',hit:[P.desk.x,P.mons[0].y,P.desk.w,52],at:c=>P.kbdFloor[Math.max(0,nearKbd(c))],near:[P.desk.x-2,P.desk.y+32,P.desk.w-18,18],label:()=>S.ci.state==='fail'?'跳上桌踩键盘（CI 红了！）':'跳上桌踩键盘',
   ok:c=>!c.hold&&nearKbd(c)>=0,no:c=>c.hold?'先把嘴里的东西放下':'三个键盘都有猫了',ai:{mood:'play',w:c=>S.ci.state==='fail'?6:1},
   go(c){let i=nearKbd(c);if(i<0)return;
     run(c,[{go:P.kbdFloor[i]},{fn:c=>{if(S.kbd[i]&&S.kbd[i]!==c&&!S.kbd[i].gone){i=nearKbd(c);if(i<0){c.q=[];emote(c,'q');return}}S.kbd[i]=c;c.doing='在踩键盘';c.onLeave=c=>{if(S.kbd[i]===c)S.kbd[i]=null;c.doing=null};
       const k=P.kbds[i];run(c,[...(dist(c,P.kbdFloor[i])>2?[{go:P.kbdFloor[i]}]:[]),{jump:{x:k.x+11,y:P.desk.y+10,z:P.desk.y+32.5}},{fn:c=>{c.face='R';if(c.me&&S.ci.state==='fail')say('CI 红了，使劲踩！');stay(c,{k:'knead',ex:'focus',dur:rr(6,12),leave:()=>[{jump:{...P.kbdFloor[i]}},{fn:c=>{c.z=undefined}}]})}}],true)}}])}});
 function nearKbd(c){let b=-1,bd=1e9;S.kbd.forEach((u,i)=>{if(u&&u!==c&&!u.gone)return;const d=Math.abs(P.kbdFloor[i].x-c.x);if(d<bd){bd=d;b=i}});return b}
 tick(dt=>{const ci=S.ci,n=S.kbd.filter(c=>c&&!c.gone).length;ci.glow=Math.max(0,ci.glow-dt);
-  if(ci.state==='pass'&&(ci.next-=dt)<=0){ci.state='fail';ci.p=0;news('CI 红了！（工坊）快去踩键盘');if(atMe(P.ci,260)){sfx('alarm');say('CI 红了！跳上桌踩键盘试试')}}
+  if(ci.state==='pass'&&(ci.next-=dt)<=0){ci.state='fail';ci.p=0;news('CI 红了！（二楼工坊）快去踩键盘');if(atMe(P.ci,260)){sfx('alarm');say('CI 红了！跳上桌踩键盘试试')}}
   else if(ci.state==='fail'){ci.p+=dt*n*.07;if(ci.p>=1){ci.state='run';ci.t=2.5}}
   else if(ci.state==='run'&&(ci.t-=dt)<=0){ci.state='pass';ci.glow=6;ci.next=rr(80,150);news('CI 绿了——虽然没人知道是怎么修好的');S.kbd.forEach(c=>{if(c&&!c.gone)emote(c,'heart',1.6)});if(S.kbd.includes(me))say('CI 绿了！虽然你只是在上面踩了踩')}});
 A.marks.push(()=>S.ci.state==='fail'?{x:P.ci.x+8,y:P.ci.y+6,col:'#e0533d'}:null);
-T({id:'duck',n:'小黄鸭',hit:[P.duck.x-2,P.duck.y-2,12,10],at:P.duckAt,near:[P.duckAt.x-14,86,30,24],label:c=>c.hold&&!c.hold.knit?'把便签上的问题讲给小黄鸭听':'和小黄鸭聊聊',ai:{mood:'play',w:.5},
+T({id:'duck',n:'小黄鸭',hit:[P.duck.x-2,P.duck.y-2,12,10],at:P.duckAt,near:[P.duckAt.x-14,P.duckAt.y-14,30,24],label:c=>c.hold&&!c.hold.knit?'把便签上的问题讲给小黄鸭听':'和小黄鸭聊聊',ai:{mood:'play',w:.5},
   go(c){run(c,[{go:P.duckAt},{fn:c=>{c.face='L'}},{k:'sit',dur:1.2,ex:'curious',fn:c=>emote(c,'q',1.2)},{k:'meow',dur:1.6},{fn:c=>{emote(c,'bang',1.4);speak(c,'想通了！',2);if(c.hold&&!c.hold.knit){c.hold.easy=true;if(c.me)say('小黄鸭调试法：讲一遍就想通了。这颗毛线球现在解起来会很快')}else if(c.me)say('小黄鸭一句话没说，但你好像想通了什么')}},{k:'happy',dur:1,soft:1}])}});
 // 打印机 → 纸团：走过去会踢到，按 E 扑一下踢得远；踢进废纸篓算进球
 S.papers=[];S.print=0;
@@ -301,17 +274,17 @@ T({id:'paper',n:'纸团',hidden:c=>!S.papers.some(p=>p.sink==null&&near(c,p,26))
 /* ================= 橱窗长廊：爪印墙、拍照角 ================= */
 S.paws=[];
 const pawCol=c=>PAL[c.pal].collar;
-T({id:'paw',n:'爪印墙',hit:[P.paw.x,P.paw.y,P.paw.w,P.paw.h],at:P.inkAt,near:[590,58,44,26],label:'按个爪印',ok:c=>!c.hold&&!(c.pawT>now()),no:c=>c.hold?'先把嘴里的东西放下':'墨还没干，一会儿再来',ai:{mood:'social',w:.8},
+T({id:'paw',n:'爪印墙',hit:[P.paw.x,P.paw.y,P.paw.w,P.paw.h],at:P.inkAt,near:[P.inkAt.x-22,P.inkAt.y-16,44,26],label:'按个爪印',ok:c=>!c.hold&&!(c.pawT>now()),no:c=>c.hold?'先把嘴里的东西放下':'墨还没干，一会儿再来',ai:{mood:'social',w:.8},
   go(c){const x=P.paw.x+rr(4,P.paw.w-4);run(c,[{go:P.inkAt},{k:'maneki',dur:.5,mirror:true},{jump:{x,y:P.sillY+2,z:P.sillY+2}},{k:'maneki',dur:.7,fn:c=>{
       if(S.paws.length<150)S.paws.push({x:Math.round(Math.max(1,Math.min(P.paw.w-6,x-P.paw.x+rr(-2,2)))),y:Math.round(rr(10,P.paw.h-6)),col:pawCol(c)});c.pawT=now()+60;if(c.me){sfx('stamp');say(`按了一个爪印。墙上已经有 ${S.paws.length} 个了`)}}},
     {jump:{x,y:P.hangY+4}},{k:'happy',dur:.6,soft:1}])}});
 // 拍照角：站到背景板前 → 有猫按快门 → 相机背面倒数 3、2、1 → 咔嚓，照片可以下载
 S.cam={count:0,flash:0};const STAGE=P.stage.map(()=>null);let camBusy=false;
 const stageFree=c=>STAGE.findIndex(u=>!u||u===c||u.gone);
-T({id:'stage',n:'背景板',hit:[P.backdrop.x,P.backdrop.y,P.backdrop.w,P.backdrop.h],at:{x:592,y:176},near:[556,160,72,24],label:'站到背景板前',ok:c=>stageFree(c)>=0,no:()=>'站满了',ai:{mood:'social',w:c=>camBusy?5:.8},
+T({id:'stage',n:'1024 舞台',hit:[P.backdrop.x,P.backdrop.y,P.backdrop.w,P.backdrop.h+48],at:{x:810,y:166},near:[766,148,88,30],label:'站上舞台',ok:c=>stageFree(c)>=0,no:()=>'站满了',ai:{mood:'social',w:c=>camBusy?5:.8},
   go(c){let i=stageFree(c);if(i<0)return;run(c,[{go:P.stage[i]},{fn:c=>{if(STAGE[i]&&STAGE[i]!==c&&!STAGE[i].gone){i=stageFree(c);if(i<0){c.q=[];emote(c,'q');return}}STAGE[i]=c;c.doing='等着拍照';c.onLeave=c=>{if(STAGE[i]===c)STAGE[i]=null;c.doing=null};
-    run(c,[...(dist(c,P.stage[i])>2?[{go:P.stage[i]}]:[]),{fn:c=>{c.face=i<2?'R':'L';stay(c,{k:'sit',ex:rnd(['happy','sparkle','wink','smug','content','love']),dur:rr(6,12)});if(c.me&&!camBusy)say('站好了。去相机后面按快门，或者等别的猫按')}}],true)}}])}});
-T({id:'camera',n:'相机',hit:[P.cam.x,P.cam.y-4,16,34],at:P.camAt,near:[574,222,40,24],label:()=>camBusy?'倒数中……':'按快门（倒数 3 秒）',ok:()=>!camBusy,no:()=>'正在倒数',ai:{mood:'social',w:c=>STAGE.filter(Boolean).length>=2&&!camBusy?3:.2},
+    run(c,[...(dist(c,P.stage[i])>2?[{go:P.stage[i]}]:[]),{fn:c=>{c.face=i<2?'R':'L';stay(c,{k:'sit',ex:rnd(['happy','sparkle','wink','smug','content','love']),dur:rr(6,12)});if(c.me&&!camBusy)say('站上舞台了。去台下的相机后面按快门，或者等别的猫按')}}],true)}}])}});
+T({id:'camera',n:'相机',hit:[P.cam.x,P.cam.y-4,16,34],at:P.camAt,near:[P.camAt.x-20,P.camAt.y-20,40,24],label:()=>camBusy?'倒数中……':'按快门（倒数 3 秒）',ok:()=>!camBusy,no:()=>'正在倒数',ai:{mood:'social',w:c=>STAGE.filter(Boolean).length>=2&&!camBusy?3:.2},
   go(c){run(c,[{go:P.camAt},{k:'maneki',dur:.6,soft:1,fn:()=>shoot(c)}])}});
 function shoot(by){if(camBusy)return;camBusy=true;S.cam.count=3;sfx('beep');
   S.cats.forEach(o=>{if(isBot(o)&&near(o,P.stage[2],170)&&!o.working&&!o.place&&Math.random()<.55&&stageFree(o)>=0)useThing(o,TID('stage'))});
@@ -322,23 +295,23 @@ function shoot(by){if(camBusy)return;camBusy=true;S.cam.count=3;sfx('beep');
 A.overs.push(vis=>{if(S.flash>0&&vis(P.shot.x,P.shot.y,P.shot.w,P.shot.h))alpha(Math.min(1,S.flash*4)*.8,()=>R(P.shot.x-10,P.shot.y-10,P.shot.w+20,P.shot.h+20,'#ffffff'))});
 
 /* ================= 大客厅：泡泡机、激光点、地板钢琴、猫薄荷 ================= */
-S.bubbles=[];S.bubbleOn=0;let nextBubbles=rr(40,70),bubbleT=0;
+S.bubbles=[];S.bubbleOn=0;let nextBubbles=rr(40,70),bubbleT=0;const LOUNGE=M.rooms.find(r=>r.id==='lounge').in;
 T({id:'bubbler',n:'泡泡机',hit:[P.bubbler.x,P.bubbler.y,18,14],at:{x:P.bubbler.x+9,y:P.bubbler.y+22},label:()=>S.bubbleOn>0?'泡泡机开着':'打开泡泡机',ok:()=>!(S.bubbleOn>0),no:()=>'已经开着了',ai:{mood:'play',w:.4},
   go(c){run(c,[{k:'maneki',dur:.6,soft:1,fn:()=>{S.bubbleOn=10;if(c.me)say('泡泡！扑上去戳破它')}}])}});
 tick(dt=>{if((nextBubbles-=dt)<=0){S.bubbleOn=10;nextBubbles=rr(60,110)}if(S.bubbleOn>0){S.bubbleOn-=dt;if((bubbleT-=dt)<=0){bubbleT=.28;S.bubbles.push({x:P.bubbler.x+11,y:P.bubbler.y+12,h:10,r:Math.round(rr(2,4.4)),vx:rr(-12,16),vy:rr(-4,14),vh:rr(4,9),t0:now(),life:rr(4,7)})}}
   for(let i=S.bubbles.length-1;i>=0;i--){const b=S.bubbles[i];if(b.pop!=null){b.pop+=dt;if(b.pop>.25)S.bubbles.splice(i,1);continue}b.x+=b.vx*dt+Math.sin(now()*2+i)*6*dt;b.y+=b.vy*dt;b.h=Math.min(48,b.h+b.vh*dt);
-    if(now()-b.t0>b.life||!inR(b.x,b.y,[330,300,300,236]))b.pop=0}});
+    if(now()-b.t0>b.life||!inR(b.x,b.y,LOUNGE))b.pop=0}});
 A.overs.push(vis=>S.bubbles.forEach(b=>{if(vis(b.x-6,b.y-b.h-6,12,12))bubble(Math.round(b.x),Math.round(b.y-b.h),b.r,b.pop??0)}));
 const reachBubble=c=>S.bubbles.filter(b=>b.pop==null&&b.h<30&&near(c,b,30)).sort((a,b)=>dist(a,c)-dist(b,c))[0];
 T({id:'pop',n:'泡泡',hidden:c=>!reachBubble(c),near:c=>{const b=reachBubble(c);return b?[b.x-30,b.y-22,60,44]:null},hit:()=>null,at:c=>c,label:'扑泡泡',ai:{mood:'play',w:c=>S.bubbles.length?(c.pal===5?5:2):0},
   go(c){const b=reachBubble(c)||S.bubbles.find(b=>b.pop==null);if(!b)return;faceTo(c,b);run(c,[...(near(c,b,30)?[]:[{chase:()=>b,near:14}]),{jump:()=>land(b.x,b.y),h:14,dur:.34},
     {fn:c=>{if(b.pop==null&&near(c,b,14)&&b.h<34){b.pop=0;if(c.me||atMe(b,120))sfx('pop');c.pops=(c.pops||0)+1;if(c.me)say(`啵！扑破了 ${c.pops} 个泡泡`)}else if(c.me)say('差一点')}},{k:'sit',dur:.3,soft:1}])}});
 // 激光点：书架顶上的逗猫器，隔一阵自己开 15 秒，也可以去按
-S.laser={on:0,x:480,y:420,tx:480,ty:420,pause:0};let nextLaser=rr(70,120);
-T({id:'laser',n:'激光逗猫器',hit:[P.laser.x,P.laser.y,12,8],at:P.laserAt,near:[P.laserAt.x-16,306,34,24],label:()=>S.laser.on>0?'激光点在地上跑':'打开激光逗猫器',ok:()=>!(S.laser.on>0),no:()=>'已经开着了，快去追',ai:{mood:'play',w:.3},
+S.laser={on:0,x:P.laserAt.x,y:P.laserAt.y,tx:P.laserAt.x,ty:P.laserAt.y,pause:0};let nextLaser=rr(70,120);
+T({id:'laser',n:'激光逗猫器',hit:[P.laser.x,P.laser.y,12,8],at:P.laserAt,near:[P.laserAt.x-16,P.laserAt.y-12,34,24],label:()=>S.laser.on>0?'激光点在地上跑':'打开激光逗猫器',ok:()=>!(S.laser.on>0),no:()=>'已经开着了，快去追',ai:{mood:'play',w:.3},
   go(c){run(c,[{k:'maneki',dur:.6,soft:1,fn:()=>{startLaser();if(c.me)say('红点！追上去扑')}}])}});
-function startLaser(){const L=S.laser;L.on=15;L.x=P.laser.x+6;L.y=318;newLaserTarget();news('激光点出现在大客厅')}
-function newLaserTarget(){const L=S.laser,p=randFree([336,310,290,200]);L.tx=p.x;L.ty=p.y;L.pause=Math.random()<.3?rr(.3,1.2):0}
+function startLaser(){const L=S.laser;L.on=15;L.x=P.laser.x+6;L.y=P.laserAt.y;newLaserTarget();news('激光点出现在二楼大客厅')}
+function newLaserTarget(){const L=S.laser,p=randFree(LOUNGE);L.tx=p.x;L.ty=p.y;L.pause=Math.random()<.3?rr(.3,1.2):0}
 tick(dt=>{const L=S.laser;if((nextLaser-=dt)<=0){startLaser();nextLaser=rr(90,160)}if(!(L.on>0))return;L.on-=dt;if(L.pause>0){L.pause-=dt;return}
   const dx=L.tx-L.x,dy=L.ty-L.y,d=Math.hypot(dx,dy),st=Math.min(d,130*dt);if(d>.5){L.x+=dx/d*st;L.y+=dy/d*st}else newLaserTarget();
   for(const c of S.cats)if(c.z==null&&!c.hidden&&Math.hypot(c.x-L.x,c.y-L.y)<5&&c.k==='leap')newLaserTarget()});
@@ -357,13 +330,13 @@ T({id:'piano',n:'地板钢琴',hit:[P.piano.x,P.piano.y,98,24],at:{x:P.piano.x-4
 T({id:'catnip',n:'猫薄荷鱼',hit:[P.catnip.x-2,P.catnip.y-2,15,9],at:P.sniff,label:'闻闻猫薄荷',ok:c=>!c.hold,ai:{mood:'play',w:c=>c.pal===4?2:.5},
   go(c){run(c,[{go:P.sniff},{fn:c=>{c.face='L'}},{k:'sit',dur:1.2,ex:'curious',soft:1,fn:()=>{S.catnipUsed=4}},{k:'sit',dur:1.6,ex:'dizzy',soft:1},{k:'lie',dur:2.4,ex:'love',soft:1},{k:'sit',dur:.8,ex:'content',soft:1}])}});
 
-/* ================= 前厅的小东西：猫抓柱、盆栽 ================= */
+/* ================= 门厅的小东西：猫抓柱、盆栽 ================= */
 T({id:'post',n:'猫抓柱',hit:[P.post.x,P.post.y,16,42],at:P.postAt,label:'磨磨爪子',ok:c=>!c.hold,ai:{mood:'play',w:.8},
   go(c){run(c,[{go:P.postAt},{fn:c=>{c.face='R';S.scratch=3.4;if(c.me)sfx('scratch')}},{k:'stretch',dur:DUR.stretch},{k:'stretch',dur:DUR.stretch},{k:'sit',dur:.5,ex:'content',soft:1}])}});
-T({id:'plant',n:'盆栽',hit:[96,32,18,24],at:{x:106,y:64},near:[94,58,24,16],label:'蹭蹭盆栽',go(c){S.plantShake=1;run(c,[{k:'lick',dur:1,soft:1}])}});
-T({id:'coffee',n:'咖啡机',hit:[10,40,22,26],at:{x:40,y:92},label:'看看咖啡机',go(){S.brew=2.5;say('咖啡机自己咕嘟了一下。店里没有人喝，它只是想暖暖手')}});
+T({id:'plant',n:'盆栽',hit:[P.plantA.x,P.plantA.y,16,26],at:{x:P.plantA.x+8,y:P.plantA.y+32},near:[P.plantA.x-4,P.plantA.y+22,26,18],label:'蹭蹭盆栽',go(c){S.plantShake=1;run(c,[{k:'lick',dur:1,soft:1}])}});
+// 咖啡机在吧台上，做拉花：world-cafe.js
 
-/* ================= 后院：落叶堆、蝴蝶、鸟浴盆、跑轮和串灯 ================= */
+/* ================= 后院：落叶堆、蝴蝶、鸟浴盆；屋顶：跑轮和串灯 ================= */
 S.pile=1;let leafT=0;
 tick(dt=>{if((leafT-=dt)<=0){leafT=rr(.5,1.3);const x=P.maple.x+rr(-30,30),gy=P.maple.y+rr(-6,40);fx.push({kind:'leaf',x,y:gy,h:rr(40,70),fall:rr(10,16),ci:Math.floor(Math.random()*4),t0:now(),life:18});
   if(Math.hypot(x-P.pile.x,gy-P.pile.y)<24)S.pile=Math.min(1,S.pile+.02)}S.pile=Math.min(1,S.pile+dt*.004)});
@@ -372,7 +345,7 @@ T({id:'pile',n:'落叶堆',hit:[P.pile.x-20,P.pile.y-12,40,14],at:{x:P.pile.x-30
   go(c){run(c,[{go:{x:P.pile.x-30,y:P.pile.y+2}},{fn:c=>{c.face='R'}},{k:'pounce',dur:1.1},{jump:{x:P.pile.x,y:P.pile.y},h:14,dur:.45},{fn:c=>{c.hidden=true;S.pile=.15;sfx('rustle');
       for(let i=0;i<36;i++){const a=rr(0,Math.PI*2),s=rr(20,60);fx.push({kind:'leaf',x:P.pile.x+rr(-8,8),y:P.pile.y+rr(-3,3),h:rr(2,8),vx:Math.cos(a)*s,vy:Math.sin(a)*s*.3,vh:rr(40,90),ci:i%4,t0:now(),life:rr(6,12)})}
       c.onLeave=c=>{c.hidden=false};if(c.me)say('哗啦——')}},{k:'sit',dur:.9},{fn:unclaim},{k:'happy',dur:1,soft:1}])}});
-const FLY=P.flyArea;   // 蝴蝶飞的范围：后院和巨树中庭连成一片
+const FLY=P.flyArea;   // 蝴蝶飞的范围：后院的草地
 S.flies=[0,1,2].map(i=>({x:rr(FLY[0]+20,FLY[0]+FLY[2]-40),y:rr(FLY[1]+10,FLY[1]+FLY[3]-30),h:rr(12,26),tx:0,ty:0,col:['#ffd84a','#f4a6b8','#fff4dc'][i],spook:0}));
 tick(dt=>S.flies.forEach(f=>{if(f.spook>0)f.spook-=dt;if(Math.hypot(f.tx-f.x,f.ty-f.y)<3||!f.tx){const p=Math.random()<.4?{x:P.flowers.x+rr(6,P.flowers.w-6),y:P.flowers.y+14}:randFree(FLY);f.tx=p.x;f.ty=p.y}
   const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy),sp=f.spook>0?60:18;f.x+=dx/d*Math.min(d,sp*dt)+Math.sin(now()*7+f.col.length)*8*dt;f.y+=dy/d*Math.min(d,sp*dt);f.h=Math.max(6,Math.min(40,(f.spook>0?f.h+30*dt:f.h+Math.sin(now()*3+f.x)*10*dt)))}));
@@ -396,21 +369,21 @@ T({id:'wheel',n:'猫跑轮',hit:[P.wheel.x,P.wheel.y,48,50],at:{x:WHEEL.x,y:P.wh
   ai:{mood:'play',w:c=>c.pal===5?3:1},go(c){run(c,[{go:{x:WHEEL.x,y:P.wheel.y+58}},{fn:c=>{if(wheelBy){c.q=[];return}wheelBy=c;c.doing='在跑轮里跑';c.onLeave=c=>{if(wheelBy===c)wheelBy=null;c.doing=null}}},{jump:WHEEL},
     {fn:c=>{c.face='R';stay(c,{k:'walkR',dur:rr(8,14),leave:()=>[{jump:{x:WHEEL.x,y:P.wheel.y+60}},{fn:c=>{c.z=undefined}}]});if(c.me)say('跑起来！旁边的串灯会一颗颗亮起来')}}])}});
 tick(dt=>{if(wheelBy&&wheelBy.gone)wheelBy=null;const run2=wheelBy&&wheelBy.k==='walkR';S.wheelA+=dt*(run2?5:0);S.power=Math.max(0,Math.min(1,S.power+(run2?.06:-.004)*dt));
-  const n=Math.floor(S.power*30);if(n>lit&&n===30)news('后院的串灯全亮了');lit=n;
-  A.lights.length=0;if(S.tod!=='day'){const {x0,x1}=P.yardLights,m=Math.floor((x1-x0)/10);for(let i=0;i<=m;i+=3)if(i/m<S.power)A.lights.push({x:x0+i*10,y:294+Math.round(Math.sin(i/m*Math.PI)*12),r:16,col:YARN[i%5][2],a:.8})}});
+  const n=Math.floor(S.power*30);if(n>lit&&n===30)news('屋顶的串灯全亮了');lit=n;
+  A.lights.length=0});
 tick(dt=>{S.hamSw=Math.sin(now()*1.2)*(S.hamBy?1:.4);if(S.hamBy&&!S.hamBy.gone&&S.hamBy.k!=='leap')S.hamBy.dy=Math.round(Math.sin(now()*1.2))});
 
 /* ================= 大毛线团：疑难委托，三只猫一起扒拉才解得开 ================= */
 const GIANT_PATH=[P.xlOut,...P.giantPath,{x:P.giant.x,y:P.giant.y}];
 let nextGiant=rr(90,150);S.giant=null;const GSPOTS=[[-20,2,'R'],[20,2,'L'],[-12,12,'R'],[12,12,'L']];
 function giantArrive(){if(S.giant)return;S.xl=2.5;S.door.ring=1.2;sfx('bell');S.giant={x:P.xlOut.x,y:P.xlOut.y,seg:0,p:0,cols:[rnd([0,2,4]),1,3],state:'roll',help:GSPOTS.map(()=>null)};
-  news('门外塞进来一颗大毛线团！要三只猫一起解（工坊）');if(A.play)say('大毛线团来了！它会滚到工坊，要三只猫一起扒拉')}
+  news('门外塞进来一颗大毛线团！要三只猫一起解（橱窗长廊）');if(A.play)say('大毛线团来了！它会滚进橱窗长廊，要三只猫一起扒拉')}
 tick(dt=>{if(!S.giant&&(nextGiant-=dt)<=0){giantArrive();nextGiant=rr(160,240)}const g=S.giant;if(!g)return;
   if(g.state==='roll'){const p=GIANT_PATH[g.seg+1];if(!p){g.state='wait';return}const dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy),st=Math.min(d,38*dt);g.x+=dx/d*st;g.y+=dy/d*st;g.spin=(g.spin||0)+st;if(d-st<.5)g.seg++}
   else if(g.state==='wait'){const n=g.help.filter(c=>c&&!c.gone&&!c.k.startsWith('walk')&&near(c,g,26)).length;g.n=n;if(n>=3){g.p+=dt*.035*n;if(g.p>=1)giantDone()}}});
 function giantDone(){const g=S.giant,helpers=g.help.filter(Boolean);S.giant=null;for(let i=0;i<5;i++)S.puffs.push({x:g.x+rr(-10,10),y:g.y-12+rr(-6,6),t0:now()+i*.08});
   S.banner=60;if(!A.shared)S.count++;news(`大毛线团解开了！${helpers.length} 只猫一起织成一条横幅，挂在橱窗上`);sfx('fanfare');
-  helpers.forEach(c=>{c.helpGiant=null;S.hearts.push({x:Math.round(c.x),y:Math.round(c.y-18),t0:now()});run(c,[{k:'happy',dur:1.4}]);if(c.me)say('解开了！去橱窗长廊看看那条横幅')})}
+  helpers.forEach(c=>{c.helpGiant=null;S.hearts.push({x:Math.round(c.x),y:Math.round(c.y-18),t0:now()});run(c,[{k:'happy',dur:1.4}]);if(c.me)say('解开了！抬头看橱窗上那条横幅')})}
 A.drawers.push((L,vis)=>{const g=S.giant;if(g&&vis(g.x-40,g.y-40,80,50))L.push([g.y,()=>{giantYarn(Math.round(g.x),Math.round(g.y),A.t,g.p,g.cols);if(g.state==='wait'){pbar(Math.round(g.x)-12,Math.round(g.y)-34,24,g.p,g.n>=3?'#7ee08a':'#ffd84a');if(g.n<3)txt(g.n+'/3',Math.round(g.x)-5,Math.round(g.y)-42,'#fff4dc')}}])});
 A.marks.push(()=>S.giant?{x:S.giant.x,y:S.giant.y,col:'#ffd84a'}:null);
 const gFree=c=>S.giant?S.giant.help.findIndex(u=>!u||u===c||u.gone):-1;
@@ -423,12 +396,12 @@ T({id:'giant',n:'大毛线团',hidden:()=>!S.giant||S.giant.state!=='wait',hit:(
       run(c,[...(dist(c,at(i))>2?[{go:at(i)}]:[]),{fn:c=>{c.face=GSPOTS[i][2];c.yarn=g.cols[0];stay(c,{k:rnd(['bat','swing','kick']),dur:60});if(c.me&&(g.n||0)<2)say('再来两只猫就能解了。按 T 喊一声「来帮忙！」')}}],true)}}])}});
 
 /* ================= 店猫（NPC）：三只守着自己的地盘，三只到处逛 ================= */
-const HOMES={1:{spot:{x:P.sofaSeats[0].x,y:P.sofaSeats[0].y,z:508.5,face:'R'},floor:{x:P.sofaSeats[0].x,y:520},pool:['sleep','knead','lie','belly']},
+const HOMES={1:{spot:{x:P.sofaSeats[0].x,y:P.sofaSeats[0].y,z:SZ,face:'R'},floor:{x:P.sofaSeats[0].x,y:SF},pool:['sleep','knead','lie','belly']},
   2:{spot:{...P.rackTop,face:'L'},floor:P.rackFloor,pool:['lie','sleep','lick','sit']},6:{spot:{...P.counterTop,face:'R'},floor:P.counterFloor,pool:['sleep','lie','lick','sit']}};
 function goHome(c){const h=HOMES[c.pal];return[{go:h.floor},{jump:h.spot},{fn:c=>{c.atHome=true;c.face=h.spot.face;setK(c,h.pool[0])}}]}
-const LIKES={3:{tank:4,win0:2,win1:2,piano:3,bath:3,fly:3,walk:3},4:{vac:4,bigbox:3,table:4,tunnel:3,catnip:2,walk:3},5:{work:5,dot:4,pop:4,paper:3,wheel:3,giant:6,walk:3}};
+const LIKES={3:{tank:4,win0:2,win1:2,piano:3,bath:3,fly:3,walk:3},4:{vac:4,bigbox:3,tunnel:3,catnip:2,walk:3},5:{work:5,dot:4,pop:4,paper:3,wheel:3,giant:6,walk:3}};
 [[1,'宪宪'],[2,'砚砚'],[6,'金哥'],[3,'烁烁'],[4,'小狸花'],[5,'斑斑']].forEach(([b,name])=>{const c=A.mkCat(b,name,{kind:'npc',def:PERSONA[b].face,sp:26});const h=HOMES[b];
-  if(h)Object.assign(c,{x:h.spot.x,y:h.spot.y,z:h.spot.z,face:h.spot.face,atHome:true,k:h.pool[0]});else Object.assign(c,randIn(['kitchen','lounge','gallery'][b-3]));S.cats.push(c)});
+  if(h)Object.assign(c,{x:h.spot.x,y:h.spot.y,z:h.spot.z,face:h.spot.face,atHome:true,k:h.pool[0]});else Object.assign(c,randIn(['cafe','library','gallery'][b-3]));S.cats.push(c)});
 function npcThink(c){const h=HOMES[c.pal];
   if(h){if(!c.atHome){run(c,goHome(c));return}c.wait=rr(7,13);setK(c,pickW(Object.fromEntries(h.pool.map(k=>[k,(PERSONA[c.pal].idle[k]??1)*(k==='sleep'&&S.tod==='night'?4:1)]))));return}
   c.wait=rr(1,3);const L=LIKES[c.pal],w={walk:L.walk,idle:3};
@@ -439,7 +412,7 @@ function npcThink(c){const h=HOMES[c.pal];
   if(k==='idle'){const al=Object.keys(PERSONA[c.pal].idle).filter(x=>x!=='walk'&&x!=='sleep'),pk=al.length?pickW(Object.fromEntries(al.map(x=>[x,PERSONA[c.pal].idle[x]]))):'lick';run(c,[{k:pk,dur:pk==='pounce'?DUR.pounce:pk==='lick'?DUR.lick:rr(3,5)},{k:'sit',dur:.1}]);return}
   if(k==='work'){doWork(c);return}if(k==='vac'){const V=VACS.find(V=>V.mode==='clean'&&!V.rider);if(V)A.ride(c,V);return}
   const th=TID(k);if(th)(th.id==='dot'||th.id==='pop'||th.id==='fly'||th.id==='paper')?th.go(c):useThing(c,th)}
-const roomRect=c=>{const r=roomAt(c.x,c.y);return[r.x+8,r.y+(r.y?56:60),r.w-16,r.h-(r.y?60:66)]};
+const roomRect=c=>roomAt(c.x,c.y).in;
 function doWork(c){const opts=S.baskets.map((b,i)=>[i,b.length]).filter(([,n])=>n>0);if(!opts.length||c.hold)return false;
   const i=opts.map(([i])=>i).sort((a,b)=>dist(c,P.baskets[a])-dist(c,P.baskets[b]))[Math.random()<.7?0:Math.floor(Math.random()*opts.length)],th=TID('basket'+i);
   c.working=true;c.doing='在做委托';const rug=rnd(P.rugs);
@@ -450,8 +423,12 @@ function doWork(c){const opts=S.baskets.map((b,i)=>[i,b.length]).filter(([,n])=>
 const usedNames=A.usedNames=new Set();let botTarget=0,botT=0,visitT=rr(12,25);   // A.usedNames：成品里把玩家的名字也放进去，机器人就不会重名
 function botName(){const f=BOT_NAMES.filter(n=>!usedNames.has(n));const n=f.length?rnd(f):rnd(BOT_NAMES)+(2+Math.floor(Math.random()*8));usedNames.add(n);return n}
 const MOODW=()=>({work:rr(1,4),play:rr(1.5,4),rest:rr(1,3),social:rr(1,3),afk:rr(.3,1.5),explore:rr(.5,2)});
-function addBot(instant){const c=A.mkCat(7+Math.floor(Math.random()*COATS.length*COLLARS.length),botName(),{kind:'bot',def:rnd(BOT_FACES),sp:rr(26,36),moods:MOODW(),mood:null,moodUntil:0});
-  if(instant){Object.assign(c,randIn(rnd(M.rooms).id));c.wait=rr(0,4)}
+// 每只补位的猫有一层最喜欢的楼（一楼 45%、二楼 30%、屋顶 25%）：逛的时候多半在那一层，做事也更爱挑那一层的东西。屋顶是看星星的地方，要有猫
+const FAVW={f1:45,f2:30,roof:25},roomsOf=f=>M.rooms.filter(r=>r.f===f);
+const pickRoom=f=>{const L=f?roomsOf(f):M.rooms;return pickW(Object.fromEntries(L.map(r=>[r.id,r.in[2]*r.in[3]])))};
+function addBot(instant){const fav=pickW(FAVW),mw=MOODW();if(fav==='roof'){mw.work*=.35;mw.rest*=1.6}
+  const c=A.mkCat(7+Math.floor(Math.random()*COATS.length*COLLARS.length),botName(),{kind:'bot',def:rnd(BOT_FACES),sp:rr(26,36),moods:mw,mood:null,moodUntil:0,fav});
+  if(instant){Object.assign(c,randIn(pickRoom(fav)));c.wait=rr(0,4)}
   else{Object.assign(c,{x:P.spawnIn.x,y:P.spawnIn.y,hidden:true});S.spawnPop=.6;run(c,[{fn:c=>{c.hidden=false;c.z=P.spawn.y+19.5}},{jump:{...P.spawnOut},h:14},{k:'happy',dur:.8}]);if(Math.random()<.35||A.online<20)news(`${c.name} 上线了`)}
   S.cats.push(c);return c}
 function dropBot(c){c.leaving=true;usedNames.delete(c.name);run(c,[{go:P.spawnOut},{jump:{x:P.spawnIn.x,y:P.spawnIn.y,z:P.spawn.y+19.5},h:14},{fn:c=>{c.gone=true;S.spawnPop=.6;if(c.hold)S.baskets[0].push(c.hold)}}])}
@@ -479,19 +456,21 @@ function socialAct(c){const r=Math.random(),others=S.cats.filter(o=>o!==c&&!o.hi
 A.events={arrive:()=>{for(let i=0;i<3;i++)after(i*.5,arrive)},giant:()=>{if(S.giant)return'大毛线团已经在店里了';giantArrive()},ci:()=>{if(S.ci.state==='pass'){S.ci.next=0;return}return'CI 已经是红的了'},
   laser:()=>startLaser(),bubbles:()=>{S.bubbleOn=10},bird:()=>{nextBath=0;S.birds.forEach((b,w)=>{if(!b)nextWinBird[w]=0})},vac:()=>VACS.forEach(V=>vacGo(V,V.mode==='dock'?'clean':'home'))};
 // 别的模块要用到的几样
-Object.assign(A,{HOMES,LIKES,goHome,solveSteps,deliverSteps,throwTo,giveBack,land,useThing,TID,fx,nearest,seatThing,faceTo,pickBy,chaseDot,eatTreat,VACS,kindOne});
+Object.assign(A,{HOMES,LIKES,goHome,solveSteps,deliverSteps,throwTo,giveBack,land,useThing,TID,fx,nearest,seatThing,faceTo,pickBy,chaseDot,eatTreat,VACS,kindOne,SZ,SF});
 A.think=c=>{if(c.leaving)return;if(c.kind==='npc')return npcThink(c);
   c.wait=rr(.6,2.4);if(c.hold){c.working=true;c.doing='在做委托';run(c,[...(c.hold.knit?[]:solveSteps(c)),...deliverSteps(c),{fn:c=>{c.working=false;c.doing=null}}]);return}
   if(c.followT){const o=c.followT;if(o.gone||o.hidden||now()>c.followUntil)c.followT=null;else{if(dist(o,c)>26)run(c,[{chase:()=>({x:o.x+(c.x<o.x?-13:13),y:o.z!=null?o.z+6:o.y+1}),near:16}]);c.wait=.3;return}}
   if(now()>c.moodUntil){c.mood=pickW(c.moods);c.moodUntil=now()+rr(25,90)}
   const ev=urgent(c);if(ev)return ev();
+  // 爱待在屋顶的猫：在屋顶上一半的时候就找个地方坐着、趴着看天，不急着下楼
+  if(c.fav==='roof'&&A.floorOf(c.y).id==='roof'&&c.mood!=='work'&&Math.random()<.55){run(c,[{go:randIn('roof')},{k:rnd(['sit','lie','sleep','sit','lick']),dur:rr(8,22),ex:'lookUp'}]);return}
   const m=c.mood;
   if(m==='work'){if(!doWork(c))c.mood='play';return}
   if(m==='afk'){run(c,[{k:rnd(['sleep','sleep','lie','sit','knead']),dur:rr(15,45)}]);return}
-  if(m==='explore'){const r=rnd(M.rooms);run(c,[{go:randIn(r.id)},{k:rnd(['sit','lick','lie','meow']),dur:rr(2,6)}]);return}
+  if(m==='explore'){run(c,[{go:randIn(pickRoom(Math.random()<.7?c.fav:null))},{k:rnd(['sit','lick','lie','meow']),dur:rr(2,6)}]);return}
   if(m==='social'&&Math.random()<.55)return socialAct(c);
   const cands=TH.filter(th=>th.ai&&th.ai.mood===m&&!(th.hidden&&th.hidden(c))&&(!th.ok||th.ok(c)));
   if(!cands.length||Math.random()<.25){run(c,[{go:randFree(roomRect(c))},{k:rnd(['sit','lick','lie','sit']),dur:rr(2,6)}]);return}
-  const th=pickBy(cands,th=>(val(th.ai.w,c)||0)/(1+dist(c,val(th.at,c)||c)/260));if(!th)return;
+  const th=pickBy(cands,th=>{const at=val(th.at,c)||c;return(val(th.ai.w,c)||0)/(1+dist(c,at)/260)*(c.fav&&A.floorOf(at.y).id===c.fav?3:1)});if(!th)return;
   if(['dot','pop','fly','paper'].includes(th.id))th.go(c);else useThing(c,th)};
 });
