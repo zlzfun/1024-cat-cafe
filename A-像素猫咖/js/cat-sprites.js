@@ -132,7 +132,7 @@ const TAIL_Q=[{1:"1:oo",2:"0:otto",3:"0:oto",4:"0:oto",5:"0:oto",6:"0:oto",7:"1:
 const SIDE={w:24,h:19,hx:5,cx:14,top:15,bottom:18,
   body:{8:"3:oooo",9:"2:obbbbooo",10:"1:obbgbbgbbo",11:"0:obbbbgbbgbbb",12:"0:obbbbbbbbbbb|19:o",13:"0:obbbbbbbbbbbbbbbbbllo",14:"1:obbbbbbbbbbbbbbbblo",15:"2:ooooooooooooooooo"},
   shade:{12:"5:d",13:"6:d",14:"6:d"},tail:TAIL_Q,legs:STEP4(2,14)};
-function sideWalk(step,tf,{expr=null,bob=0}={}){const v=SIDE,G=blank(v.w,v.h),L=v.legs[step%4],b=bob&&step%2?1:0;
+function sideWalk(step,tf,{expr=null,bob=0}={}){step=((step%4)+4)%4;const v=SIDE,G=blank(v.w,v.h),L=v.legs[step],b=bob&&step%2?1:0;   // 帧号对负数取正（时间早于起点时 floor 出负数）
   [1,2].forEach(i=>legP(G,L[i][0],v.top,v.bottom,'d',L[i][2],L[i][1]));
   sp(G,v.tail[tf],0,b);sp(G,v.body,0,b);sp(G,v.shade,0,b);
   [0,3].forEach(i=>legP(G,L[i][0],v.top+1,v.bottom,'b',L[i][2],L[i][1]));

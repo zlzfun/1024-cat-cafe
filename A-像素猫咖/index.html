@@ -406,11 +406,11 @@ function fail(f){failed=true;msg.innerHTML=`有一样东西没加载出来（${f
 // 题库（quest-bank.js 的 TIPS）一到，进度条下面出一条小贴士：随机一条猫猫咖啡馆的 Tips
 function tip(){if(typeof TIPS==='undefined')return;const L=Object.values(TIPS),t=L[Math.floor(Math.random()*L.length)],e=document.getElementById('boottip');if(!t||!e)return;
   e.innerHTML='<i class="tb"><i></i>TIPS</i><p></p>';e.lastChild.textContent=t.t;e.hidden=false}
-// 小猫追着线球跑：线就是进度条
-function draw(ms){const t=(ms-t0)/1000;shown=Math.min(real,shown+(1/55));x.clearRect(0,0,160,34);const bx=10+Math.round(shown*136);
+// 小猫追着线球跑：线就是进度条。浏览器给第一帧的时间戳可能比 t0 还早一点：t 不小于 0；画的时候出了错也接着往下走（不然进度停住、进店的按钮出不来）
+function draw(ms){const t=Math.max(0,(ms-t0)/1000);shown=Math.min(real,shown+(1/55));try{x.clearRect(0,0,160,34);const bx=10+Math.round(shown*136);
   x.fillStyle='#4a3a5c';x.fillRect(10,30,136,1);x.fillStyle='#e0533d';x.fillRect(10,30,bx-10,1);for(let i=12;i<bx-4;i+=6){x.fillStyle='#f7a58c';x.fillRect(i,30,2,1)}
   if(typeof yarnBall==='function'&&typeof drawCat==='function'){const o=typeof C!=='undefined'?C:null;use(x);yarnBall(bx,26,3,0,Math.floor(shown*40));
-    const done=shown>=1,k=done?(ready?'pounce':'sit'):'walkR';drawCat(x,k,0,Math.max(12,bx-22),31,done?t%2:t,{});if(o)use(o)}
+    const done=shown>=1,k=done?(ready?'pounce':'sit'):'walkR';drawCat(x,k,0,Math.max(12,bx-22),31,done?t%2:t,{});if(o)use(o)}}catch(e){}
   if(shown>=1&&ready&&doneCb){const f=doneCb;doneCb=null;setTimeout(f,280)}if(!failed)requestAnimationFrame(draw)}
 requestAnimationFrame(draw);
 let n=0;const total=FILES.length;
