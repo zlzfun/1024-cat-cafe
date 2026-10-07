@@ -13,7 +13,7 @@ addP({ridge:[30,62,94,168,198,226].map((x,i)=>({x,y:Y+247,z:Y+251.5,face:i<3?'L'
   tankTop:[{x:892,y:Y+331,z:Y+388.6,face:'L'},{x:910,y:Y+331,z:Y+388.6,face:'R'}],tankAt:{x:900,y:Y+398},chimSeat:[{x:110,y:Y+249,z:Y+251.6,face:'R'},{x:154,y:Y+249,z:Y+251.6,face:'L'}]});
 M.WALK.push([250,Y+322,702,212],[8,Y+418,250,116],[814,Y+430,22,24]);
 M.BLOCK.push([792,Y+400,22,54],[836,Y+400,22,54],[814,Y+400,22,30],[884,Y+380,32,8],[450,Y+402,60,22],[602,Y+452,20,6],[676,Y+482,4,8],[736,Y+482,4,8],[772,Y+484,40,6],[820,Y+484,10,6],[836,Y+482,7,6],
-  [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[688,Y+488,40,10],[372,Y+468,16,6]);
+  [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[630,Y+488,40,10],[372,Y+468,16,6]);
 M.portals.push({id:'s32',from:'roof',to:'f2',n:'楼梯（下二楼）',k:'walk',auto:1,walk:1,zone:[814,Y+434,22,12],at:{x:825,y:Y+442},dir:{x:0,y:-1},out:{x:784,y:Y2+412,face:'R'},outDir:{x:0,y:1}});
 M.lights.push({x:836,y:Y+64,r:90,col:'#c8d0ff',a:.5},{x:58,y:Y+322,r:24,col:'#ffcf70'},{x:310,y:Y+328,r:16,col:'#ffcf70'},{x:690,y:Y+328,r:16,col:'#ffcf70'},{x:132,y:Y+214,r:26,col:'#ffa060',a:.4},{x:810,y:Y+400,r:22,col:'#ffe08a'},{x:850,y:Y+400,r:22,col:'#ffe08a'},{x:838,y:Y+420,r:16,col:'#ffcf70'},{x:575,y:Y+470,r:30,col:'#ffcf70',a:.6},{x:40,y:Y+500,r:20,col:'#ffcf70'});
 const bg0=M.bg,wall0=M.wall,floor0=M.floor,over0=M.over;
@@ -44,7 +44,8 @@ const add=(x,y,w,h,base,draw,o={})=>M.props.push({x,y,w,h,base,draw,...o});
 add(P.chimney.x-2,P.chimney.y-40,26,84,Y+247,t=>chimney(P.chimney.x,P.chimney.y,t),{live:1});
 // 屋顶平台上的灯笼（花箱两头、观星垫旁边）
 [[306,Y+318],[686,Y+318],[606,Y+462],[36,Y+478]].forEach(([x,y])=>add(x-3,y-14,8,16,y,t=>{R(x,y-14,1,3,OL);R(x-3,y-11,7,9,OL);R(x-2,y-10,5,7,'#ffd88a');R(x-2,y-4,5,1,'#e8a040');R(x-1,y-2,3,2,OL)}));
-add(688,Y+486,40,14,Y+500,()=>{R(688,Y+490,40,6,OL);R(689,Y+491,38,4,'#a8703f');R(704,Y+496,8,4,OL);latte(692,Y+484);latte(712,Y+484)});
+// 观星毯右边一张小茶几，两杯拉花（原来摆在吊床正下方，吊床的落脚点落在它的占地里，下来就卡住）
+add(630,Y+486,40,14,Y+500,()=>{R(630,Y+490,40,6,OL);R(631,Y+491,38,4,'#a8703f');R(646,Y+496,8,4,OL);latte(634,Y+484);latte(654,Y+484)});
 add(P.blanket.x,P.blanket.y,44,20,P.blanket.y+2,()=>blanket(P.blanket.x,P.blanket.y));
 add(P.scope.x,P.scope.y,26,30,P.scope.y+30,t=>telescope(P.scope.x,P.scope.y,t));
 add(P.hammock.x,P.hammock.y,64,34,P.hammock.y+6,(t,S)=>hammockBack(P.hammock.x,P.hammock.y,S.hamSw||0),{live:1});add(P.hammock.x,P.hammock.y+10,64,24,P.hammock.y+30,(t,S)=>hammockFront(P.hammock.x,P.hammock.y,S.hamSw||0),{live:1});

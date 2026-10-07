@@ -144,7 +144,7 @@ function stepCat(c,dt){if(c.transit)return stepTransit(c,dt);
     // 你点了楼梯口（走到了口子里）：接着上下楼
     if(fin&&c.me&&c.cur===s&&!c.q.length){const p=PORT.find(p=>p.auto&&p.from===floorOf(c.y).id&&inR(c.x,c.y,p.zone));if(p){c.cur=null;transit(c,p,null);return}}}
   else if(s.jump){const k=Math.min(1,(now-s.t0)/s.dur);c.x=s.x0+(s.j.x-s.x0)*k;c.y=s.y0+(s.j.y-s.y0)*k;c.dy=-Math.sin(k*Math.PI)*s.h;
-    if(k>=1){c.dy=0;c.z=s.j.z;if(s.j.face)c.face=s.j.face;setK(c,restPose(c));fin=true}}
+    if(k>=1){c.dy=0;c.z=s.j.z;if(s.j.face)c.face=s.j.face;setK(c,restPose(c));fin=true;if(c.z==null&&!free(c.x,c.y)){A.landSnaps.push({n:c.name,x:Math.round(c.x),y:Math.round(c.y),doing:c.doing||c.k});if(A.landSnaps.length>20)A.landSnaps.shift();snapFree(c)}}}   // 落地落在家具里：挪到最近的空地（记一笔，测试里查是哪儿的落点不对）
   else if(s.until!=null)fin=now>=s.until;
   else if(s.when)fin=s.when(c);
   else fin=true;
@@ -180,7 +180,7 @@ function act(c,th){if(th.ok&&!th.ok(c)){if(c.me&&th.no)say(th.no(c));return fals
 
 /* ---------- 给 world-acts.js 用的接口 ---------- */
 const A={S,P,M,me,play,ui,after,say,sfx,news,rnd,rr,pickW,dist,run,setK,idle,emote,speak,borrow,settle,stay,leavePlace,unclaim,restPose,findPath,free,FREE,randFree,randIn,roomAt,inR,floorOf,FL,FLID,PORT,nextPortal,transit,
-  T,TH,act,thingNear,thingAt:(x,y)=>thingAt(x,y),mkCat,byName,tickers:[],floors:[],drawers:[],overs:[],marks:[],lights:[],huds:[],hi,think:()=>{},social:()=>{},pass:()=>{},solveHere:()=>{},onEmote:()=>{}};
+  T,TH,act,thingNear,thingAt:(x,y)=>thingAt(x,y),mkCat,byName,landSnaps:[],tickers:[],floors:[],drawers:[],overs:[],marks:[],lights:[],huds:[],hi,think:()=>{},social:()=>{},pass:()=>{},solveHere:()=>{},onEmote:()=>{}};
 Object.defineProperty(A,'t',{get:()=>now});
 WORLD_MODS.forEach(m=>m(A));
 const nearCatOf=(c,d=26)=>S.cats.filter(o=>o!==c&&!o.hidden&&!o.gone&&!o.riding&&o.z==null&&Math.hypot(o.x-c.x,o.y-c.y)<d).sort((a,b)=>dist(a,c)-dist(b,c))[0];
@@ -278,6 +278,8 @@ function afk(dt,moving){if(moving){poke();return}if(me.place||me.hidden||!idle(m
 // 待在某个地方时，place.steer(dx,dy,dt) 可以接管方向键（划船、弹琴挪爪子、跑轮、荡秋千、开扫地机器人）：返回 true 就不离开；松开时也调一次（0,0）
 function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(!dx&&!dy){keyMove.held=0;me.portalLock=0;if(me.place&&me.place.steer)me.place.steer(0,0,dt);return false}
   if(busy())return true;if(me.place){if(me.place.steer&&me.place.steer(dx,dy,dt)){keyMove.held=1;return true}if(!keyMove.held)leavePlace(me);keyMove.held=1;return true}keyMove.held=0;if(me.hidden)return true;me.follow=null;if(me.q.length||me.cur)run(me,[]);
+  // 脚下不是空地（被挤进了家具的占地里）：先挪到最近的空地，不然往哪边挪一步都还在里面
+  if(me.z==null&&!free(me.x,me.y))snapFree(me);
   const l=Math.hypot(dx,dy),sp=me.sp*(keys.shift?1.6:1),nx=me.x+dx/l*sp*dt,ny=me.y+dy/l*sp*dt;if(free(nx,me.y))me.x=nx;if(free(me.x,ny))me.y=ny;if(dx)me.face=dx>0?'R':'L';
   const wk=me.face==='L'?'walkL':'walkR';if(me.k!==wk)setK(me,wk);
   // 换层以后要先松开方向键：一直按着走，不会刚上来又走回楼梯口
