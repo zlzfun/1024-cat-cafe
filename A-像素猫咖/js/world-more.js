@@ -19,7 +19,7 @@ T({id:'mic',n:'话筒',hit:[P.mic.x-1,P.mic.y-2,10,28],at:P.micAt,near:[P.micAt.
       news1(`${c.me?'你':c.name}在 1024 舞台上对着话筒喵了一声，全店都听见了`)}},{k:'happy',dur:.8,soft:1}])}});
 S.spotOn=null;
 T({id:'spot',n:'聚光灯',hit:[P.spots[0].x-2,P.spots[0].y,16,34],at:P.spotAt,near:[P.spotAt.x-16,P.spotAt.y-12,32,24],label:'拨一下聚光灯',ai:{mood:'social',w:.25},
-  go(c){run(c,[{go:P.spotAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.6,fn:c=>{S.spotOn={by:c,until:now()+15};sfx('clunk')}},
+  go(c){run(c,[{go:P.spotAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.6,fn:c=>{S.spotOn={by:c,until:now()+15};if(c.me||atMe(P.spotAt,260))sfx('clunk')}},
     {fn:c=>{if(c.me)say('聚光灯打在你身上了：走到哪儿跟到哪儿（十五秒）');else run(c,[{go:land(P.stage[rr(0,5)|0].x,P.stage[0].y+2)},{k:'sit',dur:rr(4,7),ex:'sparkle'}],true)}}])}});
 tick(()=>{const s=S.spotOn;if(!s)return;if(now()>s.until||s.by.gone||A.floorOf(s.by.y).id!=='f1'){S.spotOn=null;return}const c=s.by;if(c.hidden)return;
   A.lights.push({x:c.x,y:c.y-6,r:30,col:'#fff2c0',a:.95},{x:c.x,y:c.y-2,r:16,col:'#ffffff',a:.5})});

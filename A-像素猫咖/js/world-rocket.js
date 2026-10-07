@@ -7,7 +7,9 @@
    飞：一段特写（挂在"看风景"那一套上，画面在 planet-art.js），落在星球上；星球上走走、碰碰只有这里才有的东西，坐回火箭飞回屋顶。
    星球上：水晶鱼池（坐在池边，看准了伸爪捞跳出水面的水晶鱼）、大毛线团（爬上去；扯一下线头，天上那圈毛线环跟着晃）、插旗子的小山包、会唱歌的水晶、蹦蹦坑（一蹦老高）。
    重力小：在星球上走起来一蹦一蹦，跳得又高又慢。补位的猫不来（这里的东西都不写 ai）。
-   记在你的猫身上（彩蛋记录里 planet 那一条）：steps 四步、parts 拿到的零件、flag 插过旗子、fish 捞到几条。在星球上关了页面，下次进店醒在屋顶的火箭旁边。 */
+   记在你的猫身上（彩蛋记录里 planet 那一条）：steps 四步、parts 拿到的零件、fwDown 烟花筒掉下来了还没捡、flag 插过旗子、fish 捞到几条。在星球上关了页面，下次进店醒在屋顶的火箭旁边。
+   第六轮（找得到）：望远镜三四秒就划过；屋顶的天上隔一分多钟也划过这颗耳朵星；EGGS.planet.now() 给图鉴、前台猫说此刻做到哪一步、下一步去哪儿；
+   检索柜头一回先给图纸；有了图纸，跑轮的提示多一句"串灯全亮会放烟花"；捞到的水晶鱼可以装进泡泡带回地面（world-crystal.js）。 */
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,rnd,run,emote,say,sfx,news,after,T,settle,setK,TID}=A;
 const now=()=>A.t,tick=f=>A.tickers.push(f),L=PLA.live,near=(c,p,d)=>Math.hypot(c.x-p.x,c.y-p.y)<d,onPlanet=c=>c.y>=Y5-40,here=()=>A.floorOf(me.y).id;
@@ -31,9 +33,9 @@ const SC={v:null,next:0,pass:null};
 // 镜筒和月亮的位置、大小：望远镜那张画导出的 VA.geo.moon → {cx,cy,r 镜筒半径,mr 月亮半径}；没有就按画面中心估
 function scopeGeo(w,h){try{const g=VA.geo&&VA.geo.moon&&VA.geo.moon(w,h);if(g&&isFinite(g.cx)&&isFinite(g.cy)&&isFinite(g.r))return g}catch(e){}const r=Math.round(Math.min(w,h)*.42);return{cx:Math.round(w/2),cy:Math.round(h*.47),r,mr:Math.round(r*.86)}}
 tick(()=>{const V=A.vista.cur;if(!V||V.kind!=='moon'||V.phase!=='on'){SC.v=null;SC.pass=null;return}
-  if(SC.v!==V){SC.v=V;SC.next=now()+rr(12,15);SC.pass=null}
+  if(SC.v!==V){SC.v=V;SC.next=now()+rr(3,4);SC.pass=null}
   if(!SC.pass&&now()>=SC.next)SC.pass={t0:now(),dur:9,seen:0};const ps=SC.pass;if(!ps)return;const k=(now()-ps.t0)/ps.dur;
-  if(k>=1){SC.pass=null;SC.next=now()+rr(25,40);return}
+  if(k>=1){SC.pass=null;SC.next=now()+rr(15,25);return}
   if(k>.3&&!ps.seen){ps.seen=1;if(stepDone(0,'……那颗星星长着两只耳朵？一晃就不见了。书里会不会写过它？','你在望远镜里看到一颗长着耳朵的星球'))sfx('twinkle')}});
 A.vista.overlay('moon',E=>{const ps=SC.pass;if(!ps)return;const g=scopeGeo(E.w,E.h);PLA.scopePass(g.cx,g.cy,g.r,(now()-ps.t0)/ps.dur,E.t,g.mr)});
 
@@ -43,15 +45,16 @@ function openCard(){const first=!done(1),p=parts();
   A.infoDialog('rocketcard','检索柜','book',[{k:'text',t:first?'最里面那格抽屉里，多了一张手写的卡片：':'最里面那格抽屉里，还是那张手写的卡片：'},{k:'book',t:CARD},...(PARTS.some(k=>p[k])?[{k:'steps',items:PARTS.map(k=>({t:PN[k],done:!!p[k]}))}]:[])],'memory',['docs']);
   if(first)stepDone(1,null,'你在检索柜里翻到一张《纸箱火箭制造指南》')}
 if(A.Q){const oc0=A.Q.onCatalog,cl0=A.Q.catalogLabel;
-  A.Q.onCatalog=c=>{if(oc0&&oc0(c))return true;if(c.me&&done(0)){openCard();return true}return false};
-  A.Q.catalogLabel=c=>(cl0&&cl0(c))||(c.me&&done(0)&&!done(1)?'翻翻检索柜最里面那格':null)}
+  // 头一回先给图纸（哪怕嘴里叼着要去查记忆的毛线球，再拉一次就办正事）；翻到过图纸以后，毛线球的事先办
+  A.Q.onCatalog=c=>{if(c.me&&done(0)&&!done(1)){openCard();return true}if(oc0&&oc0(c))return true;if(c.me&&done(0)){openCard();return true}return false};
+  A.Q.catalogLabel=c=>(c.me&&done(0)&&!done(1)?'翻翻检索柜最里面那格':null)||(cl0&&cl0(c))}
 // 关上卡片以后说一句（像个谜语，不说去哪）
 const close0=A.dlg.close;A.dlg.close=()=>{const sp=A.dlg.spec;close0();if(sp&&/^rocketcard-/.test(sp.id||'')&&!PARTS.some(k=>parts()[k]))after(.4,()=>say('三样东西……好像都在店里见过'))};
 
 /* ================= ③ 三样零件 ================= */
 function getPart(k){if(!need(k))return;const s=st(),p=s.parts=s.parts||{};p[k]=Date.now();save();const n=PARTS.filter(q=>p[q]).length;sfx('ding');
   say({box:'正好坐得下一只猫：火箭的身子有了',funnel:'倒过来扣着，就是火箭的尖头',fw:'没放出去的烟花：火箭的发动机有了'}[k]+`（${n}/3）`);
-  if(k==='fw')L.fw=null;if(n===3)buildAt=now()+2.2}
+  if(k==='fw'){L.fw=null;delete s.fwDown;save()}if(n===3)buildAt=now()+2.2}
 // 大纸箱：跳进去比一比，正好坐得下（纸箱还在午睡角，火箭用的是"它这么大的"）
 {const th=TID('bigbox');if(th){const lab0=th.label,go0=th.go,ok0=th.ok,B=P.bigBox;
   th.label=c=>c.me&&need('box')?'量一量这只大纸箱':typeof lab0==='function'?lab0(c):lab0;th.ok=c=>c.me&&need('box')?!c.hold:ok0(c);
@@ -62,11 +65,57 @@ T({id:'plFunnel',n:'漏斗',hit:[P.plFunnel.x-9,P.plFunnel.y-15,19,16],at:P.plFu
 // 烟花：屋顶放过一场烟花以后（跑轮的串灯全亮），最后一筒没炸开，从天上掉下来，落在跑轮旁边
 let showAt=-1;
 tick(dt=>{for(const f of S.fireworks||[])if(!f._pl){f._pl=1;if(f.y0>=Y3&&f.y0<Y3+540)showAt=now()}
+  if(need('fw')&&!L.fw&&rd().fwDown)L.fw={fall:1};   // 上次掉下来还没捡：一直躺在那儿
   if(need('fw')&&showAt>0&&!L.fw&&now()-showAt>8.5){L.fw={fall:0};if(here()==='roof'&&near(me,P.plFw,320))sfx('whoosh')}
-  if(L.fw&&L.fw.fall<1){L.fw.fall=Math.min(1,L.fw.fall+dt/1.2);if(L.fw.fall>=1&&here()==='roof'){sfx('clunk');S.puffs.push({x:P.plFw.x,y:P.plFw.y-2,t0:now()});if(near(me,P.plFw,320))say('有一筒烟花没炸开，掉回了平台上')}}
+  if(L.fw&&L.fw.fall<1){L.fw.fall=Math.min(1,L.fw.fall+dt/1.2);if(L.fw.fall>=1){st().fwDown=1;save();if(here()==='roof'){sfx('clunk');S.puffs.push({x:P.plFw.x,y:P.plFw.y-2,t0:now()});if(near(me,P.plFw,320))say('有一筒烟花没炸开，掉回了平台上')}}}
   if(L.fw&&!need('fw'))L.fw=null});
+// 有了图纸、还没拿到烟花：跑轮的提示条多一句
+{const th=TID('wheel');if(th){const lab0=th.label;th.label=c=>c.me&&need('fw')?'进跑轮跑一会儿（串灯全亮会放烟花）':typeof lab0==='function'?lab0(c):lab0}A.wheelHint=()=>need('fw')?' · 串灯全亮会放烟花':''}
 T({id:'plFw',n:'没放出去的烟花',hit:[P.plFw.x-8,P.plFw.y-8,20,10],at:P.plFwAt,near:[P.plFwAt.x-14,P.plFwAt.y-14,34,24],label:'捡起这筒没放出去的烟花',hidden:c=>!c.me||!need('fw')||!L.fw||L.fw.fall<1,
   go(c){run(c,[{go:P.plFwAt},{fn:c=>{c.face='R'}},{k:'pounce',dur:.8},{fn:()=>getPart('fw')}])}});
+
+/* ================= 找得到：此刻做到哪一步（图鉴"彩蛋"那一页、前台猫用；docs/店内设计.md 第四节"找得到"） ================= */
+const PT={box:()=>'二楼午睡角',funnel:()=>'一楼吧台，咖啡机旁边',fw:()=>L.fw&&L.fw.fall>=1?'掉在屋顶跑轮旁边，捡起来':'屋顶跑轮的串灯全亮，会放一场烟花，有一筒没炸开'};
+EGGS.planet.now=()=>{const p=parts();
+  if(!done(0))return{i:0,riddle:'望远镜里，有一颗星星长着耳朵',tip:'屋顶的望远镜，凑过去看一会儿',go:'scope'};
+  if(!done(1))return{i:1,riddle:'书里会不会写过它？',tip:'二楼图书馆的检索柜，翻最里面那格',go:'catalog'};
+  if(!done(2))return{i:2,riddle:'照着《纸箱火箭制造指南》，凑齐三样零件',parts:PARTS.map(k=>({k,n:PN[k],got:!!p[k],tip:PT[k](),go:k==='box'?'bigbox':k==='funnel'?'plFunnel':L.fw?'plFw':'wheel'}))};
+  return{i:3,riddle:'零件齐了。要飞，得去最高、最开阔的地方',tip:'屋顶最西头，斜屋顶底下，坐进纸箱火箭',go:'plRocket'}};
+
+/* ---------- 屋顶的天上：隔一分多钟，那颗长着耳朵的小紫星从天边慢慢划过去（十二秒）；屋顶上的店猫抬头看 ----------
+   站在平台上镜头只看得到天的下沿，而且正中间是巨树的树冠（x 280～680）、左边是斜屋顶：只在树冠两边露天的那段天上划过，
+   挑你画面里看得见的那一边；贴着画面上沿（远处的东西不跟着镜头走），从画面外慢慢进来，划到树冠边上淡下去，像钻到树冠后面。 */
+const SKY={t0:-99,next:rr(25,45),x0:0,x1:0,y:20,said:false},SKY_DUR=12,CAN_L=280,CAN_R=680,TILE_X=252,TILE_Y=Y3+244;
+const skyTop=()=>{const v=A.view();return v&&A.floorOf(v.y+v.h/2).id==='roof'?v.y:Y3};
+const skyPos=()=>{const k=(now()-SKY.t0)/SKY_DUR,base=Math.max(Y3+110,Math.min(Y3+258,skyTop()+SKY.y));
+  return{k,x:Math.round(SKY.x0+(SKY.x1-SKY.x0)*k),y:Math.round(base-Math.sin(k*Math.PI)*6),a:Math.min(1,k/.12,(1-k)/.18)}};
+function skyLaunch(){const v=A.view(),onRoof=here()==='roof'&&v,top=skyTop(),seeL=onRoof?Math.max(0,Math.min(v.x+v.w,CAN_L)-Math.max(v.x,0)):0,seeR=onRoof?Math.max(0,Math.min(v.x+v.w,960)-Math.max(v.x,CAN_R)):1;
+  SKY.t0=now();SKY.y=rr(16,24);SKY.next=now()+rr(65,95);
+  // 左边那段天下面是斜屋顶的瓦：镜头太低、天只剩一条缝的时候不走左边
+  if(seeL>seeR&&top+SKY.y+6<TILE_Y){SKY.x0=-14;SKY.x1=CAN_L-6}else{SKY.x0=974;SKY.x1=CAN_R+8}
+  if(here()==='roof')S.cats.forEach((c,i)=>{if(c.me||c.hidden||c.gone||c.place||c.puppet||c.z!=null||A.floorOf(c.y).id!=='roof'||!A.idle(c)||i%2)return;after(rr(.5,3),()=>{if(A.idle(c)&&!c.place)run(c,[{k:'sit',dur:rr(2.5,4),ex:'lookUp'}],true)})})}
+tick(()=>{if(now()>=SKY.next)skyLaunch();const q=skyPos();if(q.k<0||q.k>1)return;A.lights.push({x:q.x,y:q.y,r:12,col:'#c8a8f0',a:.7*q.a});
+  // 还没在望远镜里看到它：第一次看到天上这一颗（露在画面里、不在树冠后面），你的猫说一句（一次进店只说一次）
+  if(!SKY.said&&!done(0)&&here()==='roof'&&!me.place&&q.a>.6&&(q.x<CAN_L-4||q.x>CAN_R+4)){const v=A.view(),sc=A.hudScale||0,sx=(q.x-(v?v.x:0))*sc,sy=(q.y-(v?v.y:0))*sc,
+    hid=(A.hudAvoid&&A.hudAvoid()||[]).some(r=>sx>r[0]&&sx<r[0]+r[2]&&sy>r[1]&&sy<r[1]+r[3]);
+    if(v&&sc&&!hid&&q.x>v.x+20&&q.x<v.x+v.w-20&&q.y>v.y+6&&q.y<v.y+v.h-10){SKY.said=true;emote(me,'q',1.6);say('天上那颗星星……长着耳朵？凑到望远镜那儿看看')}}});
+A.events.earstar=()=>{if(now()-SKY.t0<SKY_DUR)return'耳朵星还在天上';skyLaunch()};   // 开发工具条：马上划过去一颗
+// 耳朵星的画：紫色的小星球，顶上两只三角耳朵，一闪一闪；k 倍大（店里 1 倍，观星毯的特写里 2 倍）
+const EAR=[[0,-3,'b'],[-1,-3,'b'],[1,-3,'b'],[-2,-2,'b'],[-1,-2,'l'],[0,-2,'b'],[1,-2,'b'],[2,-2,'b'],[-3,-1,'b'],[-2,-1,'l'],[-1,-1,'l'],[0,-1,'b'],[1,-1,'b'],[2,-1,'b'],[3,-1,'b'],[-3,0,'b'],[-2,0,'l'],[-1,0,'b'],[0,0,'b'],[1,0,'b'],[2,0,'b'],[3,0,'d'],
+  [-3,1,'b'],[-2,1,'b'],[-1,1,'b'],[0,1,'b'],[1,1,'b'],[2,1,'d'],[3,1,'d'],[-2,2,'b'],[-1,2,'b'],[0,2,'d'],[1,2,'d'],[2,2,'d'],[-1,3,'d'],[0,3,'d'],[1,3,'d'],[-3,-4,'e'],[-2,-4,'e'],[-3,-5,'e'],[2,-4,'e'],[3,-4,'e'],[3,-5,'e']];
+const EARC={b:'#8a6ab8',l:'#c8a8f0',d:'#6a4a98',e:'#a888d8'};
+// （这个文件里 R 是"这一趟火箭"，不是画方块的 R：直接用画布的 fillRect）
+function earStar(x,y,k,t){const px=(dx,dy,c)=>{C.fillStyle=c;C.fillRect(Math.round(x+dx*k),Math.round(y+dy*k),k,k)};for(const [dx,dy,c] of EAR)px(dx,dy,EARC[c]);if(Math.floor(t*3)%3===0){px(5,-2,'#fff4dc');px(6,-2,'#fff4dc');px(5,-3,'#fff4dc')}}
+A.floors.push(vis=>{const q=skyPos();if(q.k<0||q.k>1||!vis(q.x-6,q.y-7,13,13))return;alpha(q.a,()=>earStar(q.x,q.y,1,now()))});
+// 观星毯的特写里也划过这一颗：躺在观星毯上看满天星，一定看得见（就在望远镜旁边）；还没在望远镜里看到过，第一次看到说一句
+const ST={v:null,next:0,pass:null,said:false};
+tick(()=>{const V=A.vista.cur;if(!V||V.kind!=='stars'||V.phase!=='on'){ST.v=null;ST.pass=null;return}
+  if(ST.v!==V){ST.v=V;ST.next=now()+(done(0)?rr(20,40):rr(4,6));ST.pass=null}
+  if(!ST.pass&&now()>=ST.next)ST.pass={t0:now(),dur:10,dir:Math.random()<.5?1:-1};const ps=ST.pass;if(!ps)return;const k=(now()-ps.t0)/ps.dur;
+  if(k>=1){ST.pass=null;ST.next=now()+(done(0)?rr(30,50):rr(12,18));return}
+  if(k>.35&&!ST.said&&!done(0)){ST.said=true;say('……那颗星星长着耳朵？凑到旁边的望远镜那儿看得更清楚')}});
+A.vista.overlay('stars',E=>{const ps=ST.pass;if(!ps)return;const k=Math.min(1,(now()-ps.t0)/ps.dur),G=VA.geo.stars(E.w,E.h),span=G.x1-G.x0+40,
+  x=Math.round(ps.dir>0?G.x0-20+k*span:G.x1+20-k*span),y=Math.round(E.h*.36-Math.sin(k*Math.PI)*E.h*.1);alpha(Math.max(0,Math.min(1,k/.1,(1-k)/.1)),()=>earStar(x,y,2,E.t))});
 
 /* ================= ④ 纸箱火箭：倒数、发射、飞、落地 ================= */
 const PADS={roof:{x:P.plPad.x,y:P.plPad.y-5,at:P.plPadAt,out:P.plWake},planet:{x:P.plPad2.x,y:P.plPad2.y,at:P.plPad2At,out:P.plOut}};
@@ -147,10 +196,14 @@ tick(dt=>{if(!onPlanet(me)&&!FISH.length)return;
   for(let i=FISH.length-1;i>=0;i--){const f=FISH[i],p=fpos(f);if(p.k>=1){if(!f.back)splash(f.x1,f.y1,5);FISH.splice(i,1);continue}A.lights.push({x:p.x,y:p.y,r:12,col:f.gold?'#ffd84a':'#7ae8ff',a:.9})
     // 伸爪的那一下（0.1～0.4 秒）：爪子够得着就捞到了
     const k=now()-swipeT;if(!f.back&&fishing()&&k>.08&&k<.42&&Math.hypot(p.x-(me.x+(me.face==='L'?-13:13)),p.y-(me.y-9))<14){FISH.splice(i,1);catchFish(f)}}
-  if(caught&&now()-caught.t0>1.5){const c=caught;caught=null;FISH.push({x0:me.x+(me.face==='L'?-6:6),y0:me.y-24,x1:LK.x+rr(-20,20),y1:LK.y,h:22,dur:1.5,t0:now(),gold:c.gold,back:1})}});
-function catchFish(f){caught={t0:now(),gold:f.gold};const s=st();s.fish=(s.fish||0)+1;if(f.gold)s.gold=(s.gold||0)+1;save();sfx('twinkle');setK(me,'hold');
+  if(caught&&now()-caught.t0>1.5){const c=caught;caught=null;if(c.keep&&A.crystal)A.crystal.pocket(c.gold);else FISH.push({x0:me.x+(me.face==='L'?-6:6),y0:me.y-24,x1:LK.x+rr(-20,20),y1:LK.y,h:22,dur:1.5,t0:now(),gold:c.gold,back:1})}});
+function catchFish(f){const keep=!!(A.crystal&&A.crystal.want());caught={t0:now(),gold:f.gold,keep};const s=st();s.fish=(s.fish||0)+1;if(f.gold)s.gold=(s.gold||0)+1;
+  const FL=A.guide.fishLog(),first=!FL.crystal;FL.crystal=(FL.crystal||0)+1;if(f.gold)FL.crystalGold=(FL.crystalGold||0)+1;save();sfx('twinkle');setK(me,'hold');
   for(let i=0;i<8;i++)fx(me.x+rr(-6,6),me.y-24,rr(-16,16),rr(-24,-6),1.4,f.gold?'#ffd84a':'#a8f0ff',8);
-  say(f.gold?'金色的水晶鱼！在爪子里亮得像一颗小太阳':s.fish===1?'捞到一条水晶鱼！它在爪子里亮了一下，又慢慢游回了池子里':rnd(['又捞到一条！','水晶鱼在爪子里叮地亮了一下','凉凉的，亮晶晶的'])+`（捞到过 ${s.fish} 条）`);
+  const full=A.crystal&&A.crystal.full();
+  say(keep?(f.gold?'金色的水晶鱼！':'捞到一条水晶鱼！')+'它钻进了一颗水晶泡泡，跟着你走。带回地面，放进一楼吧台的大鱼缸吧':
+    f.gold?'金色的水晶鱼！在爪子里亮得像一颗小太阳':s.fish===1?'捞到一条水晶鱼！它在爪子里亮了一下，又慢慢游回了池子里':(full&&!me.bubble?'大鱼缸里已经有你的三条了，这一条放回池子里':rnd(['又捞到一条！','水晶鱼在爪子里叮地亮了一下','凉凉的，亮晶晶的']))+`（捞到过 ${s.fish} 条）`);
+  if(first&&A.fishCard)after(.8,()=>A.fishCard('crystal'));
   after(1.4,()=>{if(fishing())setK(me,'sit','focus')})}
 A.overs.push(vis=>{for(const f of FISH){const p=fpos(f);if(!vis(p.x-8,p.y-8,16,16))continue;const k=Math.min(.999,p.k),dir=f.x1>=f.x0?1:-1,ang=Math.max(-1,Math.min(1,4*f.h*(1-2*k)/Math.max(12,Math.abs(f.x1-f.x0))));PLA.fish(p.x,p.y,dir,ang,f.gold,now())}
   if(caught){const x=Math.round(me.x+(me.face==='L'?-6:6)),y=Math.round(me.y-24-Math.sin(now()*4)*1.5);C.save();C.globalCompositeOperation='lighter';C.globalAlpha=.6;C.drawImage(glowTex(10,caught.gold?'#ffd84a':'#7ae8ff'),x-10,y-10);C.restore();PLA.fish(x,y,me.face==='L'?-1:1,.2,caught.gold,now())}});

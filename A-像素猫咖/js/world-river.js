@@ -1,29 +1,24 @@
 /* 1024 猫咖 · 河边：钓鱼、小船、鸭子、河上漂的东西、河里的鱼影（设计见 docs/店内设计.md 第三节）。依赖 world-acts.js、map-1f.js、props-kit.js。
    - 钓鱼：三根钓竿（栈桥尽头水深、这边岸上水浅、对岸树荫底下），各自爱咬钩的鱼不一样。坐下甩竿 → 浮漂一沉、头上冒"!" → 收竿。
-     大鱼要遛：头上一根小横条，点跑进绿的那段按 E，收三下拉上来，按错两下鱼就挣脱。鱼谱：九种，每种钓到几条、最大多长（栈桥上的鱼桶）。
+     大鱼要遛：头上一根小横条，点跑进绿的那段按 E，收三下拉上来，按错两下鱼就挣脱。鱼谱是图鉴里的一页（栈桥上的鱼桶也打开它）：
+     地上的九种加上只在猫猫星球捞得到的水晶鱼，一共十种；钓到新的一种，上方弹一张鱼谱小卡；九种都齐了说一句。
      钓上来的看一眼、放回河里（没有鱼受伤）。别的猫也会来钓，一根钓竿一次一只。
    - 小船：拴在栈桥边，能坐两只。你坐上去按 E 开船：方向键 / 点河面划，捞漂下来的毛线球，躲开漂木，偶尔捞到漂流瓶；一趟一分钟，
      时间到了船自己划回栈桥（也可以早点回来按 E 靠岸）。捞上来的毛线球送进门厅的篮子。两只猫一起划，船快一半。
      别的猫自己坐船：还是顺着河漂到下游、再划回来。
    - 鸭子一家：鸭妈妈带三只小鸭在河上游；船、扑过去的猫靠近了，嘎嘎叫着游开。
    - 河里游着几条鱼的影子，猫会盯着看。 */
-const FISH_KINDS=[{id:'jiyu',n:'小鲫鱼',sz:[8,15],col:'#9aa8b0'},{id:'liyu',n:'鲤鱼',sz:[20,42],col:'#c8a050',big:1},{id:'jinli',n:'锦鲤',sz:[25,46],col:'#f08a4a',big:1},
-  {id:'guiyu',n:'桂鱼',sz:[18,36],col:'#8a9a6a',big:1},{id:'niqiu',n:'泥鳅',sz:[10,18],col:'#6a5a4a'},{id:'xia',n:'小河虾',sz:[4,8],col:'#e0806a'},
-  {id:'pangxie',n:'小螃蟹',sz:[3,7],col:'#c8603a'},{id:'nianyu',n:'鲶鱼',sz:[30,60],col:'#5a6a6a',big:1},{id:'jinyu',n:'金鱼',sz:[6,12],col:'#ffd84a',rare:1},
-  {id:'boot',n:'旧靴子',col:'#6a5040',junk:1},{id:'yarn',n:'一颗毛线球',col:'#e0533d',junk:1}];
-// 三个钓点各自爱咬钩的鱼（权重）
-const FISH_SPOT=[{n:'栈桥尽头',w:{liyu:20,guiyu:14,nianyu:10,jinli:6,jiyu:10,boot:3,yarn:2,jinyu:1}},
-  {n:'这边岸上',w:{jiyu:28,niqiu:16,xia:16,pangxie:12,liyu:6,yarn:2,jinyu:1}},{n:'对岸树荫底下',w:{jinli:16,jiyu:14,guiyu:8,nianyu:6,niqiu:8,jinyu:4,boot:2}}];
-const FISH_WHERE=id=>{let b=0,bw=0;FISH_SPOT.forEach((s,i)=>{if((s.w[id]||0)>bw){bw=s.w[id];b=i}});return FISH_SPOT[b].n};
-// 钓上来那一下举起来的样子：一条小鱼（或一只靴子、一颗毛线球、一只小螃蟹）
-function caughtPx(x,y,k,t){const f=FISH_KINDS.find(f=>f.id===k)||FISH_KINDS[0];if(k==='boot'){grid(x-4,y-6,[".oooo...","owwwo...","owwwo...","owwwoooo","owwwwwwo","oooooooo"],{o:OL,w:f.col});return}
-  if(k==='yarn'){yarnBall(x,y-3,3,0,Math.floor(t*8));return}if(k==='pangxie'){grid(x-5,y-6,["o.......o","oo.o.o.oo",".obbbbbo.","obbebebbo",".obbbbbo.","o.o...o.o"],{o:OL,b:f.col,e:'#241a2e','.':null});return}
-  const s=Math.round(Math.sin(t*14));grid(x-6,y-4+s,["...oooo..o","..obbbbo.oo",".obbbebboao","obbbbbbbbao",".oddddddo.o","..oooooo...","........."],{o:OL,b:f.col,d:tint(f.col,.8),a:tint(f.col,.7),e:'#241a2e'})}
+// 鱼的种类、三个钓点各爱咬钩的鱼、每种的像素画都在 fish-art.js（图鉴的鱼谱那一页也用）
+// 钓上来那一下举起来的样子：那种鱼的画（或一只靴子、一颗毛线球、一只小螃蟹），一抖一抖
+function caughtPx(x,y,k,t){fishPx(k,x-1,y-1+Math.round(Math.sin(t*14)),t)}
 
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,rnd,run,emote,speak,say,sfx,news,after,T,stay,unclaim,dist,idle,settle,setK,land}=A;
 const now=()=>A.t,near=(a,b,d)=>Math.hypot(a.x-b.x,a.y-b.y)<d,tick=f=>A.tickers.push(f),atMe=(p,d=220)=>A.play&&near(me,p,d);
 const GS=()=>A.guide.games(),log=()=>A.guide.fishLog();
+const FISH=FISH_KINDS.filter(f=>!f.junk),FISH_N=FISH.length,GROUND=FISH.filter(f=>!f.sky),fishKinds=()=>FISH.filter(f=>log()[f.id]).length;
+// 钓到（捞到）新的一种：上方弹一张鱼谱小卡（app.js 的 ui.fishCard）；水晶鱼由 world-rocket.js 调
+A.fishCard=(id,cm,spot)=>{const f=FISH_BY[id];if(!f||!A.ui.fishCard)return;A.ui.fishCard({id,n:f.n,cm:cm||0,where:spot!=null?FISH_SPOT[spot].n:FISH_WHERE(id),d:f.d,count:fishKinds(),total:FISH_N})};
 const pickFish=i=>{const w=FISH_SPOT[i].w,L=FISH_KINDS.filter(f=>w[f.id]),s=L.reduce((a,f)=>a+w[f.id],0);let r=Math.random()*s;for(const f of L)if((r-=w[f.id])<=0)return f;return L[0]};
 const isBig=(f,cm)=>f.big&&cm>=f.sz[0]+(f.sz[1]-f.sz[0])*.5;
 
@@ -32,10 +27,13 @@ const SP=P.fishSpots;S.fishing=SP.map(()=>null);S.fishShow=null;let bucketN=0;
 const fishOf=c=>S.fishing.find(st=>st&&st.c===c);
 function cast(st){st.ph='cast';st.t0=now();if(atMe(SP[st.i]))sfx('splash');after(.6,()=>{if(S.fishing[st.i]===st&&st.ph==='cast'){st.ph='wait';st.until=now()+rr(3,8)}})}
 function landed(st,f,cm){const c=st.c;S.fishShow={k:f.id,c,t0:now()};st.ph='show';st.t0=now();st.reel=null;if(atMe(c))sfx('reel');if(st.i===0)bucketN=Math.min(3,bucketN+1);
-  if(c.me){const L=log(),first=!L[f.id];L[f.id]=(L[f.id]||0)+1;const M=GS().fishMax=GS().fishMax||{},rec=!f.junk&&cm>(M[f.id]||0);if(rec)M[f.id]=cm;A.guide.save();const kinds=FISH_KINDS.filter(k=>!k.junk&&L[k.id]).length;
+  if(c.me){const L=log(),first=!L[f.id];L[f.id]=(L[f.id]||0)+1;const M=GS().fishMax=GS().fishMax||{},rec=!f.junk&&cm>(M[f.id]||0);if(rec)M[f.id]=cm;A.guide.save();const kinds=fishKinds();
     if(f.id==='yarn'){say('钓上来一颗毛线球……不知道谁掉进河里的。拧干了，放回门厅的篮子里');A.addBall()}
     else if(f.id==='boot')say('钓上来一只旧靴子。……放回去吧');
-    else say(`钓上来一条${f.n}（${cm} 厘米）${first?'，第一次钓到！':rec?'，新纪录！':''}看一眼，放回河里 · 鱼谱 ${kinds}/9`);
+    else say(`钓上来一条${f.n}（${cm} 厘米）${first?'，第一次钓到！':rec?'，新纪录！':''}看一眼，放回河里 · 鱼谱 ${kinds}/${FISH_N}`);
+    if(first&&!f.junk){A.fishCard(f.id,cm,st.i);
+      // 地上的九种都齐了：鱼谱上还差最后一种
+      if(GROUND.every(k=>L[k.id])&&!GS().fish9){GS().fish9=Date.now();A.guide.save();after(3.2,()=>{say('地上的九种都钓齐了。鱼谱上还差最后一种——它不在这条河里');news('你钓齐了河里的九种鱼')})}}
     if(f.rare)news('你钓上来一条金鱼！');A.emit('game','fish')}
   else if(f.rare)news(`${c.name} 钓上来一条金鱼`);
   emote(c,f.junk?'q':'heart',1.6);after(1.8,()=>{if(S.fishing[st.i]===st&&st.ph==='show'){st.ph='wait';st.until=now()+rr(4,9);if(!c.me&&Math.random()<.5)leaveFish(c)}})}
@@ -78,13 +76,10 @@ A.overs.push(vis=>{S.fishing.forEach(st=>{if(!st||st.ph!=='reel'||!st.c.me)retur
   R(x-1,y-1,32,6,OL);R(x,y,30,4,'#5a4a6a');R(x+Math.round(R2.z*30),y,Math.max(2,Math.round(R2.w*30)),4,'#7ee08a');R(x+Math.round(R2.z*30),y,Math.max(2,Math.round(R2.w*30)),1,'#c8f8c8');
   const px=x+Math.round(R2.p*29);R(px-1,y-2,3,8,OL);R(px,y-1,1,6,'#ffd84a');for(let i=0;i<3;i++)R(x+10+i*4,y+6,3,2,i<R2.hits?'#ffd84a':'#5a4a6a')})});
 tick(dt=>{if(bucketN>0&&Math.random()<dt/40)bucketN--});
-// 鱼桶就是鱼谱：九种，钓到过几条、最大的一条多长；没钓到过的写它爱在哪个钓点咬钩
+// 鱼桶：凑过去打开图鉴的鱼谱那一页
 T({id:'bucket',n:'鱼桶 · 鱼谱',hit:[P.bucket.x-2,P.bucket.y-2,16,16],at:P.bucketAt,near:[P.bucketAt.x-12,P.bucketAt.y-12,26,20],label:'看看鱼谱',ai:{mood:'explore',w:.1},
   go(c){run(c,[{go:P.bucketAt},{fn:c=>{c.face='L'}},{k:'lie',dur:.7,ex:'lookDown'},{fn:c=>{if(c.me)openBook()}},{k:'sit',dur:.6,soft:1}])}});
-function openBook(){const L=log(),M=GS().fishMax||{},kinds=FISH_KINDS.filter(f=>!f.junk),n=kinds.filter(f=>L[f.id]).length;
-  A.dlg.show({id:'fishbook-'+Math.floor(now()*10),kind:'info',head:{icon:'fish',title:'鱼谱',chips:[`${n}/${kinds.length} 种`]},blocks:[
-    {k:'steps',items:kinds.map(f=>L[f.id]?{t:f.n,sub:`钓到过 ${L[f.id]} 条${M[f.id]?' · 最大 '+M[f.id]+' 厘米':''}${f.rare?' · 稀有':''}`,done:true}:{t:'？？？',sub:`多在${FISH_WHERE(f.id)}咬钩${f.big?' · 个头大的要遛':''}`})},
-    {k:'text',t:'三个钓点的鱼不一样：栈桥尽头水深，这边岸上水浅，对岸在树荫底下。钓上来的都看一眼就放回河里了。'}],tip:{...TIPS.care,key:'care'},acts:[{id:'ok',t:'知道了',key:'E'}]})}
+function openBook(){if(A.ui.book)A.ui.book('fish')}
 A.openFishBook=openBook;
 
 /* ---------- 河上漂的东西：从栈桥底下漂出来，往下游（东边）漂，漂到木桥底下就看不见了 ---------- */
@@ -109,7 +104,7 @@ const closestDock=()=>Math.abs(B.x-DOCKS.up.x)<=Math.abs(B.x-DOCKS.down.x)?'up':
 const NOTES=['如果你捡到这个瓶子：猫猫咖啡馆的猫也在飞书、钉钉、企业微信里接球','瓶子里一张纸条：今天的 CI 是绿的','纸条上画着一只猫，旁边写着：谢谢你把我捞上来',
   '纸条上写着：想要一只会写代码的猫','纸条：下游的木桥底下，住着一家鸭子','纸条上只有一行：TODO'];
 // 你开船：解开缆绳以后自己划；别的猫开船：从船停着的码头划到另一个码头，靠岸下船
-function depart(){if(B.mode!=='moored'||!riders().length)return;B.t0=now();sfx('row');
+function depart(){if(B.mode!=='moored'||!riders().length)return;B.t0=now();if(meIn()||atMe(B,260))sfx('row');
   if(meIn()){B.mode='free';B.got=0;B.bottle=Math.random()<.4?now()+rr(10,40):0;B.vx=8;B.vy=0;B.tgt=null;driftT=.5;say(GS().boat?'解开缆绳了。捞毛线球，躲漂木，一分钟':'解开缆绳了。自己划：捞漂下来的毛线球，躲开漂木，一趟一分钟');news('你划着小船出发了')}
   else{B.mode='out';B.dir=B.dock==='up'?1:-1;news(riders().map(c=>c.name).join('、')+(B.dir>0?' 坐着小船漂到下游去了':' 坐着小船划回上游的栈桥'))}}
 function dock(k){k=k||nearDockKey()||closestDock();B.mode='moored';B.dock=k;B.x=DOCKS[k].x;B.y=DOCKS[k].y;B.vx=B.vy=0;B.tgt=null;B.landT=now();

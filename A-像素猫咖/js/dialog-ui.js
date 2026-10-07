@@ -87,8 +87,10 @@ const KEYCAP_RE=/(^|[^A-Za-z0-9])(Esc|Shift|WASD|E|Q|空格|方向键|[←→↑
 function keycaps(s){return htmlEsc(s).replace(/(^|· )(E|Q|Esc|WASD) · /g,'$1$2 ').replace(KEYCAP_RE,(m,a,k)=>a+'<kbd>'+k+'</kbd>')}
 
 // 像素头像：坐着的猫（pal 是 PAL 的下标；店猫用它自己的默认表情）
-function drawPortrait(cv,pal,t=0,ex){const c=cv.getContext('2d');cv.width=22;cv.height=20;c.clearRect(0,0,22,20);const o=C;use(c);
-  const P=POSE.sit(t,0,0,ex||(pal<7?PERSONA[pal].face:'normal'));drawF(C,P.G,PAL[pal]||PAL[0],11,20,{cx:P.cx,blink:P.blink});use(o)}
+// charm：戴着的挂坠（world-charms.js），挂在项圈正中间
+function drawPortrait(cv,pal,t=0,ex,charm){const c=cv.getContext('2d');cv.width=22;cv.height=20;c.clearRect(0,0,22,20);const o=C;use(c);
+  const P=POSE.sit(t,0,0,ex||(pal<7?PERSONA[pal].face:'normal')),B=PAL[pal]||PAL[0];drawF(C,P.G,B,11,20,{cx:P.cx,blink:P.blink});
+  if(charm&&typeof charmImg==='function'&&CHARMS[charm]){const cc=collarOf(P.G);if(cc)C.drawImage(charmImg(charm,B.outline,0),Math.round(11-P.cx+cc[0])-2,20-P.G.length+cc[1])}use(o)}
 // 织好的小东西（围巾、毛线帽……），11×11 画布居中
 function drawKnit(cv,kind,ci=0){const c=cv.getContext('2d');cv.width=11;cv.height=11;c.clearRect(0,0,11,11);const o=C;use(c);const h=KNIT[kind].length;knit(kind,5,Math.floor((11-h)/2),ci);use(o)}
 function drawIcon(cv,kind,ci=0,t=0){const c=cv.getContext('2d');cv.width=16;cv.height=16;c.clearRect(0,0,16,16);const o=C;use(c);

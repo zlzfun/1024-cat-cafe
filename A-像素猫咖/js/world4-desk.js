@@ -62,9 +62,10 @@ const lottoSub=()=>{const st=S.stamps,n=['ball','inner','site'].filter(k=>st[k])
 const HEAD={icon:'bell',title:NAME,chips:['有事问我']};
 const say1=t=>({k:'say',pal:DESK_PAL,name:NAME,t});
 const BACK=[{id:'back',t:'回去'},{id:'close',t:'再逛逛',key:'Esc'}];
+let eggI=0;   // 店里有彩蛋吗：说到第几个（换一个）
 function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick=null;
   if(id==='menu'){const items=[...(q&&ball?[{id:'quest',t:'我叼着的这颗球，该怎么解？',sub:'再看一眼便签'}]:[]),
-      ...(G.disc.yarntree?[]:[{id:'tree',t:'听说店里有棵大树？',sub:'就在咖啡厅正中间，我带你去'}]),{id:'lotto',t:'怎么参加抽奖？',sub:lottoSub()},{id:'games',t:'有什么小游戏？',sub:'七个，能一直玩下去'},{id:'fun',t:'这附近有什么好玩的？',sub:'我带你过去'},{id:'floors',t:'楼上楼下有什么？',sub:'二楼、屋顶，还有地下'},{id:'me',t:'我是哪只猫？'},{id:'ball',t:'毛线球是什么？怎么解？'},
+      ...(G.disc.yarntree?[]:[{id:'tree',t:'听说店里有棵大树？',sub:'就在咖啡厅正中间，我带你去'}]),{id:'lotto',t:'怎么参加抽奖？',sub:lottoSub()},{id:'games',t:'有什么小游戏？',sub:'七个，能一直玩下去'},{id:'fun',t:'这附近有什么好玩的？',sub:'我带你过去'},{id:'floors',t:'楼上楼下有什么？',sub:'二楼、屋顶，还有地下'},{id:'eggs',t:'店里有彩蛋吗？',sub:A.eggs.count()?`你找到了 ${A.eggs.count()} / ${A.eggs.total} 个`:'八个，找到了有挂坠'},{id:'me',t:'我是哪只猫？'},{id:'ball',t:'毛线球是什么？怎么解？'},
       {id:'cafe',t:'猫猫咖啡馆是什么？',sub:'官网、GitHub、内源主页'},{id:'who',t:'你是谁？'},{id:'book',t:'把图鉴给我看看',sub:'全店能玩的都在里面（B）'}];
     const hi=G.count()?rnd(['又见面啦～今天想玩点什么？','想去哪儿？我带你去。','有什么想问的？']):'欢迎光临！第一次来吧？想玩什么、想找谁，问我就好。';
     spec={blocks:[say1(hi),{k:'choices',cols:2,items}],tip:tipOf('concierge'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]};pick=i=>go(items[i].id)}
@@ -91,6 +92,13 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
         {t:'屋顶',sub:'永远是晴天的夜里：屋脊上坐一排猫，观星毯上看满天星，跑轮点亮串灯，巨树的树冠和瞭望台'},
         {t:'地下',sub:'夜里不打烊：迪斯科舞厅（舞池小游戏）、猫猫澡堂（温泉、水族馆的大玻璃）、小电影院，门厅里还有一面海报墙'}]},
       {k:'text',t:'上下楼走楼梯间的楼梯：上二楼的楼梯在东墙边，下地下的楼梯口在西南角，挂着一块霓虹牌。走进楼梯口就上去或者下去了；也可以在咖啡厅爬上巨树，一路爬到屋顶。右上角的小地图只画你在的那一层。'}],tip:tipOf('concierge'),acts:BACK};
+  // 店里有彩蛋吗：说一个你还没找到的（先说猫猫星球，说的是下一步），可以带你去、换一个（docs/店内设计.md 第四节"找得到"）
+  else if(id==='eggs'){const E=A.eggs,L=E.list().filter(e=>!e.found);
+    if(!L.length)spec={blocks:[say1('彩蛋？八个你都找到了吧……你知道的比我还多。')],tip:tipOf('concierge'),acts:BACK};
+    else{const e=L[eggI%L.length],I=E.info(e.key)||{},part=I.parts&&I.parts.find(p=>!p.got),tip=part?`${part.n}：${part.tip}`:I.tip,to=part?part.go:I.go,
+        items=[...(to?[{id:'go',t:'带我去',sub:tip}]:[]),...(L.length>1?[{id:'next',t:'换一个'}]:[])];
+      spec={blocks:[say1(eggI?'那说说这一个：':'彩蛋啊……店里藏着八个，我只知道一点点。这一个是这么说的：'),{k:'text',t:`「${I.riddle||e.hint}」`},{k:'text',t:'提示：'+(tip||'这个我也说不清，你自己琢磨琢磨～')},...(items.length?[{k:'choices',items}]:[])],tip:tipOf('concierge'),acts:BACK};
+      pick=i=>{const it=items[i];if(!it)return;if(it.id==='next'){eggI++;go('eggs');return}E.openTip(e.key);A.dlg.close();speak(cat,'去吧，找到了回来告诉我～',3);E.goTo(to)}}}
   else if(id==='cafe')spec={blocks:[say1('这家店，是照着猫猫咖啡馆开的。'),
       {k:'text',t:'猫猫咖啡馆（Clowder AI）把一个个孤立的 AI agent 变成一个团队：Claude、GPT、Gemini……每只猫有自己的身份、能力画像和长期记忆，互相 @、互相 review；你只管愿景、拍板和反馈。'},
       {k:'links',items:['inner','site','github'].map(k=>({key:k,...LINKS[k]}))}],tip:tipOf('multi'),acts:BACK};
@@ -100,6 +108,7 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
   spec={id:'desk-'+id,kind:'desk',head:HEAD,...spec};
   return{spec,h:{pick:i=>{if(pick)pick(i)},act:a=>{if(a==='back'){go('menu');return true}}}}}
 function go(id){
+  if(id==='eggs'&&A.dlg.spec&&A.dlg.spec.id==='desk-menu')eggI=0;
   if(id==='quest'){A.dlg.close();A.Q.open();return}
   if(id==='me'){A.dlg.close();A.findMe();speak(cat,'黄色描边、脚下一圈光的就是你～',3.5);return}
   if(id==='book'){A.dlg.close();A.ui.book&&A.ui.book();return}
@@ -122,7 +131,7 @@ const HEY={basket:'篮子里有毛线球，叼一颗？',knock:'扒拉一下门�
   feed:'饿了去喂食器',fountain:'流水饮水机，喝口水',plate:'零食机要三只猫同时踩爪垫',treat:'零食机，研究一下？',table:'咖啡桌上的杯子，推下去！',grass:'猫草，啃两口',tank:'鱼缸里有鱼……',
   kotatsu:'暖桌里能钻六只',fire:'壁炉前最舒服',sofa:'沙发最左边是宪宪的位置',tree:'爬架能一层层跳上去',piano:'地板钢琴，踩上去就响',bubbler:'泡泡机，打开试试',laser:'激光逗猫器！',tunnel:'隧道从这头钻到那头',catnip:'猫薄荷鱼，闻一下',
   wheel:'跑轮跑起来，那串大灯泡会亮',hammock:'吊床晃呀晃，头顶就是星星',toyback:'地上那个，叼回桌上吧',winseat:'窗边软座，夜里能等流星',
-  yarntree:'顺着树干爬上去，一路能爬到屋顶',treeplaque:'树下的铭牌，写着这棵树的来历',treebench:'树下的长凳，坐一会儿',chair:'椅子空着，坐下等杯咖啡',stool:'高脚凳，跳上去',
+  yarntree:'顺着树干爬上去，一路能爬到屋顶',treeplaque:'树下的招牌，写着这家店和这棵树的来历',treebench:'树下的长凳，坐一会儿',chair:'椅子空着，坐下等杯咖啡',stool:'高脚凳，跳上去',
   coffee:'按一下咖啡机，有拉花',cake:'蛋糕柜，隔着玻璃闻一闻',fish:'栈桥尽头能钓鱼，浮漂一沉就收竿',boat:'小船坐满两只就开',branch:'跳上一根横枝窝着',treeslide:'抱着树干，能一路滑回一楼',
   ridge:'跳上屋脊，背后就是星空',stargaze:'躺在观星毯上看星星',scope:'望远镜里是月亮',treetop:'爬到树顶，能看整座夜城',
   claw:'抓娃娃机里有咱们的玩偶，去抓一个？',mic:'对着话筒喵一声，全店都听得见',spot:'拨一下聚光灯，它会追着你照',maneki:'拍拍招财猫，说不定能招来一颗毛线球',grinder:'磨豆机，转一转，好香',

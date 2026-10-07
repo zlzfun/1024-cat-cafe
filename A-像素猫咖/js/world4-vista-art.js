@@ -513,8 +513,13 @@ function crabPx(x,y,dir,t,hide){const sx=x-dir*3;disc(sx,y-6,7,6,OL);disc(sx,y-6
   if(hide>0)return;const f=Math.floor(t*6)%2;for(let i=0;i<3;i++){const lx=x+dir*(2+i*2),up=(i+f)%2;line(lx,y-3,lx+dir*2,y+(up?-1:0),'#d0503a')}
   const cx=x+dir*8;disc(cx,y-4,2,2,OL);disc(cx,y-4,2,1,'#ff6a4a');P1(cx+dir,y-5,'#ffb08a');R(x+dir*4,y-9,1,4,'#d0503a');R(x+dir*6,y-9,1,4,'#d0503a');P1(x+dir*4,y-10,'#101418');P1(x+dir*6,y-10,'#101418')}
 function tankInit(V,w,h){const G=tankGeo(w,h);V.fish=Array.from({length:4},(_,i)=>({x:w*(.15+hsh(i,411)*.7),y:G.top+20+hsh(i,412)*(G.sand-G.top-50),tx:0,ty:0,sp:14+hsh(i,413)*10,dir:1,scare:0,ci:i%4,gold:false,ph:i*.3}));
+  // 从猫猫星球带回来的水晶鱼（world-crystal.js 的 VA.crystal：{n, gold}）：和大一点的鱼一样慢慢游，cr 是 1 淡青、2 金色
+  const CRY=(VA.crystal&&VA.crystal())||{n:0,gold:0};for(let i=0;i<CRY.n;i++)V.fish.push({x:w*(.2+hsh(i,431)*.6),y:G.top+30+hsh(i,432)*(G.sand-G.top-70),tx:0,ty:0,sp:10+hsh(i,433)*8,dir:1,scare:0,ci:0,gold:false,ph:.5+i*.37,cr:i<CRY.gold?2:1});
   for(let i=0;i<18;i++)V.fish.push({x:w*.5+(hsh(i,421)-.5)*60,y:h*.45+(hsh(i,422)-.5)*30,tx:0,ty:0,sp:30,dir:1,scare:0,sc:1,ox:(hsh(i,423)-.5)*50,oy:(hsh(i,424)-.5)*26,ph:hsh(i,425)});
   V.lead={x:w*.5,y:h*.45,dir:1};V.crab={x:w*.66,dir:1,hide:0,turn:0};V.nextGold=V.t0+12+Math.random()*8;V.bub=[];V.W=w;V.H=h;V.lt=null}
+// 特写里的水晶鱼：fish-art.js 那一幅放大三倍（36×21），头朝 dir
+const CRS={};function crystalSpr(gold,dir){const k=(gold?'g':'c')+dir;if(CRS[k])return CRS[k];const src=fishCanvas(gold?'gold':'crystal'),cv=document.createElement('canvas');cv.width=src.width*3;cv.height=src.height*3;const x=cv.getContext('2d');x.imageSmoothingEnabled=false;
+  if(dir<0){x.translate(cv.width,0);x.scale(-1,1)}x.drawImage(src,0,0,cv.width,cv.height);return CRS[k]=cv}
 function tankFrame(E){const {w,h,t,V}=E,G=tankGeo(w,h);if(!V.fish||V.W!==w||V.H!==h||!V.lead)tankInit(V,w,h);const dt=Math.min(.05,V.lt==null?0:t-V.lt);V.lt=t;
   C.drawImage(cached('tankBack',w,h,()=>tankBack(w,h)),0,0);
   // 水面一道波纹、沙子上晃动的光斑
@@ -529,13 +534,16 @@ function tankFrame(E){const {w,h,t,V}=E,G=tankGeo(w,h);if(!V.fish||V.W!==w||V.H!
   V.bub.forEach(b=>{const x=Math.round(b.x+Math.sin(b.y*.1)*2),y=Math.round(b.y);if(b.r>1){R(x-1,y-2,3,1,'#eaf8ff');R(x-1,y+2,3,1,'#eaf8ff');R(x-2,y-1,1,3,'#eaf8ff');R(x+2,y-1,1,3,'#eaf8ff');P1(x-1,y-1,'#ffffff')}else{R(x-1,y-1,2,1,'#eaf8ff');R(x-1,y+1,2,1,'#eaf8ff');P1(x-2,y,'#eaf8ff');P1(x+1,y,'#eaf8ff')}});
   // 霓虹灯鱼：跟着领头的那条；领头的一掉头，一群一起转弯
   const L=V.lead,lx=w*(.5+.36*Math.sin(t*.23)),ly=h*(.42+.16*Math.sin(t*.37+1));if(Math.abs(lx-L.x)>.05)L.dir=lx>L.x?1:-1;L.x=lx;L.y=ly;
-  if(t>V.nextGold&&!V.fish.some(f=>f.gold)){const big=V.fish.filter(f=>!f.sc),f=big[Math.floor(Math.random()*big.length)];f.gold=true;f.goldT=t+8+Math.random()*4;V.nextGold=t+25+Math.random()*15}
+  if(t>V.nextGold&&!V.fish.some(f=>f.gold)){const big=V.fish.filter(f=>!f.sc&&!f.cr),f=big[Math.floor(Math.random()*big.length)];f.gold=true;f.goldT=t+8+Math.random()*4;V.nextGold=t+25+Math.random()*15}
   V.fish.forEach(f=>{if(f.sc){const ox=f.x;if(f.scare>0){f.scare=Math.max(0,f.scare-dt);const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy)||1;f.x+=dx/d*Math.min(d,140*dt);f.y+=dy/d*Math.min(d,80*dt)}
       else{const tx=L.x-L.dir*(10+(f.ox+25)*.95),ty=L.y+f.oy*.8+Math.sin(t*1.3+f.ph*6)*3;f.x+=(tx-f.x)*Math.min(1,dt*(1.6+f.ph));f.y+=(ty-f.y)*Math.min(1,dt*(1.6+f.ph))}
       f.dir=f.scare>0?(f.x>=ox?1:-1):L.dir;C.drawImage(neonSpr(Math.floor(t*7+f.ph*5)%2,f.dir),Math.round(f.x)-5,Math.round(f.y+Math.sin(t*3+f.ph*9)*.6)-2);return}
     // 大一点的鱼：慢慢游；被爪子吓到的猛地游开；隔一阵来一条金鱼
     if(f.gold&&t>f.goldT)f.gold=false;if(!f.tx||Math.hypot(f.tx-f.x,f.ty-f.y)<4){f.tx=w*(.08+Math.random()*.84);f.ty=h*.3+Math.pow(Math.random(),.7)*(G.sand-18-h*.3)}
     const sp=f.scare>0?f.sp*4:f.sp;f.scare=Math.max(0,f.scare-dt);const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy)||1;f.x+=dx/d*Math.min(d,sp*dt);f.y+=dy/d*Math.min(d,sp*dt*.6);if(Math.abs(dx)>1)f.dir=dx>0?1:-1;
+    // 水晶鱼：一圈光，身子半透明地亮，周围一闪一闪的小星
+    if(f.cr){const fy=Math.round(f.y+Math.sin(t*1.6+f.ph)*3),gc=f.cr===2?'#ffd84a':'#7ae8ff',fx=Math.round(f.x);C.save();C.globalCompositeOperation='lighter';C.globalAlpha=.45+.15*Math.sin(t*3+f.ph*5);C.drawImage(glowTex(34,gc),fx-34,fy-34);C.restore();
+      C.drawImage(crystalSpr(f.cr===2,f.dir),fx-18,fy-10);for(let q=0;q<3;q++){const a=t*1.3+q*2.1+f.ph*4,k2=(t*1.7+q*.37+f.ph)%1;if(k2<.45)spark(Math.round(fx+Math.cos(a)*22),Math.round(fy+Math.sin(a)*13),t+q)}return}
     C.drawImage(bigFishSpr(f.gold?['#ffd84a','#c9a030','#fff4a0']:FISH_COL[f.ci],Math.floor(t*4+f.ph*3)%2,f.dir),Math.round(f.x)-16,Math.round(f.y+Math.sin(t*2+f.ph)*1.2)-9);if(f.gold&&Math.floor(t*6)%2){spark(Math.round(f.x+f.dir*12),Math.round(f.y-8),t+.2);spark(Math.round(f.x-f.dir*6),Math.round(f.y+6),t)}});
   C.drawImage(cached('tankFront',w,h,()=>tankFront(w,h)),0,0);
   // 你的猫：凑得很近，只露出头和肩膀；跟着鼠标左右挪（坐在目标旁边一点，爪子从侧面伸出去，不被头挡住），只够得着身前一段

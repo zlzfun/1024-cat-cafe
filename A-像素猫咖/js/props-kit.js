@@ -139,7 +139,8 @@ function owlPx(x,y,t,back,fly=0){const blink=Math.floor(t*.7+x)%9===0;
 
 /* ---------- 第五轮：吧台的大鱼缸、舞台的 Tips 大屏 ---------- */
 // 大鱼缸：58×40，base=y+40；木柜子上一口长缸：沙、水草、小城堡、气泡，七条鱼来回游；paw>0 时玻璃上一个爪印、鱼吓得散开
-function bigFishTank(x,y,t,{paw=0}={}){box(x,y+28,58,12,'#9a6448');R(x+1,y+29,56,1,'#b87a58');R(x+28,y+31,1,8,'#7a4c36');P1(x+25,y+34,'#ffd84a');P1(x+31,y+34,'#ffd84a');
+const CRYF=[["...oooo..","o.oCWWCo.","ooCCCCCeo","o.oCCCCo.","...oooo.."],["...oooo..",".ooCWWCo.","ooCCCCCeo",".ooCCCCo.","...oooo.."]];   // 缸里的水晶鱼，头朝右；两帧摆尾
+function bigFishTank(x,y,t,{paw=0,crystal=null}={}){box(x,y+28,58,12,'#9a6448');R(x+1,y+29,56,1,'#b87a58');R(x+28,y+31,1,8,'#7a4c36');P1(x+25,y+34,'#ffd84a');P1(x+31,y+34,'#ffd84a');
   box(x,y,58,29,'#3a5a6a');for(let j=0;j<24;j++)R(x+1,y+3+j,56,1,j<6?'#9fd6ec':j<14?'#86c8e4':'#72b6d8');R(x+1,y+1,56,2,'#c8d0d8');R(x+1,y+3,56,1,'#cfeef8');
   R(x+1,y+23,56,4,'#e6d49a');for(let i=0;i<8;i++)P1(x+4+i*7,y+24+(i%2),'#c9b070');
   // 小城堡、石头、水草
@@ -149,6 +150,10 @@ function bigFishTank(x,y,t,{paw=0}={}){box(x,y+28,58,12,'#9a6448');R(x+1,y+29,56
   const COL=['#ff8a3a','#ffd84a','#ff6a8a','#4fd8ff','#ff8a3a','#c8a0ff','#ffd84a'];
   for(let i=0;i<7;i++){const u=((t*(.12+i*.025)+i*.37)%2),k=u<1?u:2-u,dir=u<1?1:-1,sc=paw>0?Math.sign(i%2-.5)*paw*6:0,fx=Math.round(x+5+k*46+sc),fy=Math.round(y+6+((i*5)%14)+Math.sin(t*1.3+i)*1.5);
     R(fx-2,fy,4,2,COL[i]);P1(fx-3*dir,fy+(Math.floor(t*6+i)%2),COL[i]);P1(fx+dir,fy,'#141018')}
+  // 水晶鱼（第六轮，从猫猫星球带回来的；world-crystal.js 给 crystal:{n, gold}）：比别的鱼大一圈、带深色描边，身上一道亮边，隔一会儿闪一下；金的是金色
+  if(crystal&&crystal.n)for(let i=0;i<crystal.n;i++){const u=((t*(.07+i*.015)+i*.61+.3)%2),k=u<1?u:2-u,dir=u<1?1:-1,sc=paw>0?Math.sign(i%2-.5)*paw*6:0,fx=Math.round(x+8+k*42+sc),fy=Math.round(y+8+((i*7+4)%11)+Math.sin(t*1.1+i*2)*1.5),g=i<crystal.gold;
+    const pal=g?{o:'#5a3a08',C:'#ffd84a',W:'#fffbe0',e:'#5a3a08'}:{o:'#0c2a44',C:'#5ac8f0',W:'#e0fcff',e:'#0c2a44'},sw=Math.floor(t*5+i)%2;
+    CRYF[sw].forEach((r,j)=>{for(let q=0;q<r.length;q++){const c=pal[r[q]];if(c)P1(dir>0?fx-4+q:fx+4-q,fy-2+j,c)}});if((Math.floor(t*3)+i*2)%7===0){P1(fx+dir,fy-4,'#ffffff');P1(fx+dir,fy-5,pal.W)}}
   for(let i=0;i<4;i++){const k=(t*.6+i*.25)%1;P1(x+9+(i%2),Math.round(y+22-k*18),'#e8f8ff')}
   R(x+2,y+4,1,18,'#ffffff55');if(paw>0){alpha(.7,()=>{disc(x+29,y+14,3,2,'#fff4dc');[[-3,-3],[0,-4],[3,-3]].forEach(([a,b])=>P1(x+29+a,y+14+b,'#fff4dc'))})}}
 // Tips 大屏：舞台背板变成一块 LED 屏，左边一个"TIPS"小标和猫脸，中间一行中文像素字从右往左滚（PXT，画在 1 倍的画布上，跟着画面放大）

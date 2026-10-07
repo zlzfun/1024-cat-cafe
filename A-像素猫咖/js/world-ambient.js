@@ -1,7 +1,7 @@
 /* 1024 猫咖 · 声音的店里这一侧（设计见 docs/店内设计.md 第六节）：你在哪一层、离哪些声源多远，每 0.2 秒交给 sound.js 一次；你走路的脚步；每只猫的声线。
    声音默认关着；关着的时候这里只算不发。
-   - 一楼：点唱机（离它越近越响）、河水和小溪、后院的虫鸣、许愿池边的青蛙；在屋里的时候，屋外的声音小很多。
-   - 二楼：大客厅的壁炉；站在巨树回廊的天井边，隐约听得到楼下点唱机的音乐。
+   - 一楼：点唱机是一楼的背景音乐：屋里哪儿都听得到（最小一半音量），离它越近越响，出了后门小一半；河水和小溪、后院的虫鸣、许愿池边的青蛙；在屋里的时候，屋外的声音小很多。
+   - 二楼：大客厅的壁炉；站在巨树回廊的天井边，听得到楼下点唱机的音乐，别的房间隐约听得到一点。
    - 屋顶：夜风。
    - 地下：迪斯科舞厅放《喵喵迪斯科》（Sound.DISCO，点唱机里没有；门厅里隔着墙闷闷地听得到）；澡堂的水声和滴水；电影院放映机的咔嗒。
    - 猫猫星球：很轻的一层嗡嗡声。
@@ -30,9 +30,10 @@ tick(dt=>{if(!A.play||!window.Sound||!Sound.on)return;
   if((ambT-=dt)>0)return;ambT=.2;
   const f=A.floorOf(me.y).id,r=roomAt(me.x,me.y).id,out=OUT(r),lv={};
   if(f==='f1'){const RV=P.river,dr=me.y<RV.y?RV.y-me.y:me.y>RV.y+RV.h?me.y-RV.y-RV.h:0;lv.river=fall(dr,260)*(out?1:.25);
-    lv.brook=fall(Math.hypot(me.x-P.pond.x,me.y-P.pond.y),200)*(out?1:.2);lv.crickets=out?(r==='yard'?1:.6):me.y>380?.12:0;lv.frogs=fall(Math.hypot(me.x-P.pond.x,me.y-P.pond.y),320)*(out?1:.15);
-    const J=S.juke;if(J&&J.on){const d=Math.hypot(me.x-(P.juke.x+12),me.y-(P.juke.y+30));lv.music=fall(d,460)*(out?.35:1);lv.track=J.track}}
-  else if(f==='f2'){lv.fire=fall(Math.hypot(me.x-(P.fire.x+30),me.y-(P.fire.y+50)),280);const J=S.juke;if(J&&J.on&&r==='well'){lv.music=.22;lv.track=J.track}}
+    // 虫鸣、青蛙只在屋外（第六轮：原来屋里也隐约有，听上去像哪儿在嘀嘀、嘟嘟地响）
+    lv.brook=fall(Math.hypot(me.x-P.pond.x,me.y-P.pond.y),200)*(out?1:.2);lv.crickets=out?(r==='yard'?.8:.5):0;lv.frogs=out?fall(Math.hypot(me.x-P.pond.x,me.y-P.pond.y),320):0;
+    const J=S.juke;if(J&&J.on){const d=Math.hypot(me.x-(P.juke.x+12),me.y-(P.juke.y+30)),m=.5+.5*fall(d,380);lv.music=out?m*.45:m;lv.track=J.track}}
+  else if(f==='f2'){lv.fire=fall(Math.hypot(me.x-(P.fire.x+30),me.y-(P.fire.y+50)),280);const J=S.juke;if(J&&J.on){lv.music=r==='well'?.35:.12;lv.track=J.track}}
   else if(f==='roof')lv.wind=1;
   else if(f==='b1'){const d=Math.hypot(me.x-264,me.y-(Y4+164));lv.music=r==='disco'?fall(d,520)*.9+.1:r==='b1hall'?.28:.08;lv.track=Sound.DISCO;
     if(r==='bath'){lv.bath=1;lv.drip=1}if(r==='cinema'){lv.proj=fall(Math.hypot(me.x-P.projector.x,me.y-P.projector.y),360);if(A.cinema&&A.cinema.playing()){lv.music=.45;lv.track=1}else lv.music=0}}

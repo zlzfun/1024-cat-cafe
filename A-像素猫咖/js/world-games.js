@@ -40,7 +40,7 @@ function pianoSteer(dx,dy){if(dy&&!dx)return false;if(!dx){lastDx=0;return true}
   if(dx!==lastDx||t>rep){PZ.cur=Math.max(0,Math.min(11,PZ.cur+dx));rep=t+(dx!==lastDx?.32:.11);sfx('tick')}lastDx=dx;return true}
 function pianoTap(x,y){if(x<PN.x||x>PN.x+98||y<PN.y-6||y>PN.y+30)return false;pianoJump(me,keyOf(x));return true}
 function onNote(k){const s=SONGS[PZ.song].k;if(k===s[PZ.pos]){PZ.pos++;if(PZ.pos>=s.length){PZ.pos=0;songDone(me,PZ.song)}}else PZ.pos=k===s[0]?1:0}
-function songDone(c,si){const song=SONGS[si];for(let i=0;i<10;i++)A.fx.push({kind:'note',x:PN.x+rr(0,98),y:PN.y+rr(-4,10),t0:now()+i*.12,life:1.8});sfx('fanfare');
+function songDone(c,si){const song=SONGS[si];for(let i=0;i<10;i++)A.fx.push({kind:'note',x:PN.x+rr(0,98),y:PN.y+rr(-4,10),t0:now()+i*.12,life:1.8});if(c.me||atMe(PN,300))sfx('fanfare');
   S.cats.forEach(o=>{if(o===c||o.me||o.hidden||o.place||o.working||!near(o,PN,170))return;if(idle(o)&&o.z==null&&Math.random()<.7){const p=land(PN.x+rr(-10,110),PN.y+rr(-26,-12));run(o,[{go:p},{fn:o=>{faceTo(o,{x:PN.x+49,y:PN.y})}},{k:'meow',dur:1.8},{k:'sit',dur:rr(2,4),ex:'happy'}])}
     else emote(o,'note',1.6)});
   if(c.me){const g=GS(),P2=g.piano=g.piano||{songs:{}},first=!P2.songs[song.n];P2.songs[song.n]=(P2.songs[song.n]||0)+1;save();const n=Object.keys(P2.songs).length;
@@ -72,7 +72,7 @@ A.huds.push((hx,scale,dpr,v)=>{if(PZ.by!==me||!me.place)return;let pk=Math.max(1
   song.k.forEach((k,i)=>{const {d,hi}=jp(k),x=sx+i*step,y=y0+38*dpr,done=i<PZ.pos,nx=i===PZ.pos;hx.fillStyle=done?'#ffd84a':nx?(Math.floor(t*3)%2?'#ffffff':'#8a7aa8'):'#6a5e80';
     hx.fillText(d,Math.round(x),Math.round(y));if(hi)hx.fillRect(Math.round(x-k),Math.round(y-9*dpr-k),2*k,2*k)});hx.restore()});
 T({id:'sheet',n:'曲谱架',hit:[P.musicStand.x-1,P.musicStand.y,12,24],at:P.standAt,near:[P.standAt.x-14,P.standAt.y-16,30,26],label:()=>`翻到下一首（现在是《${SONGS[PZ.song].n}》）`,ai:{mood:'play',w:.15},
-  go(c){run(c,[{go:P.standAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.5,fn:()=>{PZ.song=(PZ.song+1)%SONGS.length;PZ.pos=0;sfx('page')}},
+  go(c){run(c,[{go:P.standAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.5,fn:()=>{PZ.song=(PZ.song+1)%SONGS.length;PZ.pos=0;if(c.me||atMe(P.standAt,240))sfx('page')}},
     {fn:c=>{if(c.me)say(`曲谱架翻到了《${SONGS[PZ.song].n}》：${SONGS[PZ.song].k.map(k=>jp(k).d+(jp(k).hi?'̇':'')).join(' ')}`)}},{k:'sit',dur:.6,ex:'curious',soft:1}])}});
 
 /* ================= 抓娃娃机 ================= */
@@ -131,7 +131,7 @@ A.wheelGain=c=>c.me?.03+.21*S.wheelV:.03;          // world-acts.js 的跑轮每
 A.wheelSpin=c=>c.me?2+11*S.wheelV:5;
 {const th=TID('wheel'),go0=th.go;th.go=c=>{if(!c.me){go0(c);return}go0(c);run(c,[{fn:c=>{if(!c.place)return;S.wheelV=.15;wheelT0=now();shown=false;
     c.place.steer=(dx,dy)=>{if(dy&&!dx||dx<0)return false;if(dx>0&&wLast<=0){S.wheelV=Math.min(1,S.wheelV+.13);sfx('tick')}wLast=dx;return true};
-    c.place.prompt=()=>{const n=Math.ceil(S.power*P.festN-.001);return`连按 → 跑快点 · 串灯 ${n}/${P.festN} · ←↑↓ 出来`}}}],true)}}
+    c.place.prompt=()=>{const n=Math.ceil(S.power*P.festN-.001);return`连按 → 跑快点 · 串灯 ${n}/${P.festN}${A.wheelHint?A.wheelHint():''} · ←↑↓ 出来`}}}],true)}}
 tick(dt=>{S.wheelV=Math.max(0,S.wheelV-.55*dt);const full=S.power>=.999;
   if(full&&now()-fwT>12){fwT=now();show();const runner=S.cats.find(c=>c.doing==='在跑轮里跑');
     if(runner&&runner.me&&wheelT0!=null&&!shown){shown=true;const sec=now()-wheelT0,g=GS(),W=g.wheel=g.wheel||{},best=W.best==null||sec<W.best;if(best)W.best=sec;W.n=(W.n||0)+1;save();

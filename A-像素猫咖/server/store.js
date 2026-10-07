@@ -1,6 +1,7 @@
 /* 1024 猫咖 · 服务端的库：名册、令牌、店里共同的计数、抽奖记录，以及发名字（名字池和前端是同一份：js/account.js 的 Account.NAMES）。
    数据在 server/data/（不进仓库；环境变量 DATA_DIR 可以换一个目录，压力测试时用）：
-   - cats.json：{cats:{名字键:猫}, tokens:{令牌散列:{id,k,exp}}, world:{hung, days:{日期:件数}, tree:[{kind,ci}]}, draws:[...]}
+   - cats.json：{cats:{名字键:猫}, tokens:{令牌散列:{id,k,exp}}, world:{hung, days:{日期:件数}, tree:[{kind,ci}], eggs:{彩蛋键:几只猫找到}, crystal:{n,gold}}, draws:[...]}
+     猫身上的 eggs 是它找到过的彩蛋（{键:时间}，计数用，同一个只算一次），tank 是它往吧台大鱼缸里放过几条水晶鱼
      猫身上的 entry 是它的抽奖登记 {real 姓名, emp 工号, contact 联系方式, t 第一次登记, u 最近一次改}
    - admin.key：后台口令（第一次启动时生成；也可以用环境变量 ADMIN_KEY） */
 const fs=require('fs'),path=require('path'),crypto=require('crypto'),vm=require('vm');
@@ -17,6 +18,14 @@ const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
 /* ---------- 库 ---------- */
 const db={cats:{},tokens:{},world:{hung:0,days:{},tree:[]},draws:[]};
 try{const j=JSON.parse(fs.readFileSync(DB_FILE,'utf8'));Object.assign(db,j);db.world={hung:0,days:{},tree:[],...(j.world||{})};db.draws=j.draws||[]}catch(e){}
+// 彩蛋、大鱼缸的计数：第一次（旧的库里没有）按名册里每只猫存档里的记录补算一遍，以后跟着联机消息加
+const EGG_KEYS=['planet','ninelives','shark','milk','disco','clock','konami','credits'];
+// 存档里记着的、计数里还没算上的（比如断线的时候找到的）补上：同一只猫同一个彩蛋只算一次，大鱼缸每只猫最多算三条
+function syncEggs(c){const g=(c.state&&c.state.g&&c.state.g.eggs)||{},W=db.world,E=c.eggs=c.eggs||{};let ch=false;
+  for(const k of EGG_KEYS)if(g[k]&&g[k].at&&!E[k]){E[k]=g[k].at;W.eggs[k]=(W.eggs[k]||0)+1;ch=true}
+  const tk=g.planet&&Array.isArray(g.planet.tank)?g.planet.tank.slice(0,3):[],had=c.tank||0;if(tk.length>had){W.crystal.n+=tk.length-had;W.crystal.gold+=tk.slice(had).filter(v=>v===1).length;c.tank=tk.length;ch=true}
+  return ch}
+if(!db.world.eggs||!db.world.crystal){db.world.eggs={};db.world.crystal={n:0,gold:0};for(const c of Object.values(db.cats)){c.eggs={};c.tank=0;syncEggs(c)}}
 const byIdMap=new Map();const reindex=()=>{byIdMap.clear();for(const [k,c] of Object.entries(db.cats))byIdMap.set(c.id,k)};reindex();
 const byId=id=>{const k=byIdMap.get(id);return k?db.cats[k]:null};
 let saveT=null;
@@ -44,4 +53,4 @@ const today=(t=Date.now())=>{const d=new Date(t);return d.getFullYear()+'-'+Stri
 function adminKey(){if(process.env.ADMIN_KEY)return process.env.ADMIN_KEY;try{const k=fs.readFileSync(KEY_FILE,'utf8').trim();if(k)return k}catch(e){}
   const k=crypto.randomBytes(12).toString('base64url');fs.mkdirSync(DATA,{recursive:true});fs.writeFileSync(KEY_FILE,k+'\n',{mode:0o600});return k}
 
-module.exports={ROOT,DATA,ACC,db,key,clean,okLook,sha,byId,reindex,save,flush,offer,issue,who,revoke,rename,pub,pubEntry,today,adminKey};
+module.exports={ROOT,DATA,ACC,EGG_KEYS,syncEggs,db,key,clean,okLook,sha,byId,reindex,save,flush,offer,issue,who,revoke,rename,pub,pubEntry,today,adminKey};

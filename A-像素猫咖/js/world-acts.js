@@ -91,7 +91,7 @@ tick(dt=>{for(let i=fx.length-1;i>=0;i--){const p=fx[i];if(now()-p.t0>p.life){fx
 function throwTo(from,to,y,then){const d=dist(from,to);S.flying.push({x0:from.x,y0:from.y-9,x1:to.x,y1:to.y-9,t0:now(),dur:Math.min(1.1,.4+d/320),arc:Math.min(46,14+d/7),ci:y.ci,done:then})}
 function giveBack(to,y){if(to.gone||to.hold){S.baskets[Math.floor(Math.random()*3)].push(y);return}to.hold=y}
 A.pass=(c,o)=>{const y=c.hold;if(!y||o.gone)return;c.hold=null;run(c,[{k:'happy',dur:.6,soft:1}]);if(c.me)say(`传给${o.name}`);if(o.me)say(`${c.name}把一颗毛线球传给了你`);
-  if(!o.me&&!o.hidden&&!o.place&&!o.working)run(o,[{k:'alert',dur:.7}]);sfx('toss');throwTo(c,o,y,()=>receive(o,y,c))};
+  if(!o.me&&!o.hidden&&!o.place&&!o.working)run(o,[{k:'alert',dur:.7}]);if(c.me||o.me||atMe(c,260))sfx('toss');throwTo(c,o,y,()=>receive(o,y,c))};
 const REPLY={1:['heart','宪宪接住了，慢慢眨了一下眼'],3:['q','烁烁歪着头看了看便签'],4:['q','小狸花把便签从头看到尾，才接了过去'],5:['bang','斑斑兴奋地扑了上来'],6:['q','金哥醒了，慢吞吞地接住']};
 function receive(o,y,from){
   if(o.me){if(o.hold||o.hidden){say('你嘴里已经有东西了，球滚回去了');throwTo(o,from,y,()=>giveBack(from,y));return}o.hold=y;y.knit=false;say('接住了！');return}
@@ -295,10 +295,11 @@ T({id:'stage',n:'1024 舞台',hit:[P.backdrop.x,P.backdrop.y,P.backdrop.w,P.back
     run(c,[...(dist(c,P.stage[i])>2?[{go:P.stage[i]}]:[]),{fn:c=>{c.face=i<2?'R':'L';stay(c,{k:'sit',ex:rnd(['happy','sparkle','wink','smug','content','love']),dur:rr(6,12)});if(c.me&&!camBusy)say('站上舞台了。去台下的相机后面按快门，或者等别的猫按')}}],true)}}])}});
 T({id:'camera',n:'相机',hit:[P.cam.x,P.cam.y-4,16,34],at:P.camAt,near:[P.camAt.x-20,P.camAt.y-20,40,24],label:()=>camBusy?'倒数中……':'按快门（倒数 3 秒）',ok:()=>!camBusy,no:()=>'正在倒数',ai:{mood:'social',w:c=>STAGE.filter(Boolean).length>=2&&!camBusy?3:.2},
   go(c){run(c,[{go:P.camAt},{k:'maneki',dur:.6,soft:1,fn:()=>shoot(c)}])}});
-function shoot(by){if(camBusy)return;camBusy=true;S.cam.count=3;sfx('beep');
+// 倒数的"嘟、嘟、嘟"和咔嚓：按快门的是你、或者你就在舞台边上才听得到（店猫、补位的猫自己拍的时候，别的地方听不到）
+function shoot(by){if(camBusy)return;camBusy=true;S.cam.count=3;const hear=()=>by===me||atMe(P.cam,320);if(hear())sfx('beep');
   S.cats.forEach(o=>{if(isBot(o)&&near(o,P.stage[2],170)&&!o.working&&!o.place&&Math.random()<.55&&stageFree(o)>=0)useThing(o,TID('stage'))});
-  after(1,()=>{S.cam.count=2;sfx('beep')});after(2,()=>{S.cam.count=1;sfx('beep')});
-  after(3,()=>{S.cam.count=0;const R0=P.shot,snap=A.snap(R0.x,R0.y,R0.w,R0.h);S.flash=.25;S.cam.flash=.25;sfx('shutter');const who=S.cats.filter(o=>inR(o.x,o.y,[R0.x,R0.y,R0.w,R0.h])&&!o.hidden);
+  after(1,()=>{S.cam.count=2;if(hear())sfx('beep')});after(2,()=>{S.cam.count=1;if(hear())sfx('beep')});
+  after(3,()=>{S.cam.count=0;const R0=P.shot,snap=A.snap(R0.x,R0.y,R0.w,R0.h);S.flash=.25;S.cam.flash=.25;if(hear())sfx('shutter');const who=S.cats.filter(o=>inR(o.x,o.y,[R0.x,R0.y,R0.w,R0.h])&&!o.hidden);
     S.photos=(S.photos||0)+1;news(`拍了一张合照（${who.length} 只猫）`);if(who.includes(me)||by===me)A.ui.photo&&A.ui.photo(snap,who.map(o=>o.name));
     who.forEach(o=>{if(!o.me&&!o.place)emote(o,'heart',1.2)});after(.4,()=>{S.cam.flash=0;camBusy=false})})}
 A.overs.push(vis=>{if(S.flash>0&&vis(P.shot.x,P.shot.y,P.shot.w,P.shot.h))alpha(Math.min(1,S.flash*4)*.8,()=>R(P.shot.x-10,P.shot.y-10,P.shot.w+20,P.shot.h+20,'#ffffff'))});
@@ -354,7 +355,7 @@ S.pile=1;let leafT=0;
 tick(dt=>{if((leafT-=dt)<=0){leafT=rr(.5,1.3);const x=P.maple.x+rr(-30,30),gy=P.maple.y+rr(-6,40);fx.push({kind:'leaf',x,y:gy,h:rr(40,70),fall:rr(10,16),ci:Math.floor(Math.random()*4),t0:now(),life:18});
   if(Math.hypot(x-P.pile.x,gy-P.pile.y)<24)S.pile=Math.min(1,S.pile+.02)}S.pile=Math.min(1,S.pile+dt*.008)});
 // 叶子炸开一地：跳进去、从秋千上飞进来都是这一下
-A.pileBurst=c=>run(c,[{fn:c=>{c.hidden=true;S.pile=.15;sfx('rustle');
+A.pileBurst=c=>run(c,[{fn:c=>{c.hidden=true;S.pile=.15;if(c.me||atMe(P.pile,260))sfx('rustle');
       for(let i=0;i<36;i++){const a=rr(0,Math.PI*2),s=rr(20,60);fx.push({kind:'leaf',x:P.pile.x+rr(-8,8),y:P.pile.y+rr(-3,3),h:rr(2,8),vx:Math.cos(a)*s,vy:Math.sin(a)*s*.3,vh:rr(40,90),ci:i%4,t0:now(),life:rr(6,12)})}
       c.onLeave=c=>{c.hidden=false};if(c.me)say('哗啦——')}},{k:'sit',dur:.9},{fn:unclaim},{k:'happy',dur:1,soft:1}],true);
 T({id:'pile',n:'落叶堆',hit:[P.pile.x-20,P.pile.y-12,40,14],at:{x:P.pile.x-30,y:P.pile.y+2},near:[P.pile.x-44,P.pile.y-10,88,24],label:'跳进落叶堆',ok:c=>S.pile>.45&&!c.hold,no:c=>c.hold?'叼着东西呢':'叶子还没攒够，等一会儿',

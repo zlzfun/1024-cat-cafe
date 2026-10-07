@@ -8,7 +8,7 @@
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,run,emote,speak,sfx,after,idle}=A;
 const now=()=>A.t,tick=f=>A.tickers.push(f);
-const LAND={x:TREE.cx+44,y:TREE.f1.base+40},TOP=TREE.f1.top+6,G=560,D=.45,fy=k=>TOP+.5*G*Math.max(0,k-D)**2;   // 从咖啡厅天花板的洞口、树叶里掉下来，落在树下
+const LAND={x:TREE.cx+70,y:TREE.f1.base+48},TOP=TREE.f1.top+6,G=560,D=.45,fy=k=>TOP+.5*G*Math.max(0,k-D)**2;   // 从咖啡厅天花板的洞口、树叶里掉下来，落在树下
 let ar=null;const leaves=[];
 function spotNear(x,y){if(A.free?A.free(x,y):true)return{x,y};for(let r=4;r<60;r+=4)for(let a=0;a<12;a++){const q=a/12*Math.PI*2,px=x+Math.cos(q)*r,py=y+Math.sin(q)*r;if(A.free(px,py))return{x:px,y:py}}return{...LAND}}
 A.arrive=(how,o={})=>{const p=how==='wake'&&o.x!=null?spotNear(o.x,o.y):spotNear(LAND.x,LAND.y);me.x=p.x;me.y=p.y;run(me,[]);me.place=null;me.follow=null;A.poke();

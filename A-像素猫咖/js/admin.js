@@ -28,10 +28,13 @@ const portrait=look=>{const c=document.createElement('canvas'),pal=7+(look.coat|
 
 /* ---------- 概况 ---------- */
 async function loadStats(){const s=await api('GET','/stats'),L=s.live||{};
-  const T=[['登记的猫',s.cats],['此刻在线',L.online??0,'ok'],['今天来过',s.today],['集齐三个章',s.eligible],['登记抽奖（人）',s.people],['今天挂了几件',s.hungToday],['巨树一共挂过',s.hung]];
+  const T=[['登记的猫',s.cats],['此刻在线',L.online??0,'ok'],['今天来过',s.today],['集齐三个章',s.eligible],['登记抽奖（人）',s.people],['今天挂了几件',s.hungToday],['巨树一共挂过',s.hung],['去过猫猫星球',(s.eggs||{}).planet??0]];
   $('enum').innerHTML=`${esc(s.people??0)} 人<small>能抽的人（按工号算）· 一共 ${esc(s.entries??0)} 份登记</small>`;
   $('stats').innerHTML=T.map(([a,b,k])=>`<div class="stat ${k||''}"><b>${esc(b??0)}</b><span>${a}</span></div>`).join('');const st=s.stamps||{};
-  $('live').innerHTML=`在线 <b>${esc(L.online??0)}</b> · 盖章：解球 ${esc(st.ball)} / 内源 ${esc(st.inner)} / 官网 ${esc(st.site)}`+(L.cpu!=null?` · 服务端 CPU ${esc(L.cpu)}% · 内存 ${esc(L.rssMB)}MB`:'')}
+  // 彩蛋：每个有几只猫找到（js/world-eggs.js 的 EGGS，顺序一样）；大鱼缸里一共放了几条水晶鱼
+  const EG=[['planet','猫猫星球'],['ninelives','九条命'],['shark','鲨鱼来了'],['milk','一口闷'],['disco','迪斯科之夜'],['clock','10:24'],['konami','老秘籍'],['credits','片尾彩蛋']],eg=s.eggs||{};
+  $('live').innerHTML=`在线 <b>${esc(L.online??0)}</b> · 盖章：解球 ${esc(st.ball)} / 内源 ${esc(st.inner)} / 官网 ${esc(st.site)}`+(L.cpu!=null?` · 服务端 CPU ${esc(L.cpu)}% · 内存 ${esc(L.rssMB)}MB`:'')+
+    `<br>彩蛋（几只猫找到）：${EG.map(([k,n])=>`${n} ${esc(eg[k]||0)}`).join(' / ')} · 吧台大鱼缸里的水晶鱼 ${esc((s.crystal||{}).n||0)} 条`}
 setInterval(()=>{if(key&&!$('app').hidden)loadStats().catch(()=>{})},10000);
 
 /* ---------- 名册 ---------- */

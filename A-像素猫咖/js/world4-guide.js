@@ -36,7 +36,7 @@ const GUIDE={
   grinder:{n:'磨豆机',room:'bar',what:'转一转，咖啡豆的香味一缕缕飘起来，附近的猫凑过来闻'},
   // 一楼 · 咖啡厅
   yarntree:{n:'毛线巨树',room:'cafe',hint:'一路能爬到屋顶',what:'顺着树干爬上去，穿过二楼，一直爬到屋顶的瞭望台'},
-  treebench:{n:'树下的环形长凳',room:'cafe',what:'围着树根一圈，能坐六只'},treeplaque:{n:'巨树的铭牌',room:'cafe',what:'全店每挂出一件成品，树上就多挂一件；挂满了，满树金光',tip:'multi'},
+  treebench:{n:'树下的环形长凳',room:'cafe',what:'围着树根一圈，能坐六只'},treeplaque:{n:'猫猫咖啡馆的招牌',room:'cafe',what:'树下的大招牌：CLOWDER AI · 猫猫咖啡馆。凑过去看这家店和这棵树的来历：全店每挂出一件成品，树上就多挂一件，挂满了满树金光；还有官网和 GitHub',tip:'multi'},
   table:{n:'咖啡桌',room:'cafe',what:'跳上桌，把桌上的东西推下去；落地弹一下，正好砸到路过的猫，它会吓一跳'},chair:{n:'椅子',room:'cafe',what:'坐在咖啡桌旁，像在等咖啡'},
   juke:{n:'点唱机',room:'cafe',what:'换一首（一共三首），或者关掉；开着的时候灯管里的气泡往上冒。开了声音，离它越近听得越清楚'},
   toyback:{n:'掉在地上的东西',room:'cafe',how:'有东西被推下来的时候',what:'叼起来，跳上桌摆回原处。下一只猫还能再推一次'},
@@ -52,7 +52,7 @@ const GUIDE={
   chess:{n:'石桌象棋',room:'yard',how:'要两只猫坐下',what:'两个石凳都坐了猫，就开一盘',tip:'game'},bench:{n:'长椅',room:'yard',what:'躺着看许愿池'},
   fish:{n:'钓鱼',room:'river',hint:'浮漂一沉就收竿 · 大鱼要遛',what:'三个钓点的鱼不一样。甩竿，等浮漂往下一沉再收竿；上钩的是大鱼，要等点跑进绿的那段再收线，收三下才拉得上来。钓上来看一眼，放回河里',tie:'猫会照顾你：连续忙了 90 分钟，会撒娇提醒你歇一会儿——比如来河边摸会儿鱼',tip:'care'},
   boat:{n:'小船',room:'river',hint:'自己划，捞漂着的毛线球',what:'解开缆绳自己划：捞漂下来的毛线球，躲开漂木，偶尔捞到漂流瓶。一趟一分钟，捞上来的毛线球送进门厅的篮子；两只猫一起划，快一半'},
-  bucket:{n:'鱼桶 · 鱼谱',room:'river',what:'鱼谱：九种鱼，每种钓到过几条、最大的一条多长；没钓到过的，写着它爱在哪个钓点咬钩',tip:'care'},
+  bucket:{n:'鱼桶 · 鱼谱',room:'river',what:'翻开图鉴里的鱼谱：十种鱼，每种一幅画，钓到过几条、最大的一条多长；没钓到过的是一团黑影，写着它爱在哪个钓点咬钩。最后一种，地上的河里钓不到',tip:'care'},
   ducks:{n:'鸭子一家',room:'river',what:'鸭妈妈带着三只小鸭在河上游；扑过去，嘎嘎叫着游开'},
   signpost:{n:'路标',room:'river',hint:'集章抽奖的入口',what:'三块木牌：官网、GitHub、内源主页',tip:'open'},mailbox:{n:'邮筒',room:'river',what:'给猫咖写封信（反馈、需求、bug）',tip:'feedback'},
   gate:{n:'小门',room:'river',what:'推不开：门外是人类的世界'},
@@ -120,7 +120,7 @@ const G=A.guide={GUIDE,disc:store.disc,total:Object.keys(GUIDE).length,count:()=
   roomInfo:id=>{const L=Object.entries(GUIDE).filter(([,g])=>g.room===id);return{n:L.length,found:L.filter(([k])=>store.disc[k]).length}},
   reset:()=>{store={disc:{},rooms:{}};G.disc=store.disc;save()},
   // 成品：认出是哪只猫以后，换成它自己的记录（旧存档里的 camp 是原来训练营的进度，丢掉）
-  load:s=>{store=Object.assign({disc:{},rooms:{}},s||{});delete store.camp;G.disc=store.disc},
+  load:s=>{store=Object.assign({disc:{},rooms:{}},s||{});delete store.camp;G.disc=store.disc;A.emit&&A.emit('guideLoad')},   // guideLoad：挂坠、水晶泡泡这些记在存档里的，换一套重新套上
   fishLog:()=>store.fish=store.fish||{},qseen:()=>store.qseen=store.qseen||{},save:()=>save(),
   // 小游戏的成绩（world-games.js、world-river.js）、店猫和你熟不熟（world-social.js）
   games:()=>store.games=store.games||{},friends:()=>store.friends=store.friends||{},
@@ -153,6 +153,8 @@ A.overs.push(()=>{if(!A.play||me.hidden||me.place||A.busy())return;const th=A.th
 function viaStairs(tg){const fa=A.floorOf(me.y),fb=A.floorOf(tg.y);if(fa===fb)return tg;const p=A.nextPortal(fa,fb);if(!p)return tg;const up=(A.FLID[p.to].lv||0)>(fa.lv||0);   // 上还是下看楼层的高低（lv），不看在列表里的先后
   return{x:p.at.x,y:p.at.y,label:(up?'上楼':'下楼')+' · '+tg.label}}
 A.viaStairs=viaStairs;
+// 带我去（图鉴、前台猫、彩蛋的提示）：走到那样东西跟前，碰它一下；在别的楼层先走楼梯。没有这样东西返回 false
+A.goThing=id=>{const th=A.TH.find(t=>t.id===id)||A.TH.find(t=>t.id.replace(/\d$/,'')===id);if(!th)return false;const h=val(th.hit,me),at=val(th.at,me);if(h&&h[2])A.tap(h[0]+h[2]/2,h[1]+h[3]/2);else if(at)A.tap(at.x,at.y);else return false;return true};
 // 页面的界面（左上状态块、右上地图）盖着的地方：A.hudAvoid() 给出覆盖层画布上的几个矩形。目标在底下就当它在画面外；箭头和字落在里面就沿着画面边挪出来
 const inR=(x,y,r)=>x>r[0]&&x<r[0]+r[2]&&y>r[1]&&y<r[1]+r[3];
 function dodge(x,y,av,W,H,m,pw=0,ph=0){for(let n=0;n<2;n++){const r=av.find(r=>inR(x,y,[r[0]-pw,r[1]-ph,r[2]+pw*2,r[3]+ph*2]));if(!r)break;
@@ -163,7 +165,7 @@ const ARW={};function arrowCells(a){const q=Math.round(a/(Math.PI*2)*64)&63;if(A
   const inside=(x,y)=>{const u=x*c+y*s,w=-x*s+y*c;let n=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if((yi>w)!==(yj>w)&&u<(xj-xi)*(w-yi)/(yj-yi)+xi)n=!n}return n};
   const fill=[],ol=[];for(let y=-7;y<=7;y++)for(let x=-7;x<=7;x++){if(inside(x,y))fill.push([x,y]);else if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>inside(x+dx,y+dy)))ol.push([x,y])}return ARW[q]={fill,ol}}
 function pixArrow(hx,cx,cy,a,k,col){const C2=arrowCells(a),X=Math.round(cx),Y=Math.round(cy);hx.fillStyle='#241a2e';C2.ol.forEach(([x,y])=>hx.fillRect(X+x*k,Y+y*k,k,k));hx.fillStyle=col;C2.fill.forEach(([x,y])=>hx.fillRect(X+x*k,Y+y*k,k,k))}
-A.huds.push((hx,scale,dpr,v)=>{if(!A.play||A.dlg.open)return;const tg0=(A.Q&&A.Q.target&&A.Q.target())||A.guideTarget();if(!tg0)return;const tg=viaStairs(tg0),t=now(),av=(A.hudAvoid&&A.hudAvoid())||[];
+A.huds.push((hx,scale,dpr,v)=>{A.hudScale=scale;if(!A.play||A.dlg.open)return;const tg0=(A.Q&&A.Q.target&&A.Q.target())||A.guideTarget();if(!tg0)return;const tg=viaStairs(tg0),t=now(),av=(A.hudAvoid&&A.hudAvoid())||[];
   const sx=(tg.x-v.x)*scale,sy=(tg.y-v.y)*scale,W=hx.canvas.width,H=hx.canvas.height,m=34*dpr,in_=sx>m&&sx<W-m&&sy>m&&sy<H-m&&!av.some(r=>inR(sx,sy-20*dpr,r));hx.save();
   // 指路的小牌：像素字（12×k 个画布像素，k 取整，和名牌一样），深底、一格金色描边、四角切掉；字的左边、基线落在整像素上
   let pk=Math.max(1,Math.floor(dpr));if(pk*(pk+1)<dpr*dpr)pk++;hx.font=`${12*pk}px FusionPixel,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='left';hx.textBaseline='alphabetic';

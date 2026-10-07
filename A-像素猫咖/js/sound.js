@@ -84,9 +84,10 @@ const GAIN={river:.11,brook:.05,wind:.12,fire:.07,bath:.05};
 let chirpT=0,croakT=0,crackT=0,purrT=0,dripT=0,projT=0,humT=0;
 function amb(lv){if(!on||!AC||AC.state!=='running')return;LV=lv||{};const t=AC.currentTime,dt=Math.min(.5,t-(lastT||t));lastT=t;
   for(const k in MAKE){const v=(LV[k]||0)*GAIN[k]*(k==='wind'?.7+.3*Math.sin(t*.35):k==='river'?.85+.15*Math.sin(t*.9):1);if(v<=0&&!LOOPS[k])continue;const L=loop(k,MAKE[k]);L.g.gain.setTargetAtTime(v,t,.4)}
-  // 虫鸣：两只蟋蟀，一串三四声
-  if(LV.crickets>0&&(chirpT-=dt)<=0){chirpT=.4+Math.random()*1.6;const f=Math.random()<.5?4300:4750,n=3+(Math.random()*2|0);for(let i=0;i<n;i++)tone(f,.025,{vol:.006*LV.crickets,delay:i*.045,bus:'amb'})}
-  if(LV.frogs>0&&(croakT-=dt)<=0){croakT=2+Math.random()*5;const d=Math.random()*.2;for(let i=0;i<2+(Math.random()*2|0);i++)tone(95+Math.random()*20,.08,{type:'square',vol:.008*LV.frogs,slide:1.3,delay:d+i*.1,bus:'amb'})}
+  // 虫鸣：远处的蟋蟀，一下两三声、很轻，隔一两秒到四秒一下（第六轮：原来又尖又密，像电子提示音）
+  if(LV.crickets>0&&(chirpT-=dt)<=0){chirpT=1.4+Math.random()*2.6;const f=Math.random()<.5?3900:4200,n=2+(Math.random()*2|0);for(let i=0;i<n;i++)tone(f,.03,{vol:.0035*LV.crickets,delay:i*.06,attack:.008,bus:'amb'})}
+  // 青蛙："呱——呱"两声，软的三角波往下滑（第六轮：原来是三声很低的方波"嘟嘟嘟"）
+  if(LV.frogs>0&&(croakT-=dt)<=0){croakT=4+Math.random()*6;const d=Math.random()*.2,f=150+Math.random()*30;for(let i=0;i<2;i++)tone(f*(i?.92:1),.14,{type:'triangle',vol:.012*LV.frogs,slide:.7,attack:.02,delay:d+i*.32,bus:'amb'})}
   if(LV.fire>0&&(crackT-=dt)<=0){crackT=.08+Math.random()*.35;noise(.015+Math.random()*.03,{vol:.03*LV.fire,hp:1800,bus:'amb'})}
   if(LV.purr>0&&(purrT-=dt)<=0){purrT=1.1;for(let i=0;i<4;i++)tone(44+i%2*5,.22,{type:'sawtooth',vol:.01*LV.purr,delay:i*.26,attack:.06,bus:'amb'})}
   // 澡堂：一滴水落进池子；电影院：放映机咔嗒咔嗒；猫猫星球：很轻的一层嗡嗡声，像远处有人在哼歌
@@ -127,7 +128,7 @@ const INST={b:(f,t,d)=>tone(f,d,{type:'triangle',vol:.06,delay:t,bus:'mus',attac
   l:(f,t,d,w,k)=>tone(f,d,{type:k===2?'square':'triangle',vol:k===2?.012:.03,delay:t,bus:'mus',attack:.015}),m:(f,t,d)=>{tone(f,Math.max(.5,d),{vol:.035,delay:t,bus:'mus'});tone(f*2,.3,{vol:.008,delay:t,bus:'mus'})},
   h:(f,t)=>noise(.025,{vol:.01,hp:7000,delay:t,bus:'mus'}),s:(f,t)=>noise(.08,{vol:.02,hp:1500,delay:t,bus:'mus'}),k:(f,t)=>tone(110,.12,{vol:.06,slide:.45,delay:t,bus:'mus'})};
 const M={on:false,track:-1,i:0,t0:0};
-function music(level,track){if(!AC)return;const t=AC.currentTime;BUS.mus.gain.setTargetAtTime(Math.min(1,level)*.55,t,.5);if(level<=.01){M.on=false;return}
+function music(level,track){if(!AC)return;const t=AC.currentTime;BUS.mus.gain.setTargetAtTime(Math.min(1,level)*.75,t,.5);if(level<=.01){M.on=false;return}
   const T=TR[track%TR.length],spb=60/T.bpm;if(!M.on||M.track!==track){M.on=true;M.track=track;M.i=0;M.t0=t+.1}
   // 往前排 0.6 秒
   for(let n=0;n<200;n++){if(M.i>=T.notes.length){M.i=0;M.t0+=T.len*spb}const e=T.notes[M.i],at=M.t0+e[0]*spb;if(at>t+.6)break;M.i++;if(at<t-.05)continue;
@@ -137,3 +138,6 @@ document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidd
 // 点唱机隔 0.2 秒才被叫一次，排得再勤一点，免得卡顿时断拍
 setInterval(()=>{if(on&&AC&&AC.state==='running'&&M.on)music(LV.music||0,LV.track||0)},150);
 return{sfx,amb,TRACKS:TR.slice(0,3).map(T=>T.n),DISCO:3,get on(){return on},set(v){on=!!v;try{localStorage.setItem('cat1024.sound',on?'1':'0')}catch(e){}if(on)init();else ambStop()},init:()=>{if(on)init()}}})();
+// 店里（world-ambient.js、world-more.js）用 window.Sound 判断有没有声音：const 声明的全局量不挂在 window 上，要自己挂上去
+// （第四轮起漏了这一句，环境声、点唱机的音乐、脚步声一直没响过，第六轮才发现）
+window.Sound=Sound;

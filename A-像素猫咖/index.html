@@ -142,7 +142,7 @@
   .game:not(.on) .hud,.game:not(.on) .corner{display:none!important}
   .game.vista .tl,.game.vista .tr,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle{display:none!important}
   /* 左上：一整块状态块（地名、你、毛线球、集章抽奖），格子之间一道像素虚线；字号三档：房间名大字，名字和小标题正文，其余小字 */
-  .tl{left:16px;top:16px}.tl>*{pointer-events:auto}
+  .tl{left:16px;top:16px;transition:opacity .15s steps(3)}.tl>*{pointer-events:auto}.tl.fade{opacity:0}   /* 状态块让路：淡出、换一边、淡入（app.js 的 dockHud） */
   .sb{width:var(--sbw);font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}
   .sb>div{padding:8px 12px}.sb>div:empty{display:none}
   .sb>div+div{background:linear-gradient(90deg,var(--line) 50%,transparent 0) 0 0/calc(var(--d2)*4) var(--d2) repeat-x}
@@ -268,6 +268,41 @@
   .bookov .eg .st{flex:none;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc)}.bookov .eg.off .st{color:#5a4a6a}
   .bookov .eg.off b{color:var(--dim)}.bookov .eg.off p{color:var(--sub)}
   .bookov .eg .cells{display:flex;gap:4px;margin-top:8px}.bookov .eg .cells i{width:calc(var(--px-s)*12);height:calc(var(--px-s)*8);background:#3a2c4c}.bookov .eg .cells i.on{background:var(--acc)}
+  /* 图鉴的三页（第六轮）：页签（当前页金底）、鱼谱的小卡（像素画按整数倍放大）、彩蛋的提示、带我去、挂坠 */
+  img.px{display:block;flex:none;image-rendering:pixelated}
+  .bookov .tabs{display:flex;gap:8px}
+  .bookov .tab{--cc:#2a2036;display:inline-flex;gap:8px;align-items:baseline;border:0;margin:var(--d2);padding:var(--d2) 12px;font:inherit;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--dim);background:var(--cc);cursor:pointer;
+    box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--cc),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--cc)}
+  .bookov .tab i{font-style:normal;font-size:var(--fs-s);line-height:var(--lh-s);color:#6a5a7a}
+  .bookov .tab:hover{--cc:#3a2c4c;color:var(--ink)}.bookov .tab.on{--cc:var(--acc);color:#1c1424}.bookov .tab.on i{color:#5a4410}
+  .bookov .top .kh{display:inline-flex;gap:4px;align-items:center;margin-left:auto;color:var(--dim)}.bookov .top .kh+button{margin-left:0}
+  .bookov .lead{margin:12px 0;color:var(--sub)}
+  .bookov .fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--fs-m)*17),1fr));gap:12px}
+  .bookov .fc{display:flex;gap:12px;align-items:flex-start;padding:8px 12px;color:#d8cce4;background:#2f2340;box-shadow:inset 0 0 0 var(--d2) var(--line)}
+  .bookov .fc>img.px{margin-top:calc(var(--d2)*2)}.bookov .fc>div{flex:1;min-width:0}
+  .bookov .fc b{margin-right:8px;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink)}.bookov .fc small{color:var(--dim)}
+  .bookov .fc p{margin:4px 0 0}.bookov .fc .st{color:var(--acc)}
+  .bookov .fc.off{background:#251c30}.bookov .fc.off b{color:var(--dim)}.bookov .fc.off p{color:var(--sub)}
+  .bookov .fc.sky{box-shadow:inset 0 0 0 var(--d2) #3a8ab8}.bookov .fc.sky.on{background:#1c2a3e}
+  .bookov .fc .q{flex:none;display:flex;align-items:center;justify-content:center;width:calc(var(--px-m)*48);height:calc(var(--px-m)*28);margin-top:calc(var(--d2)*2);font-size:var(--fs-l);line-height:var(--lh-l);color:#7ae8ff;background:var(--dk)}
+  .bookov .junk{margin:12px 0 0;color:var(--sub)}
+  .bookov .eggs{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--fs-m)*24),1fr));gap:12px}
+  .bookov .eg .who{margin-left:8px;font-style:normal;color:var(--sub)}
+  .bookov .eg .rw{display:flex;gap:12px;align-items:center;margin-top:8px;padding:4px 8px;background:#3a2c4c}
+  .bookov .eg .rw span{flex:1;min-width:0}.bookov .eg .rw b{margin-right:8px;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--acc)}
+  .bookov .eg .rw .lbtn.on{--bh:#3a6a3a;--bl:#1a2a1a;background:#2a4a2a;color:var(--ok)}   /* 戴着：绿的，再点一下摘下 */
+  .bookov .eg .cells i{display:inline-flex;align-items:center;justify-content:center;width:auto;height:auto;min-width:calc(var(--px-s)*24);padding:0 8px;font-style:normal;color:#6a5a7a}
+  .bookov .eg .cells i.on{color:#1c1424}.bookov .eg .cells i.cur{color:var(--acc);background:#4a3a20}
+  .bookov .eg .parts{display:grid;gap:4px;margin:8px 0 0;padding:0;list-style:none}
+  .bookov .eg .parts li{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;color:var(--ink)}.bookov .eg .parts li.got{color:var(--ok)}
+  .bookov .eg .parts small{color:var(--sub)}.bookov .eg .parts .lbtn,.bookov .eg .tp .lbtn{margin:0}
+  .bookov .eg .parts i.o{flex:none;width:calc(var(--px-s)*7);height:calc(var(--px-s)*7);box-shadow:inset 0 0 0 var(--d2) var(--dim)}
+  .bookov .eg .tp{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin:8px 0 0;color:var(--ink)}
+  .bookov .eg .tipb{margin:8px 0 0}
+  .bookov .eg .rwd{display:flex;gap:8px;align-items:center;margin:8px 0 0;color:var(--dim)}
+  /* 上方那一条里的一幅放大的画：彩蛋得到的挂坠、钓到新的一种鱼（蓝边） */
+  .disc .fr{display:flex;gap:12px;align-items:center;margin-top:8px;font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}.disc .fr b{color:var(--acc)}
+  .disc.fish{--wl:#5ab0e0;--wd:#0a2236;background:#1a2438}.disc.fish h5{color:#9ad8ff}
   /* 看风景：下面一条字幕（地名、这里是什么、此刻的事、能做什么、回到店里；左右位置由脚本对齐到整像素） */
   .vcap{left:0;bottom:20px;display:none;align-items:baseline;gap:16px;padding:4px 16px;font-size:var(--fs-s);line-height:var(--lh-m);color:var(--sub);white-space:nowrap}
   .game.vista .vcap{display:flex}
@@ -333,7 +368,7 @@
     <div><kbd>WASD</kbd> <kbd>↑↓←→</kbd> 走动，<kbd>Shift</kbd> 跑</div><div><kbd>E</kbd> <kbd>空格</kbd> 互动 · 打开便签</div>
     <div>鼠标点地面走过去，点东西、点猫也行</div><div>右键点猫：看名片 / 蹭蹭 / 舔毛 / 碰鼻子 / 一起玩 / 挨着睡 / 传球</div>
     <div><kbd>Q</kbd> 把毛线球传给鼠标下（或最近）的猫</div><div><kbd>F</kbd> 跟着一只猫走，<kbd>Esc</kbd> 不跟</div>
-    <div><kbd>C</kbd> 找到我 · <kbd>B</kbd> 图鉴</div><div><kbd>T</kbd> 快捷短语 · <kbd>1</kbd>–<kbd>8</kbd> 表情</div>
+    <div><kbd>C</kbd> 找到我 · <kbd>B</kbd> 图鉴（<kbd>←</kbd><kbd>→</kbd> 翻页）</div><div><kbd>T</kbd> 快捷短语 · <kbd>1</kbd>–<kbd>8</kbd> 表情</div>
     <div>走进楼梯口就上下楼；也可以爬巨树</div><div>右上角小地图只画你在的这一层</div>
     <div>对话框里：<kbd>↑↓</kbd> 或数字键选，<kbd>E</kbd> 确定，<kbd>Esc</kbd> 收起</div><div>看风景时：<kbd>E</kbd> 做画面里的事，<kbd>Esc</kbd> 回到店里</div>
     <div>小游戏里：<kbd>↑↓←→</kbd> 划船、挪爪子、顺着摆荡秋千，连按 <kbd>→</kbd> 跑轮</div><div>小游戏里：<kbd>E</kbd> 收竿收线、跳上琴键、抓、松手、靠岸</div>
@@ -361,10 +396,10 @@
 <script>
 /* 加载器：并行下载、按顺序执行；进度是真的（脚本到齐 → 建好店 → 认出你），显示上最快也要走一秒，让小猫把线球追完 */
 (()=>{
-const FILES=[['cat-sprites.js','把猫叫醒……'],['pixel-text.js'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['house-kit.js'],['outdoor-kit.js'],['skyline-art.js'],['props-kit.js'],['b1-kit.js'],['planet-art.js'],['quest-bank.js','把毛线球装进篮子……'],
-  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['map-b1.js','给舞池接上电……'],['map-planet.js'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world-eggs.js'],['world4-desk.js'],
-  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world-games.js','摆好抓娃娃机……'],['claw-art.js'],['world-more.js','给秋千系上绳子……'],['world-social.js'],['world-b1.js','往温泉里放热水……'],['cinema.js'],['world-rocket.js'],['world-ambient.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
-  ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['app.js']];
+const FILES=[['cat-sprites.js','把猫叫醒……'],['pixel-text.js'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['house-kit.js'],['outdoor-kit.js'],['skyline-art.js'],['props-kit.js'],['b1-kit.js'],['planet-art.js'],['fish-art.js'],['quest-bank.js','把毛线球装进篮子……'],
+  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['map-b1.js','给舞池接上电……'],['map-planet.js'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world-eggs.js'],['world-charms.js'],['world4-desk.js'],
+  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world-games.js','摆好抓娃娃机……'],['claw-art.js'],['world-more.js','给秋千系上绳子……'],['world-social.js'],['world-b1.js','往温泉里放热水……'],['cinema.js'],['world-rocket.js'],['world-crystal.js'],['world-ambient.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
+  ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['book-ui.js'],['app.js']];
 const msg=document.getElementById('bootmsg'),cv=document.getElementById('bootcv'),x=cv.getContext('2d');let real=0,shown=0,label='开门……',ready=false,failed=false,t0=performance.now(),doneCb=null;
 const say=s=>{if(s!=null)label=s;if(!failed)msg.textContent=label};
 function fail(f){failed=true;msg.innerHTML=`有一样东西没加载出来（${f}）<button class="lbtn sm" onclick="location.reload()">再试一次</button>`}

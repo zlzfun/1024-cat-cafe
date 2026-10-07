@@ -1,31 +1,50 @@
-/* 1024 猫咖 · 彩蛋（设计见 docs/店内设计.md 第四节）：登记、记在你的猫身上、第一次找到弹一条"彩蛋"、图鉴最下面那一栏。
-   - EGGS：彩蛋的登记表。n 名字，hint 没找到时图鉴里写的谜面，what 找到以后写的经过，steps 有几步（猫猫星球四步，别的没有）。
-     别的文件可以往里加（在 world-eggs.js 后面加载、建店之前加好就行）。彩蛋不进 GUIDE，不算"店里的东西"的件数。
+/* 1024 猫咖 · 彩蛋（设计见 docs/店内设计.md 第四节）：登记、记在你的猫身上、第一次找到弹一条"彩蛋"、图鉴里"彩蛋"那一页。
+   - EGGS：彩蛋的登记表。n 名字，hint 没找到时图鉴里写的谜面，tip 点"要点提示"以后那一句说得明白的，go "带我去"去哪儿（东西的 id，或者 {x,y}），
+     what 找到以后写的经过，steps 有几步（猫猫星球四步，别的没有）；now() 分几步的彩蛋此刻做到哪一步（猫猫星球的在 world-rocket.js 里填）。
+     别的文件可以往里加（在 world-eggs.js 后面加载、建店之前加好就行）。彩蛋不进 GUIDE，不算"店里的东西"的件数。每个彩蛋一枚挂坠，见 world-charms.js 的 CHARMS。
    - A.eggs.found(key)：找到了（只算第一次）；A.eggs.has(key)；A.eggs.step(key,i)：第 i 步做完了（0 起），返回做完了几步；A.eggs.steps(key)：做完了哪几步（数组）
-   - A.eggs.list()：[{key,n,hint,what,found,at,steps,done}]，图鉴用；A.eggs.count()、A.eggs.total
+   - A.eggs.list()：[{key,n,hint,what,found,at,steps,done}]，图鉴用；A.eggs.count()、A.eggs.total；A.eggs.info(key)：此刻的谜面、提示、带我去，分几步的还有 i、parts
+   - 挂坠：A.eggs.worn() 戴着哪枚（彩蛋的键）、A.eggs.wear(key 或 null)；去过猫猫星球项圈一直发光。A.eggs.tipOpen(key)、A.eggs.openTip(key)：图鉴里"要点提示"点开过没有
+   - A.eggs.counts：联机时每个彩蛋有几只猫找到（world-online.js 填）；A.onEggFound(key)：第一次找到一个彩蛋（world-online.js 接上，发给服务端）
    这个文件里还有几个不属于哪间房的彩蛋：九条命（屋顶的屋檐边）、10:24、老秘籍；别的在它们各自的房间里（澡堂、舞厅在 world-b1.js，猫猫星球在 world-rocket.js，片尾彩蛋在 cinema.js）。 */
 const EGGS={
-  planet:{n:'猫猫星球',hint:'望远镜里，有一颗星星长着耳朵',what:'坐纸箱火箭，飞到了一颗长着猫耳朵的星球上',steps:4},
-  ninelives:{n:'九条命',hint:'屋顶的边上，探头往下看看',what:'从屋顶的屋檐边跳了下去，啪地拍在后院的草地上……幸好猫有九条命'},
-  shark:{n:'鲨鱼来了',hint:'澡堂的玻璃后面，偶尔游过一个大家伙',what:'一条鲨鱼从玻璃前面游过去，鱼群一下子散开，满屋的猫都炸了毛'},
-  milk:{n:'一口闷',hint:'泡完澡，来一瓶',what:'泡完温泉，叉着腰一口闷掉一瓶咖啡牛奶：哈——'},
-  disco:{n:'迪斯科之夜',hint:'一只猫跳舞不算热闹',what:'六只猫一起在舞池上跳舞，镜面球炸开了一屋彩纸'},
-  clock:{n:'10:24',hint:'门厅的钟，一天里有两分钟不一样',what:'10:24 的时候，门厅的钟里探出一只猫报时，舞台上放了一场 1024 烟花'},
-  konami:{n:'老秘籍',hint:'一段老游戏里的秘籍，在店里也管用',what:'老游戏的秘籍真的管用：你的猫变成了彩虹色'},
-  credits:{n:'片尾彩蛋',hint:'电影放完别急着走',what:'看完了整部《猫猫咖啡馆》：字幕后面，THE END 上溜进来一个红点，六只猫扑成一团；红点溜出银幕，被你的猫一爪拍掉，最后它们对你慢慢眨眼'}};
+  planet:{n:'猫猫星球',hint:'望远镜里，有一颗星星长着耳朵',tip:'屋顶的望远镜，凑过去看一会儿',go:'scope',what:'坐纸箱火箭，飞到了一颗长着猫耳朵的星球上',steps:4},
+  ninelives:{n:'九条命',hint:'屋顶的边上，探头往下看看',tip:'屋顶南沿的栏杆缺了一段，走过去探头看看，再跳',go:'eaves',what:'从屋顶的屋檐边跳了下去，啪地拍在后院的草地上……幸好猫有九条命'},
+  shark:{n:'鲨鱼来了',hint:'澡堂的玻璃后面，偶尔游过一个大家伙',tip:'去地下的澡堂，泡着温泉等一会儿，盯着那面玻璃',go:'onsen',what:'一条鲨鱼从玻璃前面游过去，鱼群一下子散开，满屋的猫都炸了毛'},
+  milk:{n:'一口闷',hint:'泡完澡，来一瓶',tip:'在温泉里泡够十秒，起来一分钟之内去牛奶冰柜',go:'onsen',what:'泡完温泉，叉着腰一口闷掉一瓶咖啡牛奶：哈——'},
+  disco:{n:'迪斯科之夜',hint:'一只猫跳舞不算热闹',tip:'舞池上要同时有六只猫在跳。拉一下镜面球的链子，附近的猫都会过来跳',go:'mball',what:'六只猫一起在舞池上跳舞，镜面球炸开了一屋彩纸'},
+  clock:{n:'10:24',hint:'门厅的钟，一天里有两分钟不一样',tip:()=>{const d=new Date(),m=d.getHours()*60+d.getMinutes(),n=[624,1344,624+1440].find(x=>x>m)-m;return`现实时间 10:24 或 22:24 的时候待在店里（离下一次还有${n>=60?' '+Math.floor(n/60)+' 小时':''}${n%60?' '+n%60+' 分钟':''}）`},
+    go:{x:286,y:96,label:'门厅的钟'},what:'10:24 的时候，门厅的钟里探出一只猫报时，舞台上放了一场 1024 烟花'},
+  konami:{n:'老秘籍',hint:'一段老游戏里的秘籍，在店里也管用',tip:'三十条命的那个老秘籍：上上下下……',what:'老游戏的秘籍真的管用：你的猫变成了彩虹色'},
+  credits:{n:'片尾彩蛋',hint:'电影放完别急着走',tip:'去地下的小电影院，坐下看完一整部，字幕走完别起身',go:'cseat',what:'看完了整部《猫猫咖啡馆》：字幕后面，THE END 上溜进来一个红点，六只猫扑成一团；红点溜出银幕，被你的猫一爪拍掉，最后它们对你慢慢眨眼'}};
 
 WORLD_MODS.push(A=>{
 const {S,me,news,sfx}=A;
-const st=()=>A.guide.eggs();
-const E=A.eggs={
+const st=()=>A.guide.eggs(),val=v=>typeof v==='function'?v():v;
+// 挂坠戴在你的猫身上：戴着哪枚、项圈发不发光（去过猫猫星球）。进店、换了存档、找到了新的、点了"戴上"都重新套一遍
+const dress=()=>{const s=st(),w=s.$wear;me.charm=w&&EGGS[w]&&s[w]&&s[w].at?w:null;me.glow=!!(s.planet&&s.planet.at)};
+const E=A.eggs={counts:null,
   has:k=>!!(st()[k]&&st()[k].at),
-  found(k){const e=EGGS[k];if(!e)return false;const s=st();if(s[k]&&s[k].at)return false;s[k]=Object.assign(s[k]||{},{at:Date.now()});A.guide.save();
-    sfx('egg');A.ui.egg&&A.ui.egg({key:k,n:e.n,what:e.what,count:E.count(),total:E.total});news(`${me.label||'你'}找到了一个彩蛋：${e.n}`);A.emit&&A.emit('egg',k);return true},
+  found(k){const e=EGGS[k];if(!e)return false;const s=st();if(s[k]&&s[k].at)return false;s[k]=Object.assign(s[k]||{},{at:Date.now()});
+    // 挂坠：手上没戴的就戴上；猫猫星球的水晶项链最难得，直接换上
+    if(CHARMS[k]&&(!s.$wear||k==='planet'))s.$wear=k;A.guide.save();dress();
+    sfx('egg');const ch=CHARMS[k];A.ui.egg&&A.ui.egg({key:k,n:e.n,what:e.what,count:E.count(),total:E.total,charm:ch?{key:k,n:ch.n,d:ch.d,worn:s.$wear===k}:null,glow:k==='planet'});
+    news(`${me.label||'你'}找到了一个彩蛋：${e.n}`);A.emit&&A.emit('egg',k);if(A.onEggFound)A.onEggFound(k);return true},
   step(k,i){const s=st(),o=s[k]=s[k]||{};o.steps=o.steps||[];if(!o.steps.includes(i)){o.steps.push(i);o.steps.sort((a,b)=>a-b);A.guide.save()}return o.steps.length},
   steps:k=>((st()[k]||{}).steps||[]).slice(),
   list:()=>Object.entries(EGGS).map(([key,e])=>{const s=st()[key]||{};return{key,n:e.n,hint:e.hint,what:e.what,found:!!s.at,at:s.at||0,steps:e.steps||0,done:(s.steps||[]).length}}),
   count:()=>Object.keys(EGGS).filter(k=>E.has(k)).length,
-  get total(){return Object.keys(EGGS).length}};
+  get total(){return Object.keys(EGGS).length},
+  // 此刻的谜面、提示、带我去（分几步的按做到哪一步说）
+  info(k){const e=EGGS[k];if(!e)return null;const n=e.now&&!E.has(k)?e.now():null;return n?{riddle:n.riddle||e.hint,tip:val(n.tip),go:n.go,i:n.i,parts:n.parts}:{riddle:e.hint,tip:val(e.tip),go:e.go}},
+  tipOpen:k=>!!(st()[k]&&st()[k].tip),openTip(k){const s=st(),o=s[k]=s[k]||{};if(!o.tip){o.tip=1;A.guide.save()}},
+  worn:()=>me.charm||null,wear(k){const s=st();s.$wear=k&&E.has(k)&&CHARMS[k]?k:null;A.guide.save();dress();return me.charm},
+  // 带我去：走到那样东西跟前（在别的楼层先走楼梯）；go 是东西的 id 或者 {x,y}
+  goTo(go){if(!go)return false;const th=typeof go==='string'&&A.TID(go),at=typeof go==='object'?go:th&&(typeof th.at==='function'?th.at(me):th.at);
+    // 人在猫猫星球上、要去的在店里：先走到火箭旁边（没有楼梯通回去）
+    if(A.floorOf(me.y).id==='planet'&&at&&A.floorOf(at.y).id!=='planet'&&A.P.plPad2At){A.tap(A.P.plPad2At.x+24,A.P.plPad2At.y+6);A.say('先坐火箭回屋顶');return true}
+    if(typeof go==='object'){A.tap(go.x,go.y);return true}return A.goThing?A.goThing(go):false}};
+dress();A.on('guideLoad',dress);
 const {run,setK,say,emote,after,rr}=A,now=()=>A.t,tick=f=>A.tickers.push(f),P=A.P,GS=()=>A.guide.games();
 
 /* ================= 九条命：从屋顶的屋檐边掉进后院 ================= */

@@ -55,7 +55,7 @@ function exportCsv(q){const what=q.get('what')||'people';
 const R={
   'GET /stats':()=>{const L=cats(),t0=startOfDay(),W=S.db.world;return[200,{cats:L.length,today:L.filter(c=>c.last>=t0).length,eligible:L.filter(eligible).length,people:people().length,entries:L.filter(c=>c.entry).length,
     stamps:{ball:L.filter(c=>stamps(c).ball).length,inner:L.filter(c=>stamps(c).inner).length,site:L.filter(c=>stamps(c).site).length},banned:L.filter(c=>c.banned).length,
-    hung:W.hung,hungToday:W.days[S.today()]||0,draws:S.db.draws.length,live:live.stats()}]},
+    hung:W.hung,hungToday:W.days[S.today()]||0,draws:S.db.draws.length,eggs:W.eggs||{},crystal:W.crystal||{n:0,gold:0},live:live.stats()}]},
   'GET /cats':()=>{const ec=empCount();return[200,{cats:cats().map(c=>row(c,ec)).sort((a,b)=>b.last-a.last)}]},
   // 换个名字：从还空着的名字里另发一个
   'POST /rename':({body})=>{const c=find(body.id);if(!c)return[404,{err:'none'}];const [name]=S.offer(1,[c.name]);if(!name)return[409,{err:'full'}];

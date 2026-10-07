@@ -5,6 +5,8 @@
      传球是服务端记着的一笔事务：接球的一收到就回"接住了"（got）或"还回去"（back），球不会凭空多一颗或少一颗。
    - 机器人补位：bots 减去在线真人数，最少留 12 只（多猫任务要帮手）。真人的名字全店唯一，机器人撞了名就自己改名。
    - 联机时（A.shared）巨树和小黑板跟着服务端的计数走；断线 10 秒后真人的猫离开，恢复各算各的。
+   - 彩蛋：第一次找到一个，告诉服务端（全店的新闻里说一句"谁找到了一个彩蛋"，不说是哪个；图鉴里写每个有几只猫找到）；挂坠、项圈发光、水晶泡泡走标志位。
+     吧台的大鱼缸全店共用：放进去一条水晶鱼告诉服务端，缸里按全店一共放了几条画（A.crystal.shared）。
    WORLD_MODS 里放在最后：它包在别的模块的 A.pass / A.onEmote / A.onSay / A.onHang 外面。 */
 WORLD_MODS.push(A=>{
 const {S,me,say,sfx,news,emote,speak,setK,roomAt}=A;
@@ -20,7 +22,9 @@ function holdOf(h){if(typeof h!=='string')return{hold:null,toy:null};let m=/^y([
   m=/^t:(\w+)$/.exec(h);if(m&&has(CTOY_NAMES,m[1]))return{hold:null,toy:m[1]};return{hold:null,toy:null}}
 function holdCode(c){const y=c.hold;if(y)return y.knit?y.kind+':'+y.ci:'y'+y.ci;return c.ctoy?'t:'+c.ctoy.kind:0}
 // 只发服务端认得的：姿态、表情脸不在表里就换成默认的（服务端会整条丢掉认不得的状态）
-const myState=()=>[Math.round(me.x),Math.round(me.y),me.z==null?null:Math.round(me.z*2)/2,Math.max(-300,Math.min(20,Math.round(me.dy||0))),okPose(me.k)?me.k:'sit',me.face==='L'?1:0,okFace(me.ex)?me.ex:'',holdCode(me),(me.hidden?1:0)|(me.mirror?2:0)|(me.rainbowUntil>now()?4:0)|(me.soakT?8:0)|(me.puffUntil>now()?16:0)];   // 4 彩虹色、8 泡在温泉里（头顶毛巾）、16 炸毛
+const myState=()=>[Math.round(me.x),Math.round(me.y),me.z==null?null:Math.round(me.z*2)/2,Math.max(-300,Math.min(20,Math.round(me.dy||0))),okPose(me.k)?me.k:'sit',me.face==='L'?1:0,okFace(me.ex)?me.ex:'',holdCode(me),(me.hidden?1:0)|(me.mirror?2:0)|(me.rainbowUntil>now()?4:0)|(me.soakT?8:0)|(me.puffUntil>now()?16:0)|(me.glow?32:0)|(charmNo(me.charm)<<6)|(me.bubble?1024:0)];
+// 4 彩虹色、8 泡在温泉里（头顶毛巾）、16 炸毛、32 项圈发光、64～960 戴着哪枚挂坠（world-charms.js 的 CHARM_KEYS 下标 + 1）、1024 身边飘着水晶泡泡
+function charmNo(k){const i=k?CHARM_KEYS.indexOf(k):-1;return i<0?0:i+1}
 let lastSent='',lastView='',sendT=0;
 tick(dt=>{if(!L.on)return;if((sendT-=dt)>0)return;sendT=SEND_EVERY;const v=L.view&&JSON.stringify(L.view);if(v&&v!==lastView){lastView=v;L.send({t:'v',v:L.view})}
   const s=myState(),j=JSON.stringify(s);if(j===lastSent)return;lastSent=j;L.send({t:'s',s})});
@@ -37,7 +41,8 @@ function push(c,s){const t=now(),B=c.buf,last=B[B.length-1];if(last&&t-last.t>.3
 function put(c,s,x,y,dy){c.x=x;c.y=y;c.dy=dy;c.z=typeof s[2]==='number'?s[2]:null;const k=okPose(s[4])?s[4]:'sit',e=okFace(s[6])?s[6]:c.myFace;
   if(c.k!==k)setK(c,k,e);c.ex=e;c.face=s[5]?'L':'R';const H=holdOf(s[7]);c.hold=H.hold;c.ctoy=H.toy?{kind:H.toy}:null;c.yarn=H.hold&&!H.hold.knit&&PLAYS.includes(k)?H.hold.ci:null;
   const hid=!!(s[8]&1);if(c.hidden&&!hid)S.puffs.push({x:x,y:y-4,t0:now()});c.hidden=hid;c.mirror=!!(s[8]&2);
-  c.rainbowUntil=s[8]&4?now()+1:0;c.soakT=s[8]&8?(c.soakT||now()):null;c.puffUntil=s[8]&16?now()+1:0}
+  c.rainbowUntil=s[8]&4?now()+1:0;c.soakT=s[8]&8?(c.soakT||now()):null;c.puffUntil=s[8]&16?now()+1:0;
+  c.glow=!!(s[8]&32);const ci=(s[8]>>6)&15;c.charm=ci&&CHARM_KEYS[ci-1]||null;c.bubble=s[8]&1024?1:0}
 // 画 0.25 秒以前的那一刻：前后两份之间按时间插值（相差 200 像素以上就直接跳过去）
 tick(()=>{const rt=now()-DELAY;for(const c of L.cats.values()){const B=c.buf;if(!B.length)continue;while(B.length>=2&&B[1].t<=rt)B.shift();
   const a=B[0],b=B[1],s=a.s;let x=+s[0]||0,y=+s[1]||0,dy=+s[3]||0;
@@ -53,6 +58,8 @@ const rebot=()=>{if(base!=null)setBots0(want())};
 let newsT=0,downT=0;
 function welcome(m){L.myId=m.id;lastSent='';lastView='';sendT=0;for(const id of [...L.cats.keys()])dropCat(id,true);(m.cats||[]).forEach(addCat);L.on=true;A.shared=true;
   const w=m.world||{};if(Array.isArray(w.tree))A.tree.set(w.tree.filter(o=>o&&has(KNIT_NAMES,o.kind)));if(Number.isInteger(w.today)){S.count=w.today;L.day=w.day}rebot();
+  if(w.eggs&&typeof w.eggs==='object'){const E={};for(const k in EGGS)if(Number.isInteger(w.eggs[k]))E[k]=w.eggs[k];A.eggs.counts=E}
+  if(w.crystal&&Number.isInteger(w.crystal.n)&&A.crystal)A.crystal.shared={n:w.crystal.n,gold:Math.min(w.crystal.n,w.crystal.gold|0)};
   // 断线期间被改了名、中了奖：重连时补上
   const my=m.me||{};if(my.name&&my.name!==me.name)renamed({id:L.myId,name:my.name});if(Array.isArray(my.prizes)&&my.prizes.length)A.ui.prizes&&A.ui.prizes(my.prizes)}
 function batch(m){let n=0;(m.l||[]).forEach(k=>{const c=L.byN.get(k);if(c){dropCat(c.rid);n++}});
@@ -83,9 +90,16 @@ L.recv=m=>{switch(m.t){
   case 'got':{const e=pend.get(m.p);if(e&&e.o.rid===m.id&&!e.rv)pend.delete(m.p);return}
   case 'woven':{const c=L.cats.get(m.id);if(has(KNIT_NAMES,m.kind))say(`${c?c.name:'一只猫'}把你传的毛线球织成了${A.kindOne(m)}，挂进了橱窗`);return}
   case 'hang':return hung(m);
-  case 'rename':return renamed(m)}};
+  case 'rename':return renamed(m);
+  case 'egg':return egged(m);
+  case 'tank':return tanked(m)}};
+// 有猫第一次找到一个彩蛋：计数更新；新闻里只说找到了一个（猫猫星球说它坐着纸箱火箭飞上了天），人多的时候省掉一部分
+let eggNewsT=0;
+function egged(m){if(!has(EGGS,m.k))return;if(Number.isInteger(m.n)){A.eggs.counts=A.eggs.counts||{};A.eggs.counts[m.k]=m.n}if(m.id===L.myId)return;const c=L.cats.get(m.id),n=c?c.name:'一只猫';
+  if(now()<eggNewsT&&m.k!=='planet')return;eggNewsT=now()+4;news(m.k==='planet'?`${n}坐着纸箱火箭飞上了天！`:`${n}找到了一个彩蛋`)}
+function tanked(m){if(!Number.isInteger(m.n)||!A.crystal)return;A.crystal.shared={n:m.n,gold:Math.min(m.n,m.gold|0)};if(m.id===L.myId)return;const c=L.cats.get(m.id);news(`${c?c.name:'一只猫'}把一条水晶鱼放进了吧台的大鱼缸`)}
 // 断线：真人的猫先停在原地，10 秒后离开；计数恢复各算各的
-L.state=s=>{if(s!=='on'&&L.on){L.on=false;A.shared=false;downT=now()}};
+L.state=s=>{if(s!=='on'&&L.on){L.on=false;A.shared=false;downT=now();A.eggs.counts=null;if(A.crystal)A.crystal.shared=null}};
 tick(()=>{if(!L.on&&L.cats.size&&now()-downT>10){for(const id of [...L.cats.keys()])dropCat(id);rebot()}});
 
 /* ---------- 传球 ---------- */
@@ -119,5 +133,7 @@ const emo0=A.onEmote;A.onEmote=(c,i)=>{emo0(c,i);if(c.me&&L.on)L.send({t:'emo',i
 const say0=A.onSay;A.onSay=(c,s)=>{if(say0)say0(c,s);if(c.me&&L.on){const i=PHRASES.indexOf(s);if(i>=0)L.send({t:'ph',i})}};
 A.onRub=(c,o)=>{if(c.me&&o.puppet&&L.on)L.send({t:'rub',to:o.rid})};
 const soc0=A.onSocial;A.onSocial=(c,o,k)=>{if(soc0)soc0(c,o,k);if(c.me&&o.puppet&&L.on&&has(KIND,k))L.send({t:'rub',to:o.rid,k})};
+A.onEggFound=k=>{if(L.on)L.send({t:'egg',k})};
+A.onTank=gold=>{if(L.on)L.send({t:'tank',gold:gold?1:0,k:A.crystal?A.crystal.mine():1})};
 const hang0=A.onHang;A.onHang=(c,item)=>{if(hang0)hang0(c,item);if(c.me&&L.on){const y=item.y;L.send({t:'hang',kind:item.kind,ci:item.ci,...(y&&y.from?{from:y.from.rid}:{})})}};
 });

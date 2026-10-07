@@ -190,7 +190,7 @@ WORLD.props=(()=>{const P=WP,L=[];const add=(x,y,w,h,base,draw,o={})=>L.push({x,
   P.feeds.forEach((f,i)=>{add(f.x,f.y,14,26,f.y+22,(t,S)=>feeder(f.x,f.y,t,(S.feeds||[])[i]||{}),{live:1});add(f.x-2,f.y+22,40,8,f.y+30,(t,S)=>feedBowls(f.x,f.y,t,(S.feeds||[])[i]||{}),{live:1})});
   add(P.fountain.x,P.fountain.y,22,16,P.fountain.y+16,t=>fountain(P.fountain.x,P.fountain.y,t),{live:1});
   add(P.grass.x,P.grass.y,12,17,P.grass.y+17,(t,S)=>catGrass(P.grass.x,P.grass.y,t,S.grassChew>0),{live:1});
-  add(P.tank.x,P.tank.y-1,58,41,P.tank.y+40,(t,S)=>bigFishTank(P.tank.x,P.tank.y,t,{paw:Math.max(0,Math.min(1,S.fishPaw||0))}),{live:1});
+  add(P.tank.x,P.tank.y-1,58,41,P.tank.y+40,(t,S)=>bigFishTank(P.tank.x,P.tank.y,t,{paw:Math.max(0,Math.min(1,S.fishPaw||0)),crystal:S.crystalTank}),{live:1});
   // 咖啡厅：四张小圆桌和椅子（桌上的小东西 world-cafe.js 画）
   P.tables.forEach((tb,i)=>{add(tb.x-16,tb.y+2,12,18,tb.y+20,()=>cafeChair(tb.x-16,tb.y+2,-1));add(tb.x+32,tb.y+2,12,18,tb.y+20,()=>cafeChair(tb.x+32,tb.y+2,1))});
   add(P.juke.x,P.juke.y,24,36,P.juke.y+36,(t,S)=>{const J=S.juke||{};jukebox(P.juke.x,P.juke.y,t,!!J.on,J.track||0)},{live:1});

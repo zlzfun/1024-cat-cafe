@@ -27,7 +27,7 @@ const API={
     db.cats[k]=c;S.reindex();const token=S.issue(c);S.save();return[200,{cat:S.pub(c),token}]},
   'GET /me':({me})=>{if(!me)return[401,{err:'auth'}];const c=me.c;c.prev=c.last;c.last=Date.now();S.save();return[200,{cat:S.pub(c)}]},
   'PUT /me/state':({me,body})=>{if(!me)return[401,{err:'auth'}];const s=body.state;if(!s||typeof s!=='object'||JSON.stringify(s).length>STATE_MAX)return[400,{err:'bad'}];
-    me.c.state={...me.c.state,...s};me.c.last=Date.now();S.save();return[200,{ok:true}]},
+    me.c.state={...me.c.state,...s};me.c.last=Date.now();S.syncEggs(me.c);S.save();return[200,{ok:true}]},
   // 登记抽奖：三个章都盖了才收；改的话第一次登记的时间不变（按工号去重时以最早那次为准）
   'POST /me/entry':({me,body})=>{if(!me)return[401,{err:'auth'}];const st=(me.c.state&&me.c.state.stamps)||{};if(!(st.ball&&st.inner&&st.site))return[403,{err:'stamps'}];
     const bad=S.ACC.entryWhy(body);if(bad)return[400,{err:'bad',field:bad.field,why:bad.why}];const e=S.ACC.entryClean(body),now=Date.now();

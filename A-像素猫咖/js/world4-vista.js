@@ -46,7 +46,7 @@ tick(()=>{if(!V||V.kind!=='aquarium'||!V.ev||!V.ev.length)return;const ev=V.ev.s
 function tankTap(quiet){if(V.tap&&now()-V.tap.t0<.4)return;const r=VA.tankReach(V,V.W||480,V.H||270),x=r.x,y=r.y;V.tap={x,y,sx:r.sx,t0:now()};if(!quiet)sfx('clack');const PV0=V;
   A.after(.12,()=>{const V=PV0;if(!V||!V.fish)return;let hit=null;for(const f of V.fish){const d=Math.hypot(f.x-x,f.y-y);if(d<14&&(!hit||d<Math.hypot(hit.x-x,hit.y-y)))hit=f}
     V.fish.forEach(f=>{if(Math.hypot(f.x-x,f.y-y)<60){f.scare=1.2;const a=Math.atan2(f.y-y,f.x-x),G=VA.geo.tank(V.W,V.H);f.tx=Math.max(V.W*.06,Math.min(V.W*.94,f.x+Math.cos(a)*120));f.ty=Math.max(G.top+14,Math.min(G.sand-20,f.y+Math.sin(a)*60))}});
-    if(quiet)return;if(hit){V.hits++;if(hit.gold){V.gold++;hit.gold=false;say('碰到了金鱼！它甩甩尾巴游走了')}sfx('pop')}cap()})}
+    if(quiet)return;if(hit){V.hits++;if(hit.gold){V.gold++;hit.gold=false;say('碰到了金鱼！它甩甩尾巴游走了')}else if(hit.cr)say(hit.cr===2?'碰到了金色的水晶鱼，叮的一声':'碰到了水晶鱼：叮的一声，亮了一下');sfx(hit.cr?'twinkle':'pop')}cap()})}
 
 /* ---------- 操作：Esc 回到店里；E / 点一下 做这个画面里的事 ---------- */
 // 烟花：先一颗火星从城里升上去，0.55 秒后炸开；偶尔是垂下来的金柳，偶尔炸成一张猫脸

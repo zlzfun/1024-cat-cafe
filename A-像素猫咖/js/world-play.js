@@ -50,15 +50,18 @@ const SPR=new Map(),SPR_MAX=4000;   // 最近用过的放在后面，满了先�
 function catImg(k,T,tf,o,e,pi,yi,flip){const f=FK[k],key=k+'|'+(f?f(T,tf,o,e):T.toFixed(2))+'|'+pi+'|'+yi+'|'+(flip?1:0);let s=SPR.get(key);if(s){SPR.delete(key);SPR.set(key,s);return s}
   const P=POSE[k](T,tf,o,e),G=P.G,h=G.length,w=Math.max(...G.map(r=>r.length)),cv=mkCanvas(w,h),pal=yi!=null?{...PAL[pi],yarn:YARN[yi]}:PAL[pi];
   drawF(cv.getContext('2d'),G,pal,flip?w-P.cx:P.cx,h,{cx:P.cx,flip,blink:P.blink});
-  s={cv,w,h,cx:P.cx,dy:P.dy||0};if(SPR.size>=SPR_MAX){let n=0;for(const k2 of SPR.keys()){SPR.delete(k2);if(++n>=400)break}}SPR.set(key,s);return s}
+  // 项圈正中间那一格（挂坠挂在这儿，world-charms.js）：最低的一行项圈里取中间那一格；没有项圈的姿态为 null
+  let cc=null,by=-1,xs=[];G.forEach((r,y)=>r.forEach((ch,x)=>{if(ch!=='c')return;if(y>by){by=y;xs=[x]}else if(y===by)xs.push(x)}));if(by>=0){const rx=xs[Math.floor((xs.length-1)/2)];cc=[flip?w-1-rx:rx,by]}
+  s={cv,w,h,cx:P.cx,dy:P.dy||0,cc};if(SPR.size>=SPR_MAX){let n=0;for(const k2 of SPR.keys()){SPR.delete(k2);if(++n>=400)break}}SPR.set(key,s);return s}
+let CAT_DECO=null;   // world-charms.js 填：画完一只猫以后画它的挂坠、水晶泡泡，CAT_DECO(ctx, 猫, 脚底 x, y, 贴图左上 dx, top, 贴图, t, 姿态)
 // 画一只猫（脚底 x,y 为整数），返回头顶的 y
-// rainbowUntil：彩虹色（轮着换毛色）；puffUntil：吹风机吹完、被鲨鱼吓到，毛炸成一圈（world-b1.js）
+// rainbowUntil：彩虹色（轮着换毛色）；puffUntil：吹风机吹完、被鲨鱼吓到，毛炸成一圈（world-b1.js）；charm、glow、bubble：挂坠、项圈发光、水晶泡泡（world-charms.js）
 function drawCat3(ctx,c,x,y,t,ol){const k=c.k,loc=WLOCAL.has(k)&&c.t0!=null,tt=loc?t-c.t0:t,o=loc?0:(c.o||0),tf=(Math.floor(tt*2)+c.pal)%2,T=tt+o,e=c.ex??c.def;
   const pal=c.rainbowUntil>t?RAINBOW[Math.floor(t*6+c.id)%RAINBOW.length]:c.pal;
   const f0=k==='walkL'||(c.face==='L'&&FACING.has(k)),flip=c.mirror?!f0:f0,yi=c.yarn!=null&&k!=='sit'?c.yarn:null,s=catImg(k,T,tf,o,e,pal,yi,flip);
   const top=Math.round(y-s.h+s.dy),dx=flip?Math.round(x+s.cx-1)-(s.w-1):Math.round(x-s.cx),a=c.alpha??1;if(a<1)ctx.globalAlpha=a;
   if(c.puffUntil>t)ctx.drawImage(fluffOf(s,PAL[pal]),dx-3,top-3);
-  if(ol)ctx.drawImage(outlineOf(s,ol),dx-1,top-1);ctx.drawImage(s.cv,dx,top);if(a<1)ctx.globalAlpha=1;if(ol)c._ring=[ringOf(s,ol),dx-1,top-1];return top}
+  if(ol)ctx.drawImage(outlineOf(s,ol),dx-1,top-1);ctx.drawImage(s.cv,dx,top);if(CAT_DECO&&(c.charm||c.glow||c.bubble))CAT_DECO(ctx,c,x,y,dx,top,s,t,k);if(a<1)ctx.globalAlpha=1;if(ol)c._ring=[ringOf(s,ol),dx-1,top-1];return top}
 // 炸毛：贴图往外胀三圈（最外一圈描边色，里面两圈浅毛色），画在猫后面；按贴图算一次，存在贴图上
 function fluffOf(s,P){const key=P.light+P.outline;if(s.fl&&s.flk===key)return s.fl;const cv=mkCanvas(s.w+6,s.h+6),x=cv.getContext('2d'),blob=(r,col)=>{const o=mkCanvas(s.w+6,s.h+6),q=o.getContext('2d');
     for(let a=-r;a<=r;a++)for(let b=-r;b<=r;b++)if(Math.abs(a)+Math.abs(b)<=r+(r>2?0:1))q.drawImage(s.cv,3+a,3+b);q.globalCompositeOperation='source-in';q.fillStyle=col;q.fillRect(0,0,o.width,o.height);return o};

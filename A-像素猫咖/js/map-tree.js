@@ -1,6 +1,6 @@
 /* 1024 猫咖 · 毛线巨树：从一楼咖啡厅的地面长出来，穿过二楼的天井，树冠在屋顶上（设计见 docs/店内设计.md 第二节）。
    地图部分在 map-roof.js 后面加载（makeWorld 之前）；WORLD_MODS 里接在 world4-desk.js 后面。
-   - 一楼：粗大的树根、裹着五色毛线套的树干、一圈环形长凳；树干往上分出两根低枝，贴着天花板铺到咖啡桌上空。树下一块铭牌。
+   - 一楼：粗大的树根、裹着五色毛线套的树干、一圈环形长凳；树干往上分出两根低枝，贴着天花板铺到咖啡桌上空。树下立着猫猫咖啡馆的大招牌（新来的猫落地第一眼看到它）。
    - 二楼：树干从天井里长上来，六根横枝伸在回廊上空，枝头各挂一盏小灯笼，猫能跳上去窝着；抱着树干能滑回一楼。
      （横枝原来一根对应一个家族、挂猫脸圆牌，去掉了：家族和模型以后还会加，内网能用的模型也不一样。）
    - 屋顶：金色的树冠，顶上是瞭望台，坐上去画面切到"看风景"；顺着树干也能滑回一楼。
@@ -74,7 +74,18 @@ const TRUNK1=bakeAt(T1.x,T1.y,T1.w,T1.h,()=>{const B=TREE.f1.base,cx=TREE.cx;
 function treeBench(cx,cy){disc(cx,cy+2,66,22,OL);disc(cx,cy+3,65,21,'#6e4430');disc(cx,cy,65,20,OL);disc(cx,cy,64,19,'#c98d5c');
   for(let i=0;i<36;i++){const a=i/36*Math.PI*2;line(Math.round(cx+Math.cos(a)*40),Math.round(cy+Math.sin(a)*11),Math.round(cx+Math.cos(a)*63),Math.round(cy+Math.sin(a)*19),'#a86e44')}
   disc(cx,cy,42,12,OL);disc(cx,cy,41,11,'#5a3a26');for(let i=0;i<30;i++){const a=hsh(i,301)*Math.PI*2,r=Math.sqrt(hsh(i,302))*.9;const x=Math.round(cx+Math.cos(a)*38*r),y=Math.round(cy+Math.sin(a)*9*r);if(hsh(i,303)<.5)R(x,y,2,1,'#5e8a4a');else leafG(x,y,i)}}
-function treePlaque(x,y){R(x+4,y+10,3,6,OL);R(x+29,y+10,3,6,OL);box(x,y,36,12,'#8a5a3a');R(x+2,y+2,32,8,'#5c3a28');txt('CLOWDER',x+5,y+4,'#ffd84a')}
+// 树下的招牌（第六轮）：新来的猫落地第一眼看到的就是它。92×34 的木牌，两根木柱撑着，牌头一对猫耳朵；
+// 第一行金色大字 CLOWDER AI，第二行像素中文"猫猫咖啡馆"，上下沿各一串小灯轮着亮。(x,y) 是木牌左上角，底座落在 y+42
+const SIGN_W=92,SIGN_H=34;
+function treeSign(x,y,t){const W=SIGN_W,H=SIGN_H;alpha(.28,()=>disc(x+W/2,y+H+8,W/2-6,2,'#241a2e'));
+  for(const px of [x+12,x+W-17]){R(px,y+H-2,5,10,OL);R(px+1,y+H-2,3,9,'#6e4430');P1(px+1,y+H-1,'#8a5a3a')}
+  // 猫耳朵：外圈描边、里面一点粉
+  for(const [ex,d] of [[x+5,1],[x+W-17,-1]])grid(ex,y-6,[".....oo.....","....obbo....","...obppbo...","..obppppbo..",".obbppppbbo.","obbbbbbbbbbo"],{o:OL,b:'#8a5a3a',p:'#f4a6b8','.':null});
+  box(x,y,W,H,'#8a5a3a');R(x+1,y+1,W-2,1,'#b07a52');R(x+3,y+3,W-6,H-6,'#2e1c14');
+  const tw=txtW('CLOWDER AI',2),tx=x+Math.floor((W-tw)/2);txt('CLOWDER AI',tx+1,y+6,'#5a3a10',2);txt('CLOWDER AI',tx,y+5,'#ffd84a',2);
+  const cn='猫猫咖啡馆',cw=PXT.w(cn);PXT.draw(cn,x+Math.floor((W-cw)/2),y+16,'#fff4dc',{shadow:'#5a3a1a'});
+  // 小灯：上沿、下沿一串，三颗一组轮着亮
+  for(let i=0;i<14;i++){const bx=x+5+i*6,on=(Math.floor(t*3)+i)%3===0;P1(bx,y+1,on?'#ffd84a':'#6a4a2a');P1(bx+1,y+1,on?'#fff4c0':'#6a4a2a');P1(bx,y+H-2,on?'#ffd84a':'#6a4a2a');P1(bx+1,y+H-2,on?'#fff4c0':'#6a4a2a')}}
 
 /* ---------- 二楼：树干从天井里长上来，六根横枝、枝头的小灯笼，枝梢一团团叶子 ---------- */
 const T2={x:330,y:Y2+40,w:300,h:440};
@@ -122,17 +133,21 @@ function treeOrnaments(T0,floor){if(!T0)return;T0.orn.forEach((it,i)=>{if(i%3!==
 
 /* ---------- 往 WORLD 里加：一楼的长凳和树、二楼的天井和栏杆、屋顶的树冠 ---------- */
 (()=>{const M=WORLD,P=WP,W=TREE.f2.well;
-addP({treeAt:{x:TREE.cx+2,y:TREE.f1.base+28},plaque:{x:TREE.cx-18,y:TREE.f1.base+18},branchAt:{x:390,y:Y2+372},slideAt:{x:420,y:Y2+374},topAt:{x:TREE.cx+24,y:TREE.rf.base+16}});
+// plaque：树下招牌的左上角（木牌 92×34，底座落在 base+72）；爬树从招牌右边起跳
+addP({treeAt:{x:TREE.cx+68,y:TREE.f1.base+30},plaque:{x:TREE.cx-46,y:TREE.f1.base+30},branchAt:{x:390,y:Y2+372},slideAt:{x:420,y:Y2+374},topAt:{x:TREE.cx+24,y:TREE.rf.base+16}});
 M.BLOCK.push([W[0]-6,W[1]-4,W[2]+12,W[3]+12]);   // 天井和一圈栏杆
+M.BLOCK.push([P.plaque.x+2,P.plaque.y+SIGN_H-4,SIGN_W-4,12]);   // 树下的招牌占的地
+// 招牌夜里不被夜色压暗，前面一盏暖光照着
+{const F1=M.floors.find(f=>f.id==='f1');(F1.bright=F1.bright||[]).push([P.plaque.x,P.plaque.y,SIGN_W,SIGN_H])}   // 只框木牌本身（全是不透明的），牌头上面的地板照常压暗
 const bg0=M.bg;M.bg=function(){bg0.call(this);treeBench(TREE.cx,TREE.f1.base);wellHole(W[0],W[1],W[2],W[3])};
 const add=(x,y,w,h,base,draw,o={})=>M.props.push({x,y,w,h,base,draw,...o});
 add(T1.x,T1.y,T1.w,T1.h,TREE.f1.base,(t,S)=>{C.drawImage(TRUNK1,T1.x,T1.y);treeOrnaments(S.tree,0)},{ver:S=>S.tree?S.tree.v:0});
-add(P.plaque.x,P.plaque.y,36,16,P.plaque.y+16,()=>treePlaque(P.plaque.x,P.plaque.y));
+add(P.plaque.x,P.plaque.y-6,SIGN_W,SIGN_H+16,P.plaque.y+SIGN_H+8,t=>treeSign(P.plaque.x,P.plaque.y,t),{live:1});
 add(T2.x,T2.y,T2.w,T2.h,TREE.f2.base,(t,S)=>{C.drawImage(TRUNK2,T2.x,T2.y);treeOrnaments(S.tree,1)},{ver:S=>S.tree?S.tree.v:0});
 add(W[0]-6,W[1]-6,W[2]+12,14,W[1]+6,()=>railH(W[0]-6,W[1]-6,W[2]+12));add(W[0]-6,W[1]+W[3]-4,W[2]+12,14,W[1]+W[3]+8,()=>railH(W[0]-6,W[1]+W[3]-4,W[2]+12));
 add(W[0]-6,W[1],6,W[3],W[1]+W[3],()=>railV(W[0]-6,W[1],W[3]));add(W[0]+W[2]+2,W[1],6,W[3],W[1]+W[3],()=>railV(W[0]+W[2]+2,W[1],W[3]));
 add(TREE.rf.canX,TREE.rf.canY,CAN_W,TREE.rf.base-TREE.rf.canY,TREE.rf.base,(t,S)=>{C.drawImage(CANOPY_IMG,TREE.rf.canX,TREE.rf.canY);C.drawImage(TRUNK3,TR.x,TR.y);treeOrnaments(S.tree,2)},{ver:S=>S.tree?S.tree.v:0});
-M.lights.push({x:TREE.cx,y:300,r:70,col:'#ffcf60',when:'night',a:.5},{x:TREE.cx,y:Y2+250,r:90,col:'#ffcf60',when:'night',a:.45},{x:TREE.cx,y:Y3+170,r:120,col:'#ffcf60',a:.5},
+M.lights.push({x:TREE.cx,y:P.plaque.y+SIGN_H+4,r:46,col:'#ffd88a',when:'night',a:.45},{x:TREE.cx,y:300,r:70,col:'#ffcf60',when:'night',a:.5},{x:TREE.cx,y:Y2+250,r:90,col:'#ffcf60',when:'night',a:.45},{x:TREE.cx,y:Y3+170,r:120,col:'#ffcf60',a:.5},
   ...TREE.br.map(b=>{const L=brLantern(b);return{x:L.x,y:L.y+8,r:16,col:'#ffd890',when:'night',a:.8}}));
 })();
 
@@ -176,7 +191,7 @@ function topSteps(c){const i=freeOf(topOcc,c,c.me?[0,1]:[1,0]);if(i==null)return
     stay(c,{k:'sit',ex:'content',face:s.face,dur:rr(10,20),leave:c=>[...CLIMB3.slice().reverse().map(p=>({jump:{...p}})),{jump:{...P.topAt}},{fn:c=>{c.z=undefined}}]});if(A.onSeat)A.onSeat('treetop',c,i)}}]}
 
 // 一楼：爬上毛线巨树。你一路爬到屋顶的瞭望台；别的猫爬到二楼挑一根横枝
-T({id:'yarntree',n:'毛线巨树',hit:[TREE.cx-30,TREE.f1.top,60,TREE.f1.base-TREE.f1.top],at:P.treeAt,near:[TREE.cx-34,TREE.f1.base+16,68,22],
+T({id:'yarntree',n:'毛线巨树',hit:[TREE.cx-30,TREE.f1.top,60,TREE.f1.base-TREE.f1.top],at:P.treeAt,near:[P.treeAt.x-18,P.treeAt.y-14,36,24],
   label:c=>c.me?'爬上毛线巨树（一直爬到屋顶）':'爬上毛线巨树',ok:c=>!c.hold,no:()=>'叼着东西爬不了树',ai:{mood:'rest',w:1.6},
   go(c){const steps=[{go:P.treeAt},{fn:c=>{c.face='L';c.doing='在爬毛线巨树'}},...CLIMB1.map(p=>({jump:{...p},dur:.5})),{portal:TP.up12}];
     if(c.me){const ti=freeOf(topOcc,c,[0,1]);if(ti==null){say('树顶上已经坐满了');return}
@@ -185,12 +200,15 @@ T({id:'yarntree',n:'毛线巨树',hit:[TREE.cx-30,TREE.f1.top,60,TREE.f1.base-TR
 A.seatThing({id:'treebench',n:'树下的环形长凳',hit:[TREE.cx-66,TREE.f1.base-18,132,40],at:{x:TREE.cx-40,y:TREE.f1.base+24},near:[TREE.cx-70,TREE.f1.base+8,140,24],label:'在树下的长凳上坐一会儿',
   spots:BENCH_SPOTS,up:i=>[{...BENCH_SPOTS[i]}],down:i=>[{x:BENCH_SPOTS[i].x+(BENCH_SPOTS[i].x<TREE.cx?-6:6),y:TREE.f1.base+26}],floor:i=>({x:BENCH_SPOTS[i].x+(BENCH_SPOTS[i].x<TREE.cx?-6:6),y:TREE.f1.base+26}),
   k:()=>rnd(['sit','lie','sit','sleep']),ex:'content',doing:'坐在树下的长凳上',ai:{mood:'rest',w:1.8}});
-T({id:'treeplaque',n:'巨树的铭牌',hit:[P.plaque.x,P.plaque.y,36,16],at:{x:P.plaque.x+18,y:P.plaque.y+24},near:[P.plaque.x-6,P.plaque.y+14,48,18],label:'看看铭牌',ai:{mood:'explore',w:.2},
-  go(c){run(c,[{go:{x:P.plaque.x+18,y:P.plaque.y+24}},{fn:c=>{c.face='L'}},{k:'sit',dur:.6,ex:'lookUp'},{fn:c=>{if(c.me)openPlaque()}}])}});
+{const SA={x:P.plaque.x+SIGN_W/2,y:P.plaque.y+SIGN_H+20};
+T({id:'treeplaque',n:'猫猫咖啡馆的招牌',hit:[P.plaque.x,P.plaque.y-6,SIGN_W,SIGN_H+14],at:SA,near:[P.plaque.x+2,SA.y-10,SIGN_W-4,22],label:'看看招牌',ai:{mood:'explore',w:.2},
+  go(c){run(c,[{go:SA},{fn:c=>{c.face='R'}},{k:'sit',dur:.6,ex:'lookUp'},{fn:c=>{if(c.me)openPlaque()}}])}})}
 function openPlaque(){const T0=S.tree;A.dlg.show({id:'tree-'+Math.floor(now()*10),kind:'info',head:{icon:'tree',title:'毛线巨树'},blocks:[
-  {k:'text',t:'铭牌上刻着 CLOWDER：一群猫。这棵树从咖啡厅的地面长出来，穿过二楼，树冠在屋顶上。树干上的毛线套一圈一个颜色，是店里的猫一针一针织上去的。'},
+  {k:'text',t:'招牌上写着 CLOWDER AI · 猫猫咖啡馆。Clowder 是"一群猫"：猫猫咖啡馆把一只只 AI 猫变成一个团队，各有各的身份和本事，互相 @、互相 review。'},
+  {k:'text',t:'这棵树从咖啡厅的地面长出来，穿过二楼，树冠在屋顶上。树干上的毛线套一圈一个颜色，是店里的猫一针一针织上去的。'},
   {k:'text',t:'全店每挂出一件成品，树上就多挂一件，一楼、二楼、屋顶轮着挂；挂满 '+TREE.N+' 件，满树金光。'},
-  {k:'progress',p:T0.orn.length/TREE.N,t:`树上挂了 ${T0.orn.length} / ${TREE.N} 件`+(T0.blooms?` · 已经满树金光过 ${T0.blooms} 次`:'')}],
+  {k:'progress',p:T0.orn.length/TREE.N,t:`树上挂了 ${T0.orn.length} / ${TREE.N} 件`+(T0.blooms?` · 已经满树金光过 ${T0.blooms} 次`:'')},
+  {k:'links',items:['site','github'].map(k=>({key:k,...LINKS[k]}))}],
   tip:{...TIPS.multi,key:'multi'},acts:[{id:'ok',t:'知道了',key:'E'}]})}
 // 二楼：跳上一根横枝
 T({id:'branch',n:'巨树的横枝',hit:[TREE.cx-110,Y2+130,220,230],at:P.branchAt,near:[P.branchAt.x-16,P.branchAt.y-14,40,24],label:'跳上一根横枝',ok:c=>!c.hold&&freeOf(brOcc,c,[0,1,2,3,4,5])!=null,no:c=>c.hold?'叼着东西跳不上去':'横枝上都有猫了',

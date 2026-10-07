@@ -9,6 +9,8 @@
 WORLD_MODS.push(A=>{
 const {S,P,me,run,stay,settle,say,sfx,news,emote,speak,after,rr,rnd,dist,setK}=A;
 const now=()=>A.t,tick=f=>A.tickers.push(f),near=(a,b,d)=>Math.hypot(a.x-b.x,a.y-b.y)<d,Y=Y4,B=b1Kit;
+// 别的猫碰东西发出的声音：你离得近才听得到（楼层之间隔得远，按距离算不会跨层）
+const hear=(p,d=260)=>A.play&&!!p&&near(me,p,d);
 const D=S.disco={pal:0,crazy:0,allGold:0,gold:[],hit:[],pull:0,scratch:0,blow:0};
 const S1=S.b1={ticket:0,pop:0,noren:0,bucketsDown:0,milk:0,dryer:0,massage:0,needle:0};
 const onB1=c=>A.floorOf(c.y).id==='b1',room=c=>A.roomAt(c.x,c.y).id,GS=()=>A.guide.games(),idle=A.idle;
@@ -40,7 +42,7 @@ A.T({id:'dancefloor',n:'舞池',hit:[F.x,F.y,F.cols*F.tw,F.rows*F.th],at:c=>onFl
   label:c=>c.me?(G?'正在跳一曲':'跳一曲'):'跳舞',ok:c=>!c.hold&&!(c.me&&G),no:c=>c.hold?'叼着东西，先放下吧':'正在跳',ai:{mood:'play',w:c=>D.crazy>now()?6:1.2},
   go(c){if(c.me){if(!onFloor(c))run(c,[{go:randTile()},{fn:startDance}]);else startDance();return}run(c,[{go:randTile()},{k:'dance',dur:rr(8,20)}])}});
 // 镜面球：拉一下墙上的链子，二十秒"迪斯科时间"
-function discoTime(by){D.crazy=now()+20;D.pull=now()+.6;sfx('clunk');after(.3,()=>sfx('fanfare'));news((by&&!by.me?by.name:'你')+'拉下了镜面球：迪斯科时间！');
+function discoTime(by){D.crazy=now()+20;D.pull=now()+.6;if(by&&by.me||hear(P.chainAt,380)){sfx('clunk');after(.3,()=>sfx('fanfare'))}news((by&&!by.me?by.name:'你')+'拉下了镜面球：迪斯科时间！');
   S.cats.filter(c=>awake(c)&&!c.me&&!c.desk&&onB1(c)&&c.z==null&&!c.place&&!c.hold&&(room(c)==='disco'||near(c,{x:556,y:Y+180},220))).slice(0,14).forEach((c,k)=>after(k*.15,()=>run(c,[{go:randTile()},{k:'dance',dur:rr(10,18)}])))}
 A.events.disco=()=>{if(D.crazy>now())return'迪斯科时间还没完';discoTime(null)};
 A.T({id:'mball',n:'镜面球',hit:[P.ballX-9,P.ballY-9,18,18],at:P.chainAt,near:[P.chainAt.x-18,P.chainAt.y-14,36,26],label:c=>D.crazy>now()?'迪斯科时间还没完':'拉一下镜面球的链子',
@@ -95,7 +97,7 @@ P.posters.forEach((p,k)=>A.T({id:'poster'+k,n:'海报墙',hit:[p.x-3,p.y-3,36,50
   go(c){run(c,[{go:{x:p.x+15,y:Y+72}},{k:'sit',dur:c.me?.4:rr(2,4),ex:'lookUp'},{fn:c=>{if(c.me){const Q=POSTERS[k];A.linkDialog('poster','本周上映 · '+Q.t,'star',Q.x,Q.l,Q.tip)}}}])}}));
 // 爆米花机：噼里啪啦爆一锅，几颗蹦到地上，附近的猫过来吃
 const kernels=[];let popAte=0;
-function popcorn(){S1.pop=now()+3;for(let i=0;i<6;i++)after(.3+i*.35,()=>{sfx('popcorn');const x0=P.popcorn.x+20,y0=P.popcorn.y+8,tx=x0+rr(-46,46),ty=Y+rr(108,150),t0=now();
+function popcorn(){S1.pop=now()+3;for(let i=0;i<6;i++)after(.3+i*.35,()=>{if(hear(P.popcorn,300))sfx('popcorn');const x0=P.popcorn.x+20,y0=P.popcorn.y+8,tx=x0+rr(-46,46),ty=Y+rr(108,150),t0=now();
   const f={x:x0,y:y0,draw:f=>{const k=Math.min(1,(now()-t0)/.5);R(Math.round(x0+(tx-x0)*k),Math.round(y0+(ty-y0)*k-Math.sin(k*Math.PI)*22),2,2,'#fff4c0')}};
   S.flying.push(f);after(.5,()=>{const j=S.flying.indexOf(f);if(j>=0)S.flying.splice(j,1);kernels.push({x:tx,y:ty,t0:now()})})});
   after(2.8,()=>{S.cats.filter(o=>!o.me&&awake(o)&&!o.desk&&idle(o)&&!o.place&&o.z==null&&onB1(o)&&near(o,P.popcornAt,170)).slice(0,3).forEach(o=>{const k=rnd(kernels);if(k)run(o,[{go:{x:k.x+6,y:k.y+2}},{k:'lick',dur:1.2},{fn:o=>{const i=kernels.indexOf(k);if(i>=0){kernels.splice(i,1);emote(o,'heart',1)}}}])})})}
@@ -105,7 +107,7 @@ A.T({id:'popcorn',n:'爆米花机',hit:[P.popcorn.x,P.popcorn.y-14,40,72],at:P.p
   go(c){run(c,[{go:P.popcornAt},{fn:c=>{c.face='R'}},{k:'bat',dur:.5},{fn:()=>popcorn()},{k:'sit',dur:c.me?.3:2.5,ex:'sparkle'}])}});
 // 售票亭：领一张票，猫自己走去那个座位
 A.T({id:'ticket',n:'售票亭',hit:[P.ticket.x-3,P.ticket.y-12,62,88],at:P.ticketAt,near:[P.ticketAt.x-18,P.ticketAt.y-14,36,26],label:'领一张电影票',ai:{mood:'explore',w:.15},ok:c=>!c.hold,no:()=>'叼着东西，先放下吧',
-  go(c){run(c,[{go:P.ticketAt},{fn:c=>{c.face='R'}},{k:'bat',dur:.5},{fn:c=>{S1.ticket=now()+1;sfx('click');const th=A.TID('cseat'),free=th.occ.map((u,i)=>!u||u.gone?i:-1).filter(i=>i>=0);
+  go(c){run(c,[{go:P.ticketAt},{fn:c=>{c.face='R'}},{k:'bat',dur:.5},{fn:c=>{S1.ticket=now()+1;if(hear(c))sfx('click');const th=A.TID('cseat'),free=th.occ.map((u,i)=>!u||u.gone?i:-1).filter(i=>i>=0);
     if(!free.length){if(c.me)say('今天的票卖完了：座位都坐满了');return}const i=rnd(free),r=Math.floor(i/6)+1,s=i%6+1;c.ticketSeat=i;
     if(c.me)say(`一张电影票：第 ${r} 排 ${s} 座`);after(.6,()=>{if(c.ticketSeat===i)A.act(c,th)})}}])}});
 
@@ -156,7 +158,7 @@ A.T({id:'aqwall',n:'水族馆玻璃墙',hit:[AQ.x,AQ.y,AQ.w,AQ.h],at:P.aqAt,near
     if(c.me)after(.3,()=>{if(me.place&&me.doing==='在看鱼'&&typeof VA!=='undefined'&&VA.draw&&VA.draw.aquarium)A.vista.open('aquarium')})}}])}});
 // 牛奶冰柜：拿一瓶咖啡牛奶喝掉；泡完澡（一分钟内）再喝，叉着腰一口闷 → 彩蛋
 A.T({id:'milk',n:'牛奶冰柜',hit:[P.fridge.x,P.fridge.y-12,32,58],at:P.fridgeAt,near:[P.fridgeAt.x-16,P.fridgeAt.y-14,32,24],label:'拿一瓶牛奶',ok:c=>!c.hold,no:()=>'叼着东西，先放下吧',ai:{mood:'explore',w:.25},
-  go(c){run(c,[{go:P.fridgeAt},{fn:c=>{c.face='L';S1.milk=now()+.8;sfx('clunk')}},{k:'sit',dur:.6,ex:'sparkle'},{fn:c=>{c.drink=now()+1.8;sfx('gulp')}},{k:'sit',dur:1.8,ex:'content'},
+  go(c){run(c,[{go:P.fridgeAt},{fn:c=>{c.face='L';S1.milk=now()+.8;if(hear(c))sfx('clunk')}},{k:'sit',dur:.6,ex:'sparkle'},{fn:c=>{c.drink=now()+1.8;if(hear(c))sfx('gulp')}},{k:'sit',dur:1.8,ex:'content'},
     {fn:c=>{const warm=c.warmUntil>now();if(warm){emote(c,'heart',1.6);run(c,[{k:'happy',dur:1.4}],true);if(c.me){say('叉着腰，一口闷：哈——');A.eggs.found('milk')}else speak(c,'哈——',1.6)}
       else if(c.me)say('冰冰凉凉的咖啡牛奶')}}])}});
 A.drawers.push((L,vis)=>{for(const c of S.cats){if(!(c.drink>now())||c.hidden)continue;const x=Math.round(c.x)+(c.face==='L'?-6:6),top=c.top??c.y-18;L.push([c.y+.2,()=>{R(x-1,top+5,4,8,OL);R(x,top+6,2,6,'#a8703f');R(x,top+4,2,2,'#c8b8a0')}])}});
@@ -164,24 +166,24 @@ A.drawers.push((L,vis)=>{for(const c of S.cats){if(!(c.drink>now())||c.hidden)co
 let dryU=null;
 A.T({id:'dryer',n:'吹风机',hit:[P.dryer.x,P.dryer.y-2,34,46],at:P.dryerAt,near:[P.dryerAt.x-16,P.dryerAt.y-12,32,22],label:'坐到吹风机底下',ok:c=>!c.hold&&!(dryU&&dryU!==c&&!dryU.gone),no:c=>c.hold?'叼着东西，先放下吧':'有猫在吹',ai:{mood:'rest',w:.3},
   go(c){run(c,[{go:P.dryerAt},{fn:c=>{if(dryU&&dryU!==c&&!dryU.gone){c.q=[];return}dryU=c;c.dryT=now();c.doing='在吹毛';c.onLeave=c=>{if(dryU===c)dryU=null;c.doing=null;if(c.dryT&&now()-c.dryT>3){c.puffUntil=now()+20;if(c.me)say('吹得蓬蓬的，像一颗毛球')}c.dryT=null}}},
-    {jump:{...P.dryerSpot}},{fn:c=>{stay(c,{k:'sit',ex:'content',face:'L',dur:rr(5,8),leave:c=>[{jump:{...P.dryerAt}},{fn:c=>{c.z=undefined}}]});sfx('whirr')}}],true)}});
+    {jump:{...P.dryerSpot}},{fn:c=>{stay(c,{k:'sit',ex:'content',face:'L',dur:rr(5,8),leave:c=>[{jump:{...P.dryerAt}},{fn:c=>{c.z=undefined}}]});if(hear(c))sfx('whirr')}}],true)}});
 tick(()=>{if(dryU&&!dryU.gone&&dryU.dryT)S1.dryer=now()+.3});
 // 按摩椅：窝进去，跟着椅子一起嗡嗡抖，抖着抖着就睡着了
 const MS=P.massageSpot;
 const mth=A.seatThing({id:'massage',n:'按摩椅',hit:[P.massage.x-2,P.massage.y,40,42],at:P.massageAt,near:[P.massageAt.x-16,P.massageAt.y-12,32,22],label:'窝进按摩椅',k:'sit',ex:'content',ai:{mood:'rest',w:.45},doing:'在按摩',
-  dur:()=>rr(10,20),spots:[MS],up:()=>[MS],down:()=>[P.massageAt],floor:()=>P.massageAt,inn(c){c.massT=now();sfx('whirr')},out(c){c.massT=null;c.dy=0}});
+  dur:()=>rr(10,20),spots:[MS],up:()=>[MS],down:()=>[P.massageAt],floor:()=>P.massageAt,inn(c){c.massT=now();if(hear(c))sfx('whirr')},out(c){c.massT=null;c.dy=0}});
 tick(()=>{const c=mth.occ[0];if(!c||c.gone||!c.massT)return;S1.massage=now()+.3;if(c.z!=null&&!c.cur)c.dy=Math.floor(now()*28)%2?-1:0;if(now()-c.massT>8&&c.k==='sit'&&!c.cur)setK(c,'sleep')});
 // 体重秤：站上去，指针晃两下停住；每只猫的体重按名字定，隔一天会胖一点或瘦一点
 const kgOf=c=>{let h=0;for(const ch of c.name||'')h=(h*31+ch.charCodeAt(0))>>>0;const day=Math.floor(Date.now()/864e5);return Math.round((3.4+(h%28)/10+Math.sin(day*1.7+h)*.2)*10)/10};
 const ON_SCALE={x:P.scale.x+12,y:P.scale.y+22,z:P.scale.y+30.5};
 A.T({id:'scale',n:'体重秤',hit:[P.scale.x,P.scale.y,24,30],at:P.scaleAt,near:[P.scaleAt.x-14,P.scaleAt.y-12,28,22],label:'站到体重秤上',ok:c=>!c.hold,no:()=>'叼着东西，先放下吧',ai:{mood:'explore',w:.2},
-  go(c){run(c,[{go:P.scaleAt},{jump:{...ON_SCALE},h:6},{fn:c=>{const kg=kgOf(c);S1.needleT=Math.max(0,Math.min(1,(kg-2)/6));sfx('boing');
+  go(c){run(c,[{go:P.scaleAt},{jump:{...ON_SCALE},h:6},{fn:c=>{const kg=kgOf(c);S1.needleT=Math.max(0,Math.min(1,(kg-2)/6));if(hear(c))sfx('boing');
     after(1.1,()=>{if(!c.me)return;const g=GS(),r=g.scale=g.scale||{},day=new Date().toDateString();let s=`${kg} 公斤`;if(r.kg&&r.day!==day){const d=Math.round((kg-r.kg)*10)/10;s+=d>0?`，比上次胖了 ${d} 公斤`:d<0?`，比上次瘦了 ${-d} 公斤`:'，和上次一样'}r.kg=kg;r.day=day;A.guide.save();say(s)})}},
     {k:'sit',dur:c.me?1.6:2.4,ex:'curious'},{jump:{...P.scaleAt},h:6},{fn:c=>{c.z=undefined}}])}});
 tick(dt=>{if(!S.cats.some(c=>c.z!=null&&near(c,ON_SCALE,4)))S1.needleT=0;const tg=S1.needleT||0;S1.needle+=(tg-S1.needle)*Math.min(1,dt*4)});
 // 一摞木桶：扒拉一下，哗啦倒一地，过一会儿店猫又摞回去
 A.T({id:'buckets',n:'木桶',hit:[P.buckets.x-6,P.buckets.y,48,40],at:P.bucketsAt,near:[P.bucketsAt.x-16,P.bucketsAt.y-14,32,24],label:c=>S1.bucketsDown>now()?'木桶倒了一地':'扒拉一下木桶',ok:()=>S1.bucketsDown<=now(),no:()=>'已经倒了一地了',ai:{mood:'play',w:c=>S1.bucketsDown>now()?0:.15},
-  go(c){run(c,[{go:P.bucketsAt},{fn:c=>{c.face='R'}},{k:'bat',dur:.5},{fn:c=>{S1.bucketsDown=now()+25;sfx('clunk');after(.15,()=>sfx('clack'));after(.3,()=>sfx('clunk'));
+  go(c){run(c,[{go:P.bucketsAt},{fn:c=>{c.face='R'}},{k:'bat',dur:.5},{fn:c=>{S1.bucketsDown=now()+25;if(hear(c)){sfx('clunk');after(.15,()=>sfx('clack'));after(.3,()=>sfx('clunk'))}
     S.cats.forEach(o=>{if(o!==c&&awake(o)&&room(o)==='bath'&&near(o,P.bucketsAt,120))emote(o,'bang',1)});if(c.me)say('哗啦——倒了一地');
     after(25,()=>{const n=A.byName('金哥');if(onB1(me))news((n?'金哥':'店猫')+'把木桶一个个摞回去了')})}},{k:'alert',dur:1}])}});
 

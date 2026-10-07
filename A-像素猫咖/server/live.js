@@ -1,4 +1,4 @@
-/* 1024 猫咖 · 联机：谁在店里、各自在哪儿，把走路、表情、快捷短语、蹭蹭、传球转给附近的猫；巨树和小黑板的计数全店共用。设计见 docs/联机.md。
+/* 1024 猫咖 · 联机：谁在店里、各自在哪儿，把走路、表情、快捷短语、蹭蹭、传球转给附近的猫；巨树、小黑板、彩蛋、吧台大鱼缸的计数全店共用。设计见 docs/联机.md。
    - 身份只认令牌（第一条消息 {t:'hi', token}），名字和长相由服务端按令牌填，浏览器发来的消息里不带名字。令牌被作废（离店），用它连着的通道也断开。
    - 不转任何自由文字：短语只传序号，毛线球只传题号。每样字段都查（姿态、表情按 js/cat-sprites.js 里真有的查），不对的消息直接丢掉。
      处理一条消息出了任何错，只断开这一条连接，不影响别人。
@@ -12,7 +12,9 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),WS=require('./ws'),
 const TICK=100,FAR_EVERY=10,HI_MS=5000,MAX_CONN=600,TREE_N=36,PASS_TTL=20000,WW=960,WH=4940;   // 大图的高：一楼、二楼、屋顶、地下一层、猫猫星球（js/map-*.js）
 const KINDS=['scarf','hat','mitten','sock','sweater','flag'],TOYS=['cup','sugar','vase','cake','pot'];   // 咖啡桌上能推下去、叼回来的东西（js/world-cafe.js 的 CTOY）
 // 同一种消息最短间隔（秒）；回球、接球不限（它们受传球事务约束，丢了球就没了）
-const GAP=new Map([['emo',.45],['ph',.9],['rub',.45],['pass',.45],['hang',2.5],['s',.07],['v',.5]]);
+const GAP=new Map([['emo',.45],['ph',.9],['rub',.45],['pass',.45],['hang',2.5],['s',.07],['v',.5],['egg',2],['tank',3]]);
+// 彩蛋的键（js/world-eggs.js 的 EGGS，顺序也一样）；每只猫最多往大鱼缸里放几条水晶鱼（js/world-crystal.js）
+const EGG_KEYS=S.EGG_KEYS,TANK_MAX=3;
 const SPR=vm.runInNewContext(fs.readFileSync(path.join(S.ROOT,'js/cat-sprites.js'),'utf8')+';({pose:new Set(Object.keys(POSE)),face:new Set(Object.keys(FACES))})',{console,Math});
 
 const conns=new Set(),byCat=new Map(),passes=new Map();let joins=[],leaves=[],tickN=0,nseq=0;
@@ -24,7 +26,7 @@ const HOLD=new RegExp('^(y[0-4]|('+KINDS.join('|')+'):[0-4]|t:('+TOYS.join('|')+
 const okHold=h=>h===0||typeof h==='string'&&HOLD.test(h);
 function okState(s){if(!Array.isArray(s)||s.length!==9)return false;const [x,y,z,dy,k,f,e,h,fl]=s;
   return num(x,0,WW)&&num(y,0,WH)&&(z===null||num(z,0,WH+40))&&num(dy,-300,20)&&typeof k==='string'&&SPR.pose.has(k)&&(f===0||f===1)&&
-    (e===''||typeof e==='string'&&SPR.face.has(e))&&okHold(h)&&Number.isInteger(fl)&&fl>=0&&fl<64}   // fl：几个开关拼成的数（1 藏着、2 镜像、4 彩虹色、8 头顶毛巾、16 炸毛）
+    (e===''||typeof e==='string'&&SPR.face.has(e))&&okHold(h)&&Number.isInteger(fl)&&fl>=0&&fl<2048}   // fl：几个开关拼成的数（1 藏着、2 镜像、4 彩虹色、8 头顶毛巾、16 炸毛、32 项圈发光、64～960 挂坠编号、1024 水晶泡泡）
 const okBall=b=>b&&typeof b==='object'&&Number.isInteger(b.ci)&&b.ci>=0&&b.ci<5&&KINDS.includes(b.kind)&&(b.qid==null||typeof b.qid==='string'&&/^[a-z0-9-]{1,24}$/.test(b.qid));
 const cleanBall=b=>({ci:b.ci,kind:b.kind,qid:b.qid||null,...(b.rv?{rv:1}:{})});
 const idx=(i,n)=>Number.isInteger(i)&&i>=0&&i<n;
@@ -39,7 +41,7 @@ const sees=(r,c)=>{if(!r.s)return true;const cx=center(r.s[0],r.vw,WW),cy=center
 const nearOf=c=>live().filter(o=>o!==c&&sees(o,c));
 const dist=(a,b)=>Math.hypot(a.s[0]-b.s[0],a.s[1]-b.s[1]);
 const info=c=>({id:c.cat.id,n:c.n,name:c.cat.name,look:c.cat.look,s:c.s});
-const worldInfo=()=>({hung:S.db.world.hung,day:S.today(),today:S.db.world.days[S.today()]||0,tree:S.db.world.tree});
+const worldInfo=()=>({hung:S.db.world.hung,day:S.today(),today:S.db.world.days[S.today()]||0,tree:S.db.world.tree,eggs:S.db.world.eggs,crystal:S.db.world.crystal});
 
 /* ---------- 连上来 ---------- */
 function upgrade(req,socket,head){if(conns.size>=MAX_CONN){socket.end('HTTP/1.1 503 Busy\r\n\r\n');return}
@@ -93,7 +95,15 @@ const ON={
     W.tree.push({kind:m.kind,ci:m.ci});let gold=false;if(W.tree.length>=TREE_N){W.tree=[];gold=true}
     c.cat.hangs=(c.cat.hangs||0)+1;S.save();
     const msg={t:'hang',id:c.cat.id,kind:m.kind,ci:m.ci,hung:W.hung,day:d,today:W.days[d],...(gold?{gold:1}:{})};for(const o of conns)if(o.cat)send(o,msg);
-    const f=typeof m.from==='string'&&byCat.get(m.from);if(f&&f!==c)send(f,{t:'woven',id:c.cat.id,kind:m.kind,ci:m.ci})}};
+    const f=typeof m.from==='string'&&byCat.get(m.from);if(f&&f!==c)send(f,{t:'woven',id:c.cat.id,kind:m.kind,ci:m.ci})},
+  // 第一次找到一个彩蛋：同一只猫同一个彩蛋只算一次；全店在线的猫都收到（只带键和一共几只猫找到，新闻里不说是哪个由前端决定）
+  //（存档先到、已经算过了的：一分钟之内照样告诉大家，再晚的就不说了，免得有人反复发）
+  egg(c,m){if(!EGG_KEYS.includes(m.k))return;const E=c.cat.eggs=c.cat.eggs||{},W=S.db.world,now=Date.now();if(E[m.k]){if(now-E[m.k]>60000)return}else{E[m.k]=now;W.eggs[m.k]=(W.eggs[m.k]||0)+1;S.save()}
+    const msg={t:'egg',id:c.cat.id,k:m.k,n:W.eggs[m.k]||0};for(const o of conns)if(o.cat)send(o,msg)},
+  // 往吧台的大鱼缸里放一条水晶鱼：全店共用一口缸。k 是这只猫一共放过第几条（最多三条）：比算过的多才加（存档先到、已经补算过的不重复加）
+  tank(c,m){const k=Math.min(TANK_MAX,Number.isInteger(m.k)?m.k:0),had=c.cat.tank||0;if(k<1)return;const W=S.db.world;
+    if(k>had){W.crystal.n+=k-had;if(m.gold===1)W.crystal.gold++;c.cat.tank=k;S.save()}else if(k<had)return;
+    const msg={t:'tank',id:c.cat.id,n:W.crystal.n,gold:W.crystal.gold};for(const o of conns)if(o.cat)send(o,msg)}};
 
 /* ---------- 每 0.1 秒：按远近打包 ---------- */
 setInterval(()=>{const t0=process.hrtime.bigint();tickN++;const far=tickN%FAR_EVERY===0,L=live().filter(c=>c.announced),J=joins.filter(c=>c.ws.open&&c.announced),Lv=leaves;joins=[];leaves=[];
