@@ -62,7 +62,7 @@ M.bg=function(){bg0.call(this);
   // 午睡角：北墙是和图书馆之间的隔墙，不开窗，挂一盏月亮小夜灯；三只懒人沙发底下一块大圆地毯；上屋顶的楼梯、下一楼的楼梯口（栏杆围着）
   moonLamp(P.napMoon.x,P.napMoon.y);rugOval(836,Y+490,112,36,'#e8c8e0','#c8a0c0');rugOval(836,Y+490,92,28,'#f4d8ec','#e8c8e0');stairsUp(P.stairs2.x,P.stairs2.y,P.stairs2.w,P.stairs2.h);stairsDown(P.hole1.x,P.hole1.y,P.hole1.w,P.hole1.h);
   // 回廊：天井南边一张长凳旁的两盆花（家具在 props）；门洞上的招牌
-  signOver(300,Y+104,'LAB','gear');signOver(660,Y+104,'BOOKS','book');signOver(300,Y+384,'LOUNGE','heart');signOver(660,Y+384,'NAP','moon');signOver(784,Y+262,'ROOF','up','#a8d0f0');signOver(910,Y+284,'1F','down')},
+  signSide(300,Y+104,'LAB','gear',326);signSide(660,Y+84,'BOOKS','book',634);signSide(300,Y+384,'LOUNGE','heart',326);signSide(660,Y+384,'NAP','moon',634);signOver(784,Y+262,'ROOF','up','#a8d0f0');signOver(910,Y+284,'1F','down')},
 M.wall=function(t,S,vis){wall0.call(this,t,S,vis);const tod=S.tod||'day',wx=S.weather||'sun';
   if(vis(0,Y,326,60)){neon(8,Y+8,'1024','#7ee08a',t,2);ciLight(P.ci.x,P.ci.y,t,(S.ci||{}).state||'pass');if(Math.floor(t*2)%2)P1(P.tools.x+31,P.tools.y+8,'#7ee08a');
     // 白板上有猫画的东西：先擦白（原来印着的那张图看不见了），再画；擦干净以后又是原来那张图

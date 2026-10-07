@@ -160,4 +160,13 @@ A.overs.push(vis=>{if(!S.rings.length||!vis(P.chimney.x-30,P.chimney.y-80,80,90)
 /* ---------- 店猫的新去处 ---------- */
 Object.assign(A.LIKES[4],{ladder:2,globe:1.5,ubin:1});Object.assign(A.LIKES[3],{mic:1.5,frog:2,juke:.6,lantern:1});Object.assign(A.LIKES[5],{wand:3,frog:2,owl:1.5,wtank:1});
 A.events.lantern=()=>{S.lanterns.push({x0:P.lanterns.x+8,y0:P.lanterns.y-6,x:0,y:P.lanterns.y-6,t0:now(),dx:rr(-.6,.8),ph:Math.random()*6})};A.events.owl=()=>owlFly();A.events.stars=()=>{S.stars={t0:now(),until:now()+25}};
+
+/* ---------- 舞台的 Tips 大屏（第五轮）：背板平时是 1024，每隔二十秒变成一块大屏，滚一条猫猫咖啡馆的小贴士，滚完变回去 ---------- */
+// 轮着滚 TIPS 里的每一条；凑过去（或者点背板）弹出这一条的全文和"了解更多"
+const TIPK=Object.keys(TIPS).filter(k=>k!=='camp'),TB=S.tipb={on:false,s:'',k:0,key:null,i:Math.floor(Math.random()*TIPK.length),off:now()+8,t0:0};
+tick(()=>{const B=P.backdrop;if(!TB.on){if(now()<TB.off)return;TB.i=(TB.i+1)%TIPK.length;TB.key=TIPK[TB.i];TB.s='猫猫咖啡馆小贴士：'+TIPS[TB.key].t;TB.on=true;TB.t0=now();TB.w=PXT.w(TB.s);return}
+  TB.k=(now()-TB.t0)*42/(TB.w+B.w);if(TB.k>=1){TB.on=false;TB.off=now()+20}});
+const BD=P.backdrop;
+T({id:'tipboard',n:'Tips 大屏',hit:[BD.x,BD.y,BD.w,BD.h],at:{x:BD.x+60,y:P.stageTop.y+26},near:[BD.x+20,P.stageTop.y+8,BD.w-40,30],label:'看看大屏上的小贴士',ai:{mood:'explore',w:.1},
+  go(c){run(c,[{go:{x:BD.x+60,y:P.stageTop.y+26}},{k:'sit',dur:c.me?.4:2,ex:'lookUp'},{fn:c=>{if(!c.me)return;const k=TB.key||TIPK[TB.i];A.linkDialog('tipboard','猫猫咖啡馆小贴士','star',TIPS[k].t,[TIPS[k].l],k)}}])}});
 });

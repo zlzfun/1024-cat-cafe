@@ -221,7 +221,7 @@ do_reset(){
 do_pack(){
   local stamp; stamp="$(date +%Y%m%d-%H%M)"; local name="1024-cat-cafe-${stamp}"; local tmp; tmp="$(mktemp -d)"; local dst="${tmp}/${name}"
   mkdir -p "${dst}/server" "${dst}/docs"
-  cp index.html admin.html config.example.js deploy.sh "${dst}/"; cp -R js "${dst}/js"; cp server/*.js "${dst}/server/"; cp docs/*.md "${dst}/docs/"
+  cp index.html admin.html config.example.js deploy.sh "${dst}/"; cp -R js "${dst}/js"; cp -R fonts "${dst}/fonts"; cp server/*.js "${dst}/server/"; cp docs/*.md "${dst}/docs/"
   [ "${WITH_CONFIG}" = 1 ] && [ -f config.js ] && cp config.js "${dst}/" && warn "离线包里带了 config.js（有内网地址）：别外传"
   if [ -n "${WITH_NODE}" ]; then [ -f "${WITH_NODE}" ] || die "找不到 Node 的包：${WITH_NODE}"
     mkdir -p "${dst}/runtime/node"; tar xf "${WITH_NODE}" -C "${dst}/runtime/node" --strip-components 1 || die "解不开 ${WITH_NODE}（要 node-v…-linux-x64.tar.xz 这种二进制包）"

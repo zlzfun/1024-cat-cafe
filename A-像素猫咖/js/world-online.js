@@ -20,7 +20,7 @@ function holdOf(h){if(typeof h!=='string')return{hold:null,toy:null};let m=/^y([
   m=/^t:(\w+)$/.exec(h);if(m&&has(CTOY_NAMES,m[1]))return{hold:null,toy:m[1]};return{hold:null,toy:null}}
 function holdCode(c){const y=c.hold;if(y)return y.knit?y.kind+':'+y.ci:'y'+y.ci;return c.ctoy?'t:'+c.ctoy.kind:0}
 // 只发服务端认得的：姿态、表情脸不在表里就换成默认的（服务端会整条丢掉认不得的状态）
-const myState=()=>[Math.round(me.x),Math.round(me.y),me.z==null?null:Math.round(me.z*2)/2,Math.max(-300,Math.min(20,Math.round(me.dy||0))),okPose(me.k)?me.k:'sit',me.face==='L'?1:0,okFace(me.ex)?me.ex:'',holdCode(me),(me.hidden?1:0)|(me.mirror?2:0)];
+const myState=()=>[Math.round(me.x),Math.round(me.y),me.z==null?null:Math.round(me.z*2)/2,Math.max(-300,Math.min(20,Math.round(me.dy||0))),okPose(me.k)?me.k:'sit',me.face==='L'?1:0,okFace(me.ex)?me.ex:'',holdCode(me),(me.hidden?1:0)|(me.mirror?2:0)|(me.rainbowUntil>now()?4:0)|(me.soakT?8:0)|(me.puffUntil>now()?16:0)];   // 4 彩虹色、8 泡在温泉里（头顶毛巾）、16 炸毛
 let lastSent='',lastView='',sendT=0;
 tick(dt=>{if(!L.on)return;if((sendT-=dt)>0)return;sendT=SEND_EVERY;const v=L.view&&JSON.stringify(L.view);if(v&&v!==lastView){lastView=v;L.send({t:'v',v:L.view})}
   const s=myState(),j=JSON.stringify(s);if(j===lastSent)return;lastSent=j;L.send({t:'s',s})});
@@ -36,7 +36,8 @@ function dropCat(id,quiet){const c=L.cats.get(id);if(!c)return;L.cats.delete(id)
 function push(c,s){const t=now(),B=c.buf,last=B[B.length-1];if(last&&t-last.t>.3)B.push({t:t-.1,s:last.s});B.push({t,s});if(B.length>40)B.splice(0,B.length-40)}
 function put(c,s,x,y,dy){c.x=x;c.y=y;c.dy=dy;c.z=typeof s[2]==='number'?s[2]:null;const k=okPose(s[4])?s[4]:'sit',e=okFace(s[6])?s[6]:c.myFace;
   if(c.k!==k)setK(c,k,e);c.ex=e;c.face=s[5]?'L':'R';const H=holdOf(s[7]);c.hold=H.hold;c.ctoy=H.toy?{kind:H.toy}:null;c.yarn=H.hold&&!H.hold.knit&&PLAYS.includes(k)?H.hold.ci:null;
-  const hid=!!(s[8]&1);if(c.hidden&&!hid)S.puffs.push({x:x,y:y-4,t0:now()});c.hidden=hid;c.mirror=!!(s[8]&2)}
+  const hid=!!(s[8]&1);if(c.hidden&&!hid)S.puffs.push({x:x,y:y-4,t0:now()});c.hidden=hid;c.mirror=!!(s[8]&2);
+  c.rainbowUntil=s[8]&4?now()+1:0;c.soakT=s[8]&8?(c.soakT||now()):null;c.puffUntil=s[8]&16?now()+1:0}
 // 画 0.25 秒以前的那一刻：前后两份之间按时间插值（相差 200 像素以上就直接跳过去）
 tick(()=>{const rt=now()-DELAY;for(const c of L.cats.values()){const B=c.buf;if(!B.length)continue;while(B.length>=2&&B[1].t<=rt)B.shift();
   const a=B[0],b=B[1],s=a.s;let x=+s[0]||0,y=+s[1]||0,dy=+s[3]||0;
@@ -93,7 +94,7 @@ const busy=()=>!!(me.hold||me.ctoy||me.hidden||A.arriving&&A.arriving());
 // 收到球：一收到就回话（接住了 / 还回去），不等飞行动画——这样对方那边不会一直悬着，也不会一颗球变成两颗
 function incoming(m){const c=L.cats.get(m.id),b=m.ball;if(!c||!okBall(b))return;const ball={ci:b.ci};
   // 请你 review：看一眼就把球还回去，你什么都不用做
-  if(b.rv){L.send({t:'back',to:m.id,p:m.p,ok:1});say(`${c.name}请你看一眼它的代码。你看了看，点了点头 ✓`);emote(me,'note',1.4);A.throwTo(c,me,ball,()=>A.throwTo(me,c,ball));return}
+  if(b.rv){L.send({t:'back',to:m.id,p:m.p,ok:1});say(`${c.name}请你看一眼它的代码。你看了看，点了点头`);emote(me,'note',1.4);A.throwTo(c,me,ball,()=>A.throwTo(me,c,ball));return}
   if(busy()){L.send({t:'back',to:m.id,p:m.p});say(`${c.name}传来一颗毛线球，可你现在腾不出嘴，球滚回去了`);return}
   L.send({t:'got',to:m.id,p:m.p});sfx('toss');const y={ci:b.ci,kind:b.kind,note:'',knit:false,qid:b.qid||null,chain:['门外',c.name],from:{rid:m.id,name:c.name}};
   // 飞到半路嘴里有了别的：球落进门口的毛线篮，谁也不亏

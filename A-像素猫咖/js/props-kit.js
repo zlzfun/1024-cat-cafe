@@ -136,3 +136,27 @@ function owlPx(x,y,t,back,fly=0){const blink=Math.floor(t*.7+x)%9===0;
   if(fly){const w=Math.floor(t*10)%2;grid(x-7,y-9,w?["o.....oo.....o","oo...obbo...oo",".oobbbbbbbboo.","...obbbbbbo...","....obbbbo....",".....oooo....."]:["......oo......",".....obbo.....",".oobbbbbbbboo.","oobbbbbbbbbboo","....obbbbo....",".....oooo....."],{o:OL,b:'#8a6a4a','.':null});return}
   grid(x-4,y-11,back?[".o.....o.","obo...obo","obbbbbbbo","obbbbbbbo","obBbbbBbo",".obbbbbo.","obbbbbbbo","obbBbBbbo","obbbbbbbo",".obbbbbo.","..y...y.."]:[".o.....o.","obo...obo","obbbbbbbo","oWWobWWbo",blink?"oooobooob":"oeeobeeob",".obbnbbo.","obcccccbo","obcbcbcbo","obcccccbo",".obbbbbo.","..y...y.."],
     {o:OL,b:'#8a6a4a',B:'#6a4a32',W:'#f4e8c8',e:'#ffd84a',n:'#e8a040',c:'#d8c0a0',y:'#e8a040','.':null})}
+
+/* ---------- 第五轮：吧台的大鱼缸、舞台的 Tips 大屏 ---------- */
+// 大鱼缸：58×40，base=y+40；木柜子上一口长缸：沙、水草、小城堡、气泡，七条鱼来回游；paw>0 时玻璃上一个爪印、鱼吓得散开
+function bigFishTank(x,y,t,{paw=0}={}){box(x,y+28,58,12,'#9a6448');R(x+1,y+29,56,1,'#b87a58');R(x+28,y+31,1,8,'#7a4c36');P1(x+25,y+34,'#ffd84a');P1(x+31,y+34,'#ffd84a');
+  box(x,y,58,29,'#3a5a6a');for(let j=0;j<24;j++)R(x+1,y+3+j,56,1,j<6?'#9fd6ec':j<14?'#86c8e4':'#72b6d8');R(x+1,y+1,56,2,'#c8d0d8');R(x+1,y+3,56,1,'#cfeef8');
+  R(x+1,y+23,56,4,'#e6d49a');for(let i=0;i<8;i++)P1(x+4+i*7,y+24+(i%2),'#c9b070');
+  // 小城堡、石头、水草
+  R(x+40,y+15,9,9,'#8a8a98');R(x+40,y+13,2,2,'#8a8a98');R(x+44,y+13,2,2,'#8a8a98');R(x+48,y+13,1,2,'#8a8a98');R(x+43,y+19,3,5,'#3a3a48');disc(x+12,y+24,4,2,'#6a7280');
+  for(const [px,hh,c] of [[6,11,'#4a9a5a'],[20,8,'#5ea85e'],[33,12,'#4a9a5a'],[53,9,'#5ea85e']])for(let j=0;j<hh;j++)P1(x+px+Math.round(Math.sin(t*2+j*.5+px)*(j/hh)*1.5),y+22-j,c);
+  // 七条鱼：三角波来回游，转身时换方向；paw 的时候往两边散
+  const COL=['#ff8a3a','#ffd84a','#ff6a8a','#4fd8ff','#ff8a3a','#c8a0ff','#ffd84a'];
+  for(let i=0;i<7;i++){const u=((t*(.12+i*.025)+i*.37)%2),k=u<1?u:2-u,dir=u<1?1:-1,sc=paw>0?Math.sign(i%2-.5)*paw*6:0,fx=Math.round(x+5+k*46+sc),fy=Math.round(y+6+((i*5)%14)+Math.sin(t*1.3+i)*1.5);
+    R(fx-2,fy,4,2,COL[i]);P1(fx-3*dir,fy+(Math.floor(t*6+i)%2),COL[i]);P1(fx+dir,fy,'#141018')}
+  for(let i=0;i<4;i++){const k=(t*.6+i*.25)%1;P1(x+9+(i%2),Math.round(y+22-k*18),'#e8f8ff')}
+  R(x+2,y+4,1,18,'#ffffff55');if(paw>0){alpha(.7,()=>{disc(x+29,y+14,3,2,'#fff4dc');[[-3,-3],[0,-4],[3,-3]].forEach(([a,b])=>P1(x+29+a,y+14+b,'#fff4dc'))})}}
+// Tips 大屏：舞台背板变成一块 LED 屏，左边一个"TIPS"小标和猫脸，中间一行中文像素字从右往左滚（PXT，画在 1 倍的画布上，跟着画面放大）
+function tipBoard(x,y,w,h,t,tb){R(x-2,y-2,w+4,h+4,OL);R(x-1,y-1,w+2,h+2,'#8a5a3a');R(x+1,y+1,w-2,h-2,'#101828');
+  for(let j=y+3;j<y+h-2;j+=3)for(let i=x+3;i<x+w-2;i+=3)P1(i,j,'#1a2638');
+  box(x+5,y+5,40,13,'#1e6a5a');txt('TIPS',x+11,y+9,'#9cffd8');const cx=x+56,cy=y+11;R(cx-5,cy-3,11,8,'#9cffd8');R(cx-5,cy-5,2,2,'#9cffd8');R(cx+4,cy-5,2,2,'#9cffd8');P1(cx-2,cy,'#101828');P1(cx+2,cy,'#101828');
+  const s=tb.s||'',sw=PXT.w(s),X0=x+w-4,X=Math.round(X0-tb.k*(sw+w)),ty=y+Math.floor(h/2)-4;
+  C.save();C.beginPath();C.rect(x+4,y+22,w-8,h-30);C.clip();PXT.draw(s,X,ty,'#ffe98a',{shadow:'#5a3a1a'});C.restore();
+  txt('CLOWDER CAT CAFE',x+Math.floor((w-txtW('CLOWDER CAT CAFE'))/2),y+h-9,Math.floor(t*2)%2?'#9cffd8':'#5aa898');
+  for(let i=0,n=Math.floor((w+h)*2/9);i<n;i++){const u=i/n,per=2*(w+h),d=u*per;let px,py;if(d<w){px=x+d;py=y}else if(d<w+h){px=x+w;py=y+d-w}else if(d<2*w+h){px=x+w-(d-w-h);py=y+h}else{px=x;py=y+h-(d-2*w-h)}
+    P1(Math.round(px),Math.round(py),(i+Math.floor(t*6))%4?'#3a4a5a':'#9cffd8')}}

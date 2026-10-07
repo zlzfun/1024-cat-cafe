@@ -5,240 +5,307 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>1024 猫咖营业中</title>
 <meta name="description" content="一个纯网页的像素 RPG：你扮演一只猫，在照着 Clowder AI 开的猫咖里解毛线球。">
+<link rel="preload" href="fonts/fusion-pixel-12.woff2" as="font" type="font/woff2" crossorigin>
+<script>
+/* 像素字的字号（docs/店内设计.md 第十三节"字体和窗框"）：缝合像素字体只在 12 像素的整数倍上清楚，所以字号只有三档，
+   每档都让"字号 × 屏幕像素密度"是 12 的整数倍（12 × k 个屏幕像素），每个点落在整的屏幕像素上。
+   k 取离目标最近的（目标：小字 12、正文 18、大字 28 个 CSS 像素），一样近取小的（普通屏的一个 CSS 像素本来就比 Retina 的大）；正文不比小字小，大字一定比正文大。
+   普通屏 12 / 12 / 24，Retina 12 / 18 / 30，Windows 125% 9.6 / 19.2 / 28.8，150% 8 / 16 / 24，175% 13.7 / 20.6 / 27.4（CSS 像素）。
+   对话框、正上方那一摞、悬停卡、遮罩里的框这些宽度跟着正文字号走（多少个字宽），普通屏上不会一行太长。
+   算好写成 CSS 变量：--fs-s/m/l 字号；--lh-s/m/l 行高（小字、正文一行 18 个点，大字 16 个点，都是整的屏幕像素）；--px-s/m/l 这一档的一个点多大；
+   --u 窗框的一格（约 3 像素）、--d2 约 2 像素，取整到屏幕像素；--sbw 左上状态块的宽。拖到别的屏幕、缩放浏览器时重算。
+   window.PXF：{d,ks,km,kl}；snap(v) 把 CSS 像素取整到屏幕像素；center(el,cx) 让 el 的中线对着 cx（不用 translateX(-50%)：那样字会落在半个像素上发虚）。 */
+(()=>{const R=document.documentElement.style;let cur=0,mq=null;
+  const near=(t,u,lo)=>{let k=lo;for(let j=lo+1;j<lo+12;j++)if(Math.abs(j*u-t)<Math.abs(k*u-t)-1e-6)k=j;return k};
+  function fit(){const d=window.devicePixelRatio||1;if(d===cur)return;cur=d;const u=12/d,ks=near(12,u,1),km=near(18,u,ks),kl=near(28,u,km+1),px=v=>+v.toFixed(4)+'px',r=v=>Math.max(1,Math.round(v*d))/d;
+    for(const [n,k,l] of [['s',ks,18],['m',km,18],['l',kl,16]]){R.setProperty('--fs-'+n,px(k*u));R.setProperty('--lh-'+n,px(k*l/d));R.setProperty('--px-'+n,px(k/d))}
+    R.setProperty('--u',px(r(3)));R.setProperty('--d2',px(r(2)));const sbw=Math.ceil((146*ks/d+60*kl/d+40)/8)*8,g=Math.round(4*d);R.setProperty('--sbw',sbw+'px');   // 状态块第一行：楼层色块 + 最长的房间名（五个字，大字）+ "141 只猫 · 在线 12"
+    R.setProperty('--stg',px(g/d));R.setProperty('--stw',px(Math.floor(((sbw-24)*d-2*g)/6)*2/d));   // 集章卡三个章各占一格：格宽是偶数个屏幕像素，章、字居中也落在整像素上
+    const P=window.PXF=window.PXF||{};Object.assign(P,{d,ks,km,kl,snap:v=>Math.round(v*d)/d,center(el,cx){el.style.left=P.snap(cx-el.getBoundingClientRect().width/2)+'px'}});
+    try{mq=matchMedia(`(resolution: ${d}dppx)`);mq.addEventListener('change',fit,{once:true})}catch(e){}}
+  fit();addEventListener('resize',fit);setInterval(fit,1000)})();   // 有的浏览器换屏幕不发事件：每秒再看一眼（没变就什么都不做）
+</script>
 <style>
-  :root{--bg:#1c1424;--card:#2f2340;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a;--ok:#9ccc98;--bad:#f7a58c;--dim:#8a7a9a}
+  /* ---------- 字体、颜色 ---------- */
+  @font-face{font-family:FusionPixel;src:url(fonts/fusion-pixel-12.woff2) format("woff2");font-display:block}
+  :root{--bg:#1c1424;--card:#2f2340;--pan:#241a2e;--line:#4a3a5c;--ink:#fff4dc;--sub:#b9a8c9;--acc:#ffd84a;--ok:#9ccc98;--bad:#f7a58c;--dim:#8a7a9a;--pink:#f4a6b8;--dk:#140e1a;--sh:#0b0710;
+    --teal:#0e3b40;--mint:#93f5d2;   /* 猫猫咖啡馆的东西：深青底、亮薄荷字 */
+    --fs-s:12px;--fs-m:12px;--fs-l:24px;--lh-s:18px;--lh-m:18px;--lh-l:32px;--px-s:1px;--px-m:1px;--px-l:2px;--u:3px;--d2:2px;--sbw:312px;   /* 普通屏的值；<head> 里的脚本按屏幕重算 */
+    --i-cat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 9' shape-rendering='crispEdges'%3E%3Cpath d='M0 0h1v1h-1zM10 0h1v1h-1zM0 1h2v1h-2zM9 1h2v1h-2zM0 2h11v1h-11zM0 3h2v1h-2zM3 3h5v1h-5zM9 3h2v1h-2zM0 4h2v1h-2zM3 4h5v1h-5zM9 4h2v1h-2zM0 5h5v1h-5zM6 5h5v1h-5zM0 6h4v1h-4zM5 6h1v1h-1zM7 6h4v1h-4zM1 7h9v1h-9zM2 8h7v1h-7z'/%3E%3C/svg%3E");
+    --i-ck:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6' shape-rendering='crispEdges'%3E%3Cpath d='M6 0h1v1h-1zM5 1h2v1h-2zM0 2h1v1h-1zM4 2h2v1h-2zM0 3h2v1h-2zM3 3h2v1h-2zM1 4h3v1h-3zM2 5h1v1h-1z'/%3E%3C/svg%3E")}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:FusionPixel,"PingFang SC","Microsoft YaHei",sans-serif;font-size:var(--fs-m);line-height:var(--lh-m);font-weight:400;font-synthesis:none;-webkit-font-smoothing:none}
+  b,strong,h1,h2,h3,h4,h5{font-weight:400}i,em{font-style:normal}small{font-size:var(--fs-s);line-height:var(--lh-s)}   /* 像素字没有粗体、斜体：不让浏览器硬造 */
   canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
-  button{font:inherit;cursor:pointer}
-  /* 像素窗框：外深、中奶白、切角（和店里的对话框一套） */
-  .px1{background:#140e1a;padding:3px;clip-path:polygon(0 6px,3px 6px,3px 3px,6px 3px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 3px,calc(100% - 3px) 3px,calc(100% - 3px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 3px) calc(100% - 6px),calc(100% - 3px) calc(100% - 3px),calc(100% - 6px) calc(100% - 3px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 3px),3px calc(100% - 3px),3px calc(100% - 6px),0 calc(100% - 6px))}
-  .px2{background:#fff4dc;padding:3px;clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))}
-  .pbtn{border:0;background:var(--acc);color:#241a2e;font-size:15px;font-weight:600;padding:7px 26px 9px;box-shadow:inset 0 -3px 0 #b8962a;clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px))}
-  .pbtn:hover{background:#ffe27a}.pbtn:active{box-shadow:inset 0 -1px 0 #b8962a;transform:translateY(2px)}
-  .pbtn[disabled]{background:#4a3a5c;color:var(--dim);box-shadow:inset 0 -3px 0 #3a2c4c;cursor:default;transform:none}
-  .lbtn{border:2px solid var(--line);background:#241a2e;color:var(--sub);font-size:13px;padding:5px 14px}.lbtn:hover{border-color:var(--sub);color:var(--ink)}
-  kbd.k{display:inline-block;min-width:26px;text-align:center;padding:1px 6px 0;background:#2f2340;border:2px solid var(--line);border-bottom-width:4px;color:var(--ink);font:12px/1.6 ui-monospace,Menlo,monospace;border-radius:0;transition:transform .06s}
-  kbd.k.on{background:var(--acc);color:#241a2e;border-color:#b8962a;border-bottom-width:2px;transform:translateY(2px)}
+  button,input{font:inherit;color:inherit}button{cursor:pointer}
+  button:focus{outline:none}button:focus-visible,a:focus-visible{outline:var(--d2) dashed var(--acc);outline-offset:var(--u)}
+  ::selection{background:var(--acc);color:#241a2e}
+  ::-webkit-scrollbar{width:calc(var(--d2)*4);height:calc(var(--d2)*4)}::-webkit-scrollbar-track{background:var(--dk)}::-webkit-scrollbar-thumb{background:var(--line);border:var(--d2) solid var(--dk)}::-webkit-scrollbar-corner{background:none}
 
-  /* ---------- 加载页 ---------- */
+  /* ---------- 像素窗框：外深、内奶白、四角切一格，往右下错一格的硬阴影（全店就这一种框，和对话框一套） ----------
+     全用 box-shadow 画在元素外面：元素本身是里面那块底色，框不占地方，四周要留出约 3 格（--wu）的空。不用圆角、渐变、模糊阴影、1 像素细线。
+     换颜色：--wl 里圈（奶白）、--wd 外圈（深色）、--ws 阴影；.sm 是小号框（一格约 2 像素）。.wb（欢迎回来的卡）的标记在 entry.js，也用这一套。 */
+  .win,.wb{--wu:var(--u);--wl:#fff4dc;--wd:var(--dk);--ws:var(--sh);background:var(--pan);
+    box-shadow:0 calc(var(--wu)*-1) var(--wl),0 var(--wu) var(--wl),calc(var(--wu)*-1) 0 var(--wl),var(--wu) 0 var(--wl),
+      calc(var(--wu)*-1) calc(var(--wu)*-1) var(--wd),var(--wu) calc(var(--wu)*-1) var(--wd),calc(var(--wu)*-1) var(--wu) var(--wd),var(--wu) var(--wu) var(--wd),
+      0 calc(var(--wu)*-2) var(--wd),0 calc(var(--wu)*2) var(--wd),calc(var(--wu)*-2) 0 var(--wd),calc(var(--wu)*2) 0 var(--wd),
+      calc(var(--wu)*3) var(--wu) var(--ws),var(--wu) calc(var(--wu)*3) var(--ws),calc(var(--wu)*2) calc(var(--wu)*2) var(--ws)}
+  .win.sm{--wu:var(--d2)}
+  /* 像素按钮：亮边在上、暗边在下，外面一圈深色（切角）；按下去往下沉约 2 像素。.pbtn 金色（主要的），.lbtn 紫色；.sm 小字 */
+  .pbtn,.lbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;margin:var(--d2);padding:calc(var(--d2)*2) 16px calc(var(--u) + var(--d2));font-size:var(--fs-m);line-height:var(--lh-m);text-decoration:none;white-space:nowrap;cursor:pointer;
+    box-shadow:0 calc(var(--d2)*-1) var(--dk),0 var(--d2) var(--dk),calc(var(--d2)*-1) 0 var(--dk),var(--d2) 0 var(--dk),inset 0 var(--d2) var(--bh),inset 0 calc(var(--u)*-1) var(--bl)}
+  .pbtn{--bh:#fff2a8;--bl:#c09a26;background:var(--acc);color:#241a2e}.pbtn:hover{background:#ffe27a}
+  .lbtn{--bh:#5c4a72;--bl:#1c1424;background:#3a2c4c;color:var(--ink)}.lbtn:hover{background:#45365a}
+  .pbtn:active,.lbtn:active{transform:translateY(var(--d2));box-shadow:0 calc(var(--d2)*-1) var(--dk),0 var(--d2) var(--dk),calc(var(--d2)*-1) 0 var(--dk),var(--d2) 0 var(--dk),inset 0 var(--d2) var(--bl)}
+  .pbtn[disabled],.lbtn[disabled]{--bh:#55456a;--bl:#2a2036;background:#4a3a5c;color:var(--dim);cursor:default;transform:none}
+  .pbtn.sm,.lbtn.sm{gap:4px;padding:var(--d2) 8px var(--u);font-size:var(--fs-s);line-height:var(--lh-s)}
+  /* 像素键帽：方的，底边厚一格；按下（.on）变黄、往下沉 */
+  kbd{display:inline-block;margin:0 var(--d2);padding:0 calc(var(--px-s)*4) var(--d2) calc(var(--px-s)*5);font:inherit;font-size:var(--fs-s);line-height:calc(var(--px-s)*16);text-align:center;vertical-align:middle;white-space:nowrap;color:var(--ink);background:#4a3a5c;
+    box-shadow:0 calc(var(--d2)*-1) var(--dk),0 var(--d2) var(--dk),calc(var(--d2)*-1) 0 var(--dk),var(--d2) 0 var(--dk),inset 0 calc(var(--d2)*-1) #2a2036;transition:transform .06s}
+  kbd.on{background:var(--acc);color:#241a2e;box-shadow:0 calc(var(--d2)*-1) var(--dk),0 var(--d2) var(--dk),calc(var(--d2)*-1) 0 var(--dk),var(--d2) 0 var(--dk);transform:translateY(var(--d2))}
+  .pbtn kbd{background:#f0c63a;color:#241a2e;box-shadow:inset 0 calc(var(--d2)*-1) #b8962a}.lbtn kbd{background:#5a4a6e;box-shadow:inset 0 calc(var(--d2)*-1) #2a2036}
+  /* 像素小图标（mask，跟着字的颜色）：.ck 对勾 */
+  .ck{display:inline-block;flex:none;width:calc(var(--px-s)*7);height:calc(var(--px-s)*6);background:currentColor;-webkit-mask:var(--i-ck) 0 0/100% 100%;mask:var(--i-ck) 0 0/100% 100%}
+
+  /* ---------- 猫猫咖啡馆的 Tips 牌子（第十二节"让猫猫咖啡馆的内容更显眼"）：深青底、亮薄荷字，左边像素徽章（猫脸 + TIPS），后面金色的"了解更多 ↗" ----------
+     对话框底部、新发现、图鉴的条目、悬停卡、加载页都是这一块（标记由 dialog-ui.js 的 tipsHTML 生成）。字比牌子上的徽章、按钮大一号。 */
+  .tipsb{--wl:#3cae98;--wd:#06262a;display:flex;align-items:flex-start;gap:12px;margin:var(--d2) var(--d2) var(--u);padding:8px 8px 8px 8px;background:var(--teal);color:var(--mint);text-align:left;white-space:normal}
+  .tipsb .tb{flex:none;display:inline-flex;align-items:center;gap:calc(var(--px-s)*3);margin-top:calc((var(--lh-m) - var(--lh-s))/2);padding:0 calc(var(--px-s)*4);font-size:var(--fs-s);line-height:var(--lh-s);color:var(--teal);background:var(--mint);
+    box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--mint),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--mint)}
+  .tipsb .tb i{width:calc(var(--px-s)*11);height:calc(var(--px-s)*9);background:currentColor;-webkit-mask:var(--i-cat) 0 0/100% 100%;mask:var(--i-cat) 0 0/100% 100%}
+  .tipsb p{flex:1;min-width:0;margin:0;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--mint)}
+  .tipsb .more{flex:none;align-self:center;margin:0 var(--d2) var(--d2) 0;padding-left:12px;padding-right:12px;pointer-events:auto}   /* 引流的按钮：和正文一样大，金色 */
+  .tipsb.v{display:flow-root}.tipsb.v .tb{float:left;margin-right:8px}.tipsb.v .more{float:right;margin:8px var(--d2) var(--d2) 8px;padding:var(--d2) 8px var(--u);font-size:var(--fs-s);line-height:var(--lh-s)}   /* 窄的地方（图鉴的条目）：字从徽章旁边接着排满整块，按钮落在右下角 */
+
+  /* ---------- 加载页：小猫追线球（线就是进度条）+ 一条小贴士 ---------- */
   #boot{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .45s}
   #boot.out{opacity:0;pointer-events:none}
-  .bt{display:flex;flex-direction:column;align-items:center;gap:14px}
-  .bt h1{margin:0;font-size:20px;font-weight:600;letter-spacing:.3em;padding-left:.3em;color:var(--ink)}
-  #bootcv{width:480px;height:102px;max-width:90vw}
-  #bootmsg{margin:0;font-size:12px;color:var(--dim);min-height:1.6em}
+  .bt{display:flex;flex-direction:column;align-items:center;gap:16px;width:min(640px,calc(100vw - 32px))}
+  .bt h1{margin:0;font-size:var(--fs-l);line-height:var(--lh-l);letter-spacing:calc(var(--px-l)*2);padding-left:calc(var(--px-l)*2);color:var(--ink);text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
+  #bootcv{width:calc(var(--u)*160);height:calc(var(--u)*34);max-width:100%}
+  #bootmsg{margin:0;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim);min-height:var(--lh-s)}
   #bootmsg button{margin-left:8px}
-  .wb{display:flex;gap:16px;align-items:center;background:var(--card);padding:14px 22px 14px 14px;box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;animation:rise .35s ease-out}
-  .wb canvas{width:90px;height:78px;background:#241a2e}
-  .wb small{display:block;font-size:12px;color:var(--sub)}.wb b{display:block;font-size:24px;font-weight:600;color:var(--acc);line-height:1.3}
-  .wb p{margin:2px 0 10px;font-size:13px;color:#d8cce4}
+  #boottip{width:100%;margin:0}#boottip[hidden]{display:none}
+  .wb{display:flex;gap:16px;align-items:center;padding:12px 20px 12px 12px;animation:rise .35s ease-out}
+  .wb canvas{width:calc(var(--u)*30);height:calc(var(--u)*26);background:#3a2c4c}
+  .wb small{display:block;color:var(--sub)}.wb b{display:block;font-size:var(--fs-l);line-height:var(--lh-l);color:var(--acc);text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
+  .wb p{margin:0 0 12px;font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}
   .wb .acts{display:flex;align-items:center;gap:16px}
-  .wb .go{position:relative;overflow:hidden}.wb .go i{position:absolute;left:0;bottom:0;height:3px;background:#241a2e55;width:0}
-  .wb a{font-size:13px;color:var(--sub);cursor:pointer;text-decoration:underline;text-underline-offset:3px}.wb a:hover{color:var(--acc)}
+  .wb .go{overflow:hidden}.wb .go i{position:absolute;left:0;bottom:0;height:var(--u);background:#241a2e66;width:0}
+  .wb a,.nm-st a{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub);cursor:pointer;text-decoration:underline;text-decoration-thickness:var(--px-s);text-underline-offset:calc(var(--px-s)*3)}.wb a:hover{color:var(--acc)}
   @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 
-  /* ---------- 进店流程 ---------- */
+  /* ---------- 进店流程：挑名字、扭蛋、引导 ---------- */
   #entry{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;overflow:hidden;transition:opacity .45s}
   #entry.on{display:block}#entry.out{opacity:0;pointer-events:none}
   #ehc,#epc{position:absolute;left:0;top:0;display:none}
   #eui{position:absolute;inset:0;pointer-events:none}#eui>*{pointer-events:auto}
-  #eskip{position:absolute;right:18px;bottom:16px;display:none;background:none;border:0;color:var(--dim);font-size:13px;padding:4px 8px}#eskip:hover{color:var(--ink)}
+  #eskip{position:absolute;right:16px;bottom:16px;display:none}
   #ehc[style*="block"]~#esnd{display:none}
-  #esnd{position:absolute;right:18px;top:14px;background:none;border:0;color:var(--dim);font-size:12px;padding:4px 8px}#esnd:hover{color:var(--ink)}#esnd.on{color:var(--acc)}
+  #esnd{position:absolute;right:16px;top:16px}#esnd.on{color:var(--acc)}
   .nm{position:absolute;inset:0;pointer-events:none;animation:fadein .3s}.nm>*{pointer-events:auto}.nm.leave{opacity:0;transition:opacity .25s}
   @keyframes fadein{from{opacity:0}}
-  .nm-t{position:absolute;left:0;right:0;margin:0;text-align:center;font-size:20px;font-weight:600;line-height:32px;color:var(--ink)}
-  .pxf{position:absolute}
-  .pxf .nm-val{display:flex;align-items:center;height:60px;background:#fff8e8;color:#3a2630;font:600 24px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding:0 18px}
+  .nm-t{position:absolute;left:0;right:0;margin:0;text-align:center;font-size:var(--fs-l);line-height:var(--lh-l);color:var(--ink);text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
+  .pxf{position:absolute;background:#fff8e8}   /* 名字框：和 Clowder 动画最后那一格对齐（里面是便签纸色） */
+  .pxf .nm-val{display:flex;align-items:center;height:60px;padding:0 16px;color:#3a2630;font-size:var(--fs-l);line-height:var(--lh-l)}
   .nm-low{position:absolute;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
-  .nm-st{margin:0;font-size:13px;color:var(--dim);min-height:21px}.nm-st.good{color:var(--ok)}.nm-st.bad{color:var(--bad)}.nm-st.wait{color:var(--sub)}
-  .nm-st a{color:var(--acc);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-  .nm-sug{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:100%}
-  .nm-sug button{background:#2f2340;border:2px solid var(--line);color:var(--ink);font-size:14px;padding:3px 12px}.nm-sug button:hover{border-color:var(--sub)}
-  .nm-sug button.on{border-color:var(--acc);color:var(--acc);background:#3a2c4c}
-  .nm-sug button.re{border-style:dashed;color:var(--sub)}
+  .nm-st{margin:0;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim);min-height:var(--lh-s)}.nm-st.good{color:var(--ok)}.nm-st.bad{color:var(--bad)}.nm-st.wait{color:var(--sub)}
+  .nm-st a{color:var(--acc)}
+  .nm-sug{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;max-width:100%}
+  .nm-sug .lbtn.on{--bh:#fff2a8;--bl:#c09a26;background:var(--acc);color:#241a2e}
+  .nm-sug .lbtn.re{--bh:#3a2c4c;background:#2a2036;color:var(--sub)}
   .nm-acts{margin-top:4px}
   .shake,.flash{animation:shake .35s}
   @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
-  /* 扭蛋、引导里的字幕和卡片 */
-  .cap{position:absolute;left:50%;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadein .3s;white-space:nowrap}
-  .cap b{font-size:18px;font-weight:600;color:var(--ink)}
-  .cap span,.cap i{font-size:13px;color:var(--sub);font-style:normal}
-  .cap .kk{display:flex;align-items:center;gap:10px}
-  .cap .pad{display:inline-block;text-align:center;line-height:1.9}
+  /* 扭蛋、引导里的字幕和卡片（字幕的左右位置由脚本对齐到整像素，见 PXF.center） */
+  .cap{position:absolute;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadein .3s;white-space:nowrap}
+  .cap b{font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink);text-shadow:var(--px-m) var(--px-m) 0 var(--dk)}
+  .cap span,.cap i{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}
+  .cap .kk{display:flex;align-items:center;gap:8px}
+  .cap .pad{display:inline-block;text-align:center;line-height:calc(var(--px-s)*16 + var(--d2)*5)}
   .cap .ms{color:var(--sub)}
-  .cap .prog{display:block;width:120px;height:4px;background:#2f2340}.cap .prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .15s}
-  .gc{position:absolute;background:var(--card);padding:12px 18px 14px;box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;min-width:210px;animation:rise .3s ease-out}
-  .gc small{display:block;font-size:12px;color:var(--sub)}.gc b{display:block;font-size:22px;font-weight:600;color:var(--acc);line-height:1.35}
-  .gc p{margin:4px 0 12px;font-size:13px;color:#d8cce4}
-  .gc .acts{display:flex;gap:10px;align-items:center}
-  .gc .re small{display:block;font-size:11px;color:var(--dim);line-height:1.2}
-  .gc .hint{margin:10px 0 0;font-size:12px;color:var(--dim)}.gc .hint kbd.k{min-width:22px;padding:0 4px;font-size:11px}
-  .gc .err{margin:8px 0 0;color:var(--bad);font-size:12px;min-height:0}
-  .fly{position:absolute;background:#fff8e8;color:#3a2630;font-size:24px;font-weight:600;padding:4px 14px;white-space:nowrap;transition:left .6s cubic-bezier(.5,0,.3,1),top .6s cubic-bezier(.5,-.4,.3,1),transform .6s,opacity .6s ease-in;pointer-events:none}
+  .cap .prog{display:block;width:120px;height:calc(var(--d2)*3);margin-top:4px;background:var(--dk);box-shadow:0 0 0 var(--d2) var(--line)}.cap .prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .15s}
+  .gc{position:absolute;min-width:224px;padding:12px 16px 16px;animation:rise .3s ease-out}
+  .gc small{display:block;color:var(--sub)}.gc b{display:block;font-size:var(--fs-l);line-height:var(--lh-l);color:var(--acc);text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
+  .gc p{margin:4px 0 12px;font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}
+  .gc .acts{display:flex;gap:12px;align-items:center}
+  .gc .re{flex-direction:column;gap:0}.gc .re small{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim)}
+  .gc .hint{margin:12px 0 0;font-size:var(--fs-s);line-height:var(--lh-m);color:var(--dim)}
+  .gc .err{margin:8px 0 0;color:var(--bad);font-size:var(--fs-s);min-height:0}
+  .fly{position:absolute;background:#fff8e8;color:#3a2630;font-size:var(--fs-l);line-height:var(--lh-l);padding:4px 16px;white-space:nowrap;box-shadow:var(--u) var(--u) 0 var(--dk);transition:left .6s cubic-bezier(.5,0,.3,1),top .6s cubic-bezier(.5,-.4,.3,1),transform .6s,opacity .6s ease-in;pointer-events:none}
 
   /* ---------- 店里 ---------- */
-  kbd{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px;color:var(--ink);background:#2a2036}
-  .game{position:relative;margin:0 auto;outline:none;border-radius:4px;overflow:hidden;background:#000;user-select:none;-webkit-user-select:none}
-  .game canvas{position:absolute;left:0;top:0}
+  .game{position:fixed;inset:0;margin:auto;outline:none;overflow:hidden;background:#000;user-select:none;-webkit-user-select:none}
+  .game>canvas{position:absolute;left:0;top:0}
   .game #oc{pointer-events:none}
-  .hud{position:absolute;font-size:13px;pointer-events:none}
-  /* 左上状态块：一整块，和对话框同一套像素窗框（奶白描边 + 外面一圈深色）；几格之间虚线分开，字号三档，左边对齐 */
-  .tl{left:14px;top:14px}.tl>*{pointer-events:auto}
-  .sb{width:276px;background:#241a2ef2;box-shadow:0 0 0 2px #fff4dc,0 0 0 4px #140e1a;font-size:12px;line-height:1.5;color:#d8cce4}
-  .sb>div{padding:7px 10px}.sb>div+div{border-top:1px dashed #4a3a5c}.sb>div:empty{display:none}
-  .sb p{margin:0}.sb canvas{position:static}.sb h4{margin:0;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--acc);line-height:20px;white-space:nowrap}
-  .sb h4 i{font-style:normal;font-weight:400;font-size:12px;color:var(--sub)}.sb h4 .r{margin-left:auto;font-weight:400;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .hud{position:absolute;pointer-events:none}
+  .game:not(.on) .hud,.game:not(.on) .corner{display:none!important}
+  .game.vista .tl,.game.vista .tr,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle{display:none!important}
+  /* 左上：一整块状态块（地名、你、毛线球、集章抽奖），格子之间一道像素虚线；字号三档：房间名大字，名字和小标题正文，其余小字 */
+  .tl{left:16px;top:16px}.tl>*{pointer-events:auto}
+  .sb{width:var(--sbw);font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}
+  .sb>div{padding:8px 12px}.sb>div:empty{display:none}
+  .sb>div+div{background:linear-gradient(90deg,var(--line) 50%,transparent 0) 0 0/calc(var(--d2)*4) var(--d2) repeat-x}
+  .sb p{margin:0}.sb canvas{position:static}
+  .sb h4{margin:0;display:flex;align-items:center;gap:8px;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc);white-space:nowrap}
+  .sb h4 i{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}.sb h4 .r{margin-left:auto;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}
+  [data-f]{--fc:#9ccc98}[data-f="f2"]{--fc:#a8d0f0}[data-f="roof"]{--fc:#c8b8ff}[data-f="b1"]{--fc:#f0a8d8}[data-f="planet"]{--fc:#ffd84a}   /* 楼层的颜色：左上色块、右上楼层签一样 */
   .sb-loc{display:flex;align-items:center;gap:8px;pointer-events:none}
-  .sb-loc i{flex:none;font-style:normal;font-size:12px;font-weight:600;color:#241a2e;background:#9ccc98;padding:0 6px;line-height:20px}
-  .sb-loc i[data-f="f2"]{background:#a8d0f0}.sb-loc i[data-f="roof"]{background:#c8b8ff}
-  .sb-loc b{font-size:17px;font-weight:600;color:var(--acc);line-height:22px;white-space:nowrap}
+  .sb-loc i{flex:none;margin:var(--d2) 0;padding:0 calc(var(--px-s)*4);color:#241a2e;background:var(--fc);box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--fc),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--fc)}
+  .sb-loc b{font-size:var(--fs-l);line-height:var(--lh-l);color:var(--acc);white-space:nowrap;text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
   .sb-loc span{margin-left:auto;color:var(--dim);white-space:nowrap}
-  .sb-me{display:flex;gap:10px;align-items:center;cursor:pointer}
-  .sb-me canvas{flex:none;width:44px;height:40px;background:#3a2c4c}
+  .sb-me{display:flex;gap:12px;align-items:center;cursor:pointer}
+  .sb-me canvas{flex:none;width:calc(var(--px-s)*44);height:calc(var(--px-s)*40);background:#3a2c4c}
   .sb-me>div{min-width:0}.sb-me .mn{display:flex;align-items:center;gap:8px;white-space:nowrap}
-  .sb-me .mn b{color:#241a2e;background:var(--acc);padding:0 6px;font-size:13px;font-weight:600;line-height:20px}
+  .sb-me .mn b{padding:0 calc(var(--px-m)*3);font-size:var(--fs-m);line-height:var(--lh-m);color:#241a2e;background:var(--acc)}
   .sb-me .mn span{color:var(--sub);overflow:hidden;text-overflow:ellipsis}
-  .sb-me .st{display:flex;gap:16px;margin-top:3px}
-  .sb-me .st em{font-style:normal;display:inline-flex;align-items:center;gap:4px;color:var(--sub)}
-  .sb-me .st em b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
-  .sb-me .st canvas,.sb h4 canvas{flex:none;width:14px;height:14px;background:none;image-rendering:pixelated}
+  .sb-me .st{display:flex;gap:16px;margin-top:4px}
+  .sb-me .st em{display:inline-flex;align-items:center;gap:4px;color:var(--sub)}.sb-me .st em b{color:var(--ink)}
+  .sb-me .st canvas,.sb h4 canvas{flex:none;width:calc(var(--px-s)*14);height:calc(var(--px-s)*14);background:none}
   .sb-me .st em.bk{cursor:pointer}.sb-me .st em.bk:hover b{color:var(--acc)}
   /* 毛线球：便签那句话 + 一颗球的一生（解开 → 挂进橱窗 → 回信）+ 这一段做什么 */
   .sb-task{cursor:pointer}
-  .sb-task .op{margin-left:auto;font-weight:400;font-size:12px;color:var(--sub);display:inline-flex;align-items:center;gap:5px}
-  .sb-task .op kbd{font-size:11px;padding:0 4px;line-height:15px}
-  .sb-task .q{margin:2px 0 6px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .sb-task .lc{display:flex;align-items:center;gap:3px}
-  .sb-task .lc span{flex:1;text-align:center;line-height:20px;border:1px solid #4a3a5c;color:var(--dim);white-space:nowrap}
-  .sb-task .lc span.done{color:var(--ok);border-color:#5b8c5a}
-  .sb-task .lc span.cur{color:#241a2e;background:var(--acc);border-color:var(--acc);font-weight:600}
-  .sb-task .lc i{flex:none;font-style:normal;font-size:10px;color:#6a5a7a}
-  .sb-task .ln{margin-top:5px;color:var(--acc)}.sb-task .ln.ok{color:var(--ok)}
+  .sb-task .op{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}
+  .sb-task .q{margin:4px 0 8px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-task .lc{display:flex;align-items:center;gap:4px}
+  .sb-task .lc span{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;color:var(--dim);background:#2a2036;white-space:nowrap}
+  .sb-task .lc span.done{color:var(--ok)}.sb-task .lc span.cur{color:#241a2e;background:var(--acc)}
+  .sb-task .lc i{flex:none;color:#6a5a7a}
+  .sb-task .ln{margin-top:4px;color:var(--acc)}.sb-task .ln.ok{color:var(--ok)}
   .sb-task .ln s{text-decoration:none;color:var(--dim)}.sb-task .ln u{text-decoration:none;color:var(--ok)}
-  /* 集章抽奖：三个章 + 抽奖的条件；有任务时收成一行 */
+  /* 集章抽奖：三个方章（没盖是虚线框，盖了是红色、斜一点）+ 抽奖的条件；有任务时收成一行 */
   .sb-st{cursor:pointer}
-  .sb-st .row{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:4px;text-align:center}
-  .sb-st .row>div{color:var(--dim);line-height:1.35}.sb-st .row>div.on{color:#d8cce4}
-  .sb-st .s{width:34px;height:34px;margin:0 auto 3px;border:2px dashed #4a3a5c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#6a5a7a;transform:rotate(-8deg)}
+  .sb-st .row{display:grid;grid-template-columns:repeat(3,var(--stw,1fr));column-gap:var(--stg,4px);margin-top:4px;text-align:center}
+  .sb-st .row>div{color:var(--dim)}.sb-st .row>div.on{color:#d8cce4}
+  .sb-st .s{display:flex;align-items:center;justify-content:center;width:calc(var(--px-s)*36);height:calc(var(--px-s)*36);margin:4px auto 8px;border:var(--d2) dashed #4a3a5c;color:#6a5a7a}
   .sb-st .row>div:not(.on):hover .s{border-color:var(--sub);color:var(--sub)}
-  .sb-st .on .s,.sb-st .dots .on{border:2px solid #e0533d;color:#e0533d;background:#e0533d1f;font-weight:700;box-shadow:inset 0 0 0 1px #e0533d66}
+  .sb-st .on .s,.sb-st .dots .on{border:calc(var(--d2)*2) solid #e0533d;color:#e0533d;background:#e0533d24;transform:rotate(-8deg)}   /* 没盖的是一个正着的虚线空位；盖上的是红色方章，斜一点 */
   .sb-st .new{animation:stampin .45s cubic-bezier(.3,1.5,.5,1)}
   @keyframes stampin{0%{transform:scale(2.4) rotate(-26deg);opacity:0}55%{opacity:1}100%{transform:scale(1) rotate(-8deg)}}
-  .sb-st .lt{margin-top:5px;text-align:center;color:var(--sub)}
-  .sb-st .lt.go{color:var(--acc);font-weight:600;animation:ltpulse 1.6s ease-in-out infinite}.sb-st .lt.done{color:var(--ok)}
+  .sb-st .lt{margin-top:4px;text-align:center;color:var(--sub)}
+  .sb-st .lt.go{color:var(--acc);animation:ltpulse 1.6s steps(2) infinite}.sb-st .lt.done{color:var(--ok)}
   @keyframes ltpulse{50%{opacity:.55}}
   .sb-st.fold{display:flex;align-items:center;gap:8px}
-  .sb-st .dots{display:flex;gap:4px}
-  .sb-st .dots span{width:20px;height:20px;border:2px dashed #4a3a5c;border-radius:50%;font-size:11px;line-height:16px;text-align:center;color:#6a5a7a;transform:rotate(-8deg)}
-  .sb-st.fold>i{margin-left:auto;font-style:normal;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .sb-st.hl{animation:sthl 1.2s ease-in-out 3}
-  @keyframes sthl{50%{background:#ffd84a26;box-shadow:inset 0 0 0 2px #ffd84a}}
-  /* 右上：同样窗框的地图——楼层签 + 小地图 */
-  .tr{right:14px;top:14px}.tr>*{pointer-events:auto}
-  .mapbox{width:200px;background:#241a2ef2;box-shadow:0 0 0 2px #fff4dc,0 0 0 4px #140e1a}
-  .floors{display:flex;pointer-events:none}
-  .floors span{flex:1;text-align:center;font-size:12px;line-height:22px;color:var(--dim);border-bottom:1px dashed #4a3a5c}
-  .floors span+span{border-left:1px dashed #4a3a5c}
-  .floors span.on{color:#241a2e;font-weight:600;background:#9ccc98;border-bottom-style:solid;border-bottom-color:#9ccc98}
-  .floors span.on[data-f="f2"]{background:#a8d0f0;border-bottom-color:#a8d0f0}.floors span.on[data-f="roof"]{background:#c8b8ff;border-bottom-color:#c8b8ff}
-  .game .mini{position:static;display:block;width:200px;cursor:pointer;image-rendering:auto}
-  .prompt{left:50%;bottom:14px;transform:translateX(-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:3px;padding:1px 12px;white-space:nowrap;display:none}
-  .cstack{top:10px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:min(560px,50%)}
-  .toast{background:var(--acc);color:var(--bg);border-radius:3px;padding:1px 12px;opacity:0;transition:opacity .3s;text-align:center}
-  .disc,.reply{background:#241a2ef0;border:1px solid var(--acc);border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;opacity:0;transition:opacity .4s,transform .4s;transform:translateY(-6px);width:100%}
-  .disc.show,.reply.show{opacity:1;transform:none}
-  .disc h5,.reply h5{margin:0;font-size:13px;font-weight:600;color:var(--acc)}
-  .disc h5 i{font-style:normal;color:var(--sub);font-weight:400;margin-left:6px}
-  .disc p,.reply p{color:#d8cce4}
-  .disc .tie,.reply .chain{color:var(--ok);font-size:12px}
-  .reply{border-color:#f4a6b8}.reply h5{color:#f4a6b8}
-  .reply q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}
-  .news{left:10px;bottom:12px;font-size:12px;line-height:1.6;max-width:32%}
-  .news div{background:#241a2ecc;border-radius:3px;padding:0 8px;margin-top:3px;width:fit-content;transition:opacity .6s}
-  .tipbox{position:absolute;pointer-events:none;background:#241a2ef0;border:1px solid var(--line);border-radius:3px;padding:3px 9px;font-size:12px;line-height:1.6;display:none;max-width:300px;z-index:4}
-  .tipbox b{color:var(--ink);font-weight:600}.tipbox .how{color:var(--acc)}.tipbox .what{color:#d8cce4}.tipbox .tie{color:var(--ok)}.tipbox .st{float:right;color:var(--sub);margin-left:10px}
-  .menu{position:absolute;display:none;background:#2f2340;border:1px solid var(--acc);border-radius:4px;padding:4px;min-width:170px;max-width:280px;z-index:7}
-  .menu .t{font-size:12px;color:var(--sub);padding:2px 8px 4px;border-bottom:1px solid var(--line);margin-bottom:4px;line-height:1.55}
-  .menu .t b{color:var(--acc);font-weight:600}
-  .menu button{display:block;width:100%;text-align:left;border:0;padding:3px 8px}
-  .menu button:hover{background:#ffd84a22}
-  .menu button[disabled]{color:#6a5a7a;cursor:default;background:none}
-  .photo{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#241a2eb0;z-index:8}
-  .polaroid{background:#fff8e8;color:#3a2630;padding:12px 12px 10px;border-radius:3px;box-shadow:0 8px 30px #0008;text-align:center;font-size:13px}
-  .polaroid canvas{position:static;margin:0 auto 8px;border:1px solid #d8c8a8}
-  .polaroid .who{color:#8a7a6a;font-size:12px;max-width:360px;margin:0 auto 8px}
-  .polaroid a,.polaroid button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:28px;line-height:1;vertical-align:middle;font:inherit;font-size:13px;color:#3a2630;border:1px solid #c9b89a;background:#fff;margin:0 3px;padding:0 14px;border-radius:3px;text-decoration:none;cursor:pointer}
-  .bookov{position:absolute;inset:0;background:#1c1424f2;display:none;z-index:6;overflow:auto;padding:14px 20px 18px}
-  .bookov .top{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
-  .bookov .top b{font-size:16px;color:var(--acc)}.bookov .top span{color:var(--sub);font-size:12px}.bookov .top button{margin-left:auto}
-  .bookov .top .prog{flex:0 1 280px;height:6px;background:#3a2c4c;border-radius:3px;overflow:hidden;align-self:center}
+  .sb-st .dots{display:flex;gap:6px}
+  .sb-st .dots span{width:calc(var(--px-s)*20);height:calc(var(--px-s)*20);display:flex;align-items:center;justify-content:center;border:var(--d2) dashed #4a3a5c;color:#6a5a7a}
+  .sb-st.fold>i{margin-left:auto;color:var(--sub);white-space:nowrap}
+  .sb-st.hl{animation:sthl 1.2s steps(2) 3}
+  @keyframes sthl{50%{background-color:#ffd84a26;box-shadow:inset 0 0 0 var(--d2) var(--acc)}}
+  /* 右上：和左上同样窗框的地图——一排楼层签（按楼层高低）+ 小地图（只画你在的这一层） */
+  .tr{right:16px;top:16px}.tr>*{pointer-events:auto}
+  .mapbox{padding:8px}
+  .floors{display:flex;gap:4px;margin-bottom:8px;pointer-events:none}
+  .floors span{--cc:#2a2036;flex:none;width:48px;margin:var(--d2) 0;text-align:center;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim);background:var(--cc);box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--cc),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--cc)}
+  .floors span.on{--cc:var(--fc);color:#241a2e}
+  .floors span[data-f="planet"]{flex:1;width:auto}
+  .game .mini{position:static;display:block;width:204px;cursor:pointer;image-rendering:auto}
+  /* 下方：提示条（一块窄的窗框：键帽 + 会做什么，左右位置由脚本对齐到整像素）；左下角是店里的新闻（半透明的窗框，一条一行，旧的变淡） */
+  .prompt{left:0;bottom:20px;display:none;padding:4px 12px;white-space:nowrap;color:var(--ink)}
+  .news{left:16px;bottom:20px;max-width:min(32%,480px);padding:4px 12px;font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4;background:#1c1424c4}
+  .news:empty{display:none}
+  .news div{display:flex;gap:8px;align-items:baseline;transition:opacity .6s}
+  .news div:before{content:"";flex:none;width:calc(var(--px-s)*4);height:calc(var(--px-s)*4);background:var(--acc);transform:translateY(calc(var(--px-s)*-3))}
+  /* 正上方：提示（金色窄条）、新发现（带小书本的窗框）、彩蛋（金边、带星星）、人类回信（带信封、粉色边），一条条往下排 */
+  .cstack{top:20px;left:0;right:0;margin:0 auto;width:max(320px,min(calc(var(--fs-m)*32),calc(100% - var(--sbw)*2 - 96px)));width:max(320px,min(round(up,calc(var(--fs-m)*32),8px),calc(100% - var(--sbw)*2 - 96px)));display:flex;flex-direction:column;align-items:flex-start;gap:20px}
+  .toast{position:relative;left:0;max-width:100%;padding:0 12px;color:#241a2e;background:var(--acc);--wl:#fff2a8;opacity:0;transition:opacity .3s;text-align:center}
+  .disc,.reply{width:100%;padding:8px 16px 12px;opacity:0;transition:opacity .4s}
+  .disc.show,.reply.show{opacity:1}
+  .disc h5,.reply h5{margin:0 0 4px;display:flex;align-items:center;gap:8px;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc)}
+  .disc h5 canvas,.reply h5 canvas{flex:none;width:calc(var(--px-m)*16);height:calc(var(--px-m)*16)}
+  .disc h5 i{margin-left:auto;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}
+  .disc>p{margin:0;font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}.disc.egg>p{font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink)}
+  .disc .tipsb{margin-top:12px}.disc:not(.show) .more{pointer-events:none}
+  .disc.egg{--wl:var(--acc);--wd:#3a2a08;background:#2c2030}
+  .reply{--wl:var(--pink)}.reply h5{color:var(--pink)}
+  .reply q{display:block;margin:4px 0 8px;padding:4px 12px;quotes:none;color:#3a2630;background:#fff8e8;box-shadow:var(--u) var(--u) 0 var(--dk)}
+  .reply .chain{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--ok)}
+  /* 悬停卡、右键菜单：小号窗框；店猫是哪个家族（猫猫咖啡馆的）用深青底；菜单当前项前面一个像素小箭头 ▶，和 RPG 的菜单一样 */
+  .tipbox{position:absolute;pointer-events:none;display:none;max-width:calc(var(--fs-m)*12 + var(--fs-s)*12);z-index:4;padding:4px 8px 8px;font-size:var(--fs-s);line-height:var(--lh-s);color:#d8cce4}
+  .tipbox b{font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink)}.tipbox .how{color:var(--acc)}.tipbox .what{color:var(--sub)}
+  .tipbox .cli,.menu .cli{display:block;margin:4px 0;padding:0 8px;color:var(--mint);background:var(--teal)}
+  .menu{position:absolute;display:none;min-width:calc(var(--fs-m)*8 + 48px);max-width:calc(var(--fs-m)*12 + var(--fs-s)*12);z-index:7;padding:4px}
+  .menu .t{margin-bottom:4px;padding:4px 8px 8px;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub);background:linear-gradient(90deg,var(--line) 50%,transparent 0) 0 100%/calc(var(--d2)*4) var(--d2) repeat-x}
+  .menu .t b{font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc)}
+  .menu button{position:relative;display:block;width:100%;text-align:left;border:0;background:none;padding:0 8px 0 calc(var(--fs-s) + 12px);color:var(--ink)}
+  .menu button:hover{background:#3a2c4c}.menu button:hover:before{content:"▶";position:absolute;left:6px;top:0;font-size:var(--fs-s);line-height:var(--lh-m);color:var(--acc)}
+  .menu button[disabled]{color:#6a5a7a;cursor:default;background:none}.menu button[disabled]:before{content:none}
+  .menu button kbd{margin:0 8px 0 0}
+  .photo{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1c1424b0;z-index:8}
+  .polaroid{--wl:#e6d8bc;padding:12px;text-align:center;font-size:var(--fs-s);line-height:var(--lh-s);color:#3a2630;background:#fff8e8}
+  .polaroid canvas{position:static;margin:0 auto 8px;box-shadow:0 0 0 var(--d2) #3a2630}.polaroid .pbtn,.polaroid .lbtn{margin:var(--d2) 6px}
+  .polaroid .who{max-width:360px;margin:0 auto 8px;color:#8a7a6a}
+  /* 图鉴（B）：一大块窗框——进度、小游戏成绩、店猫的心；解锁的（带 Tips 牌子）、没解锁的；最下面一栏彩蛋 */
+  .bookov{position:absolute;inset:0;display:none;z-index:6;overflow:auto;padding:24px 24px 32px;background:#140e1ae6}
+  .bookov .bk{max-width:1136px;margin:0 auto;padding:12px 20px 20px;font-size:var(--fs-s);line-height:var(--lh-s)}
+  .bookov .top{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+  .bookov .top b{font-size:var(--fs-l);line-height:var(--lh-l);color:var(--acc);text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
+  .bookov .top .prog{flex:0 1 288px;height:calc(var(--d2)*4);background:var(--dk);box-shadow:0 0 0 var(--d2) var(--line)}
   .bookov .top .prog i{display:block;height:100%;background:var(--acc)}
-  .bookov .top .num{color:var(--ink);font-size:13px;font-variant-numeric:tabular-nums}
-  .bookov .sec{font-size:13px;color:var(--acc);font-weight:600;margin:14px 0 6px;display:flex;gap:8px;align-items:baseline}
-  .bookov .sec i{font-style:normal;color:var(--sub);font-weight:400}
-  .bookov .sec em{font-style:normal;color:#8a7a9a;font-weight:400;font-size:12px;margin-left:auto}
-  .bookov .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
-  .bookov .e{cursor:pointer}
-  .bookov .e.on{display:flex;gap:9px;background:#2f2340;border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:12px;line-height:1.55;color:#d8cce4}
-  .bookov .e.on:hover{border-color:var(--acc)}
-  .bookov .ic{flex:none;font-weight:700;font-size:12px}
-  .bookov .e.on .ic{width:20px;height:20px;border-radius:50%;background:#7ee08a26;color:#7ee08a;display:flex;align-items:center;justify-content:center;margin-top:1px}
-  .bookov .e.on b{color:var(--ink);font-size:13px;font-weight:600;margin-right:6px}
-  .bookov .e.on small{color:#8a7a9a}
-  .bookov .e.on p{margin:1px 0 0}.bookov .e.on p.tie{color:var(--ok)}
-  .bookov .none{font-size:12px;color:var(--sub)}
-  .bookov .rows{display:grid;gap:5px;margin:8px 0 2px}
-  .bookov .chip{display:inline-flex;gap:6px;align-items:baseline;font-size:12px;color:#d8cce4;background:#2f2340;border:1px solid var(--line);border-radius:3px;padding:1px 9px}
-  .bookov .chip[data-go]{cursor:pointer}.bookov .chip[data-go]:hover{border-color:var(--acc)}
-  .bookov .chip small{color:#8a7a9a}.bookov .chip.off{color:#8a7a9a;background:#241a2e;border-color:#3a2c4c}
-  .bookov .chip .h{color:#f4a6b8;letter-spacing:1px}.bookov .chip.off .h{color:#5a4a6a}
-  .bookov .lk{display:flex;flex-wrap:wrap;gap:5px 6px;align-items:center;margin:5px 0}
-  .bookov .lk .rn{width:86px;font-size:12px;color:var(--sub)}
-  .bookov .e.off{display:inline-flex;gap:5px;align-items:baseline;font-size:12px;color:#8a7a9a;background:#241a2e;border:1px solid #3a2c4c;border-radius:3px;padding:1px 9px}
-  .bookov .e.off .ic{color:#6a5a7a}
-  .bookov .e.off small{color:#6a5a7a}
-  .bookov .e.off:hover{border-color:var(--sub);color:var(--sub)}
-  .game.vista .tl,.game.vista .tr,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle{display:none!important}
-  .vcap{left:50%;bottom:12px;transform:translateX(-50%);display:none;align-items:baseline;gap:12px;background:#241a2ecc;border-radius:3px;padding:3px 14px;font-size:12px;color:var(--sub);white-space:nowrap}
+  .bookov .top .num{font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink)}.bookov .top button{margin-left:auto}
+  .bookov .sec{display:flex;gap:8px;align-items:baseline;margin:20px 0 8px;padding-bottom:4px;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc);background:linear-gradient(90deg,var(--line) 50%,transparent 0) 0 100%/calc(var(--d2)*4) var(--d2) repeat-x}
+  .bookov .sec i{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}.bookov .sec em{margin-left:auto;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim)}
+  .bookov .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--fs-m)*18),1fr));gap:12px}
+  .bookov .e,.bookov .chip[data-go]{cursor:pointer}
+  .bookov .e.on,.bookov .eg{display:flex;gap:8px;padding:8px 12px;color:#d8cce4;background:#2f2340;box-shadow:inset 0 0 0 var(--d2) var(--line)}
+  .bookov .e.on:hover{box-shadow:inset 0 0 0 var(--d2) var(--acc)}
+  .bookov .e.on>div,.bookov .eg>div{flex:1;min-width:0}
+  .bookov .e.on .ic{flex:none;display:flex;align-items:center;justify-content:center;width:calc(var(--px-s)*14);height:calc(var(--px-s)*14);margin-top:calc((var(--lh-m) - var(--px-s)*14)/2);color:#1c1424;background:var(--ok)}
+  .bookov .e.on b,.bookov .eg b{margin-right:8px;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink)}
+  .bookov .e.on small,.bookov .eg small{color:var(--dim)}
+  .bookov .e.on p,.bookov .eg p{margin:4px 0 0}
+  .bookov .e.on .tipsb{margin-top:8px}
+  .bookov .none{color:var(--sub)}
+  .bookov .rows{display:grid;gap:8px;margin:12px 0 4px}
+  .bookov .lk{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:4px 0}
+  .bookov .lk .rn{width:96px;color:var(--sub)}
+  .bookov .chip,.bookov .e.off{--cc:#3a2c4c;display:inline-flex;gap:8px;align-items:baseline;margin:var(--d2) 0;padding:0 8px;color:#d8cce4;background:var(--cc);box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--cc),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--cc)}
+  .bookov .chip[data-go]:hover,.bookov .e.off:hover{--cc:#45365a;color:var(--ink)}
+  .bookov .chip small{color:var(--sub)}.bookov .chip.off{--cc:#2a2036;color:var(--dim)}.bookov .chip.off small{color:#6a5a7a}
+  .bookov .chip .h{color:var(--pink);letter-spacing:var(--px-s)}.bookov .chip.off .h{color:#5a4a6a}
+  .bookov .e.off{--cc:#2a2036;gap:4px;color:var(--dim)}.bookov .e.off .ic{color:#6a5a7a}.bookov .e.off small{color:#6a5a7a}
+  .bookov .eg{background:#2a2034;box-shadow:inset 0 0 0 var(--d2) #4a3a2a}
+  .bookov .eg.on{box-shadow:inset 0 0 0 var(--d2) var(--acc)}
+  .bookov .eg .st{flex:none;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc)}.bookov .eg.off .st{color:#5a4a6a}
+  .bookov .eg.off b{color:var(--dim)}.bookov .eg.off p{color:var(--sub)}
+  .bookov .eg .cells{display:flex;gap:4px;margin-top:8px}.bookov .eg .cells i{width:calc(var(--px-s)*12);height:calc(var(--px-s)*8);background:#3a2c4c}.bookov .eg .cells i.on{background:var(--acc)}
+  /* 看风景：下面一条字幕（地名、这里是什么、此刻的事、能做什么、回到店里；左右位置由脚本对齐到整像素） */
+  .vcap{left:0;bottom:20px;display:none;align-items:baseline;gap:16px;padding:4px 16px;font-size:var(--fs-s);line-height:var(--lh-m);color:var(--sub);white-space:nowrap}
   .game.vista .vcap{display:flex}
-  .vcap b{color:var(--acc);font-weight:600;font-size:13px}.vcap .sc{color:var(--ink)}.vcap .sc:empty{display:none}
-  /* 画面上方三分之一处的大字：换房间、换楼层是小一号的房间名；进店欢迎、第一次见到巨树和星空是大号。同一时间只出一个 */
-  .vtitle{left:50%;transform:translateX(-50%);width:min(820px,72%);top:20%;text-align:center;opacity:0;transition:opacity .45s;padding:12px 0 14px;background:linear-gradient(90deg,transparent,#1c1424bb 24%,#1c1424bb 76%,transparent)}
-  .vtitle.big{transition-duration:1.2s;padding:14px 0 16px}
+  .vcap b{font-size:var(--fs-m);color:var(--acc)}.vcap .sc{font-size:var(--fs-m);color:var(--ink)}.vcap .sc:empty{display:none}
+  /* 画面上方三分之一处的大字：换房间、换楼层是房间名；进店欢迎、第一次见到巨树和星空是 .big（停得久）。大号像素字，硬边的深色投影，上下两道金线。同一时间只出一个。
+     垫一块半透明的深色底（硬边、四角切一格），压在花哨的地板、巨树上也看得清；左右位置由脚本对到整像素 */
+  .vtitle{left:0;top:20%;width:max-content;max-width:min(816px,calc(100% - 64px));padding:8px 32px 12px;text-align:center;opacity:0;transition:opacity .45s;background:#140e1aa8;
+    clip-path:polygon(0 var(--u),var(--u) var(--u),var(--u) 0,calc(100% - var(--u)) 0,calc(100% - var(--u)) var(--u),100% var(--u),100% calc(100% - var(--u)),calc(100% - var(--u)) calc(100% - var(--u)),calc(100% - var(--u)) 100%,var(--u) 100%,var(--u) calc(100% - var(--u)),0 calc(100% - var(--u)))}
+  .vtitle.big{transition-duration:1.2s}
   .vtitle.show{opacity:1}
-  .vtitle small{display:block;font-size:12px;letter-spacing:8px;padding-left:8px;color:var(--acc);text-shadow:0 1px 6px #000}
-  .vtitle b{display:inline-block;font-size:28px;line-height:1.3;font-weight:600;letter-spacing:10px;color:#fff4dc;padding:4px 0 4px 10px;margin:7px 0 6px;border-top:1px solid #ffd84a99;border-bottom:1px solid #ffd84a99;text-shadow:0 2px 10px #000}
-  .vtitle.big b{font-size:34px;letter-spacing:12px;padding:6px 0 6px 12px;margin:8px 0}
-  .vtitle span{display:block;margin:0 auto;max-width:620px;font-size:13px;color:#fff4dc;letter-spacing:2px;text-shadow:0 1px 6px #000}
-  .replydemo{background:#241a2ef0;border:1px solid #f4a6b8;border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;max-width:520px}
-  .replydemo h5{margin:0;font-size:13px;color:#f4a6b8;font-weight:600}.replydemo q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}.replydemo .chain{color:var(--ok);font-size:12px}
-  .game{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0}
-  .game:not(.on) .hud,.game:not(.on) .corner{display:none!important}
-  .corner{position:absolute;right:10px;bottom:10px;display:flex;gap:4px;z-index:3}
-  .corner button{background:#241a2ecc;border:1px solid var(--line);color:var(--sub);font-size:12px;padding:1px 9px;border-radius:3px}.corner button:hover{color:var(--ink);border-color:var(--sub)}.corner button.on{color:var(--acc)}
+  .vtitle small{display:block;letter-spacing:calc(var(--px-s)*4);padding-left:calc(var(--px-s)*4);color:var(--acc);text-shadow:var(--px-s) var(--px-s) 0 var(--dk)}
+  .vtitle b{display:inline-block;margin:8px 0;padding:4px 0 4px calc(var(--px-l)*2);font-size:var(--fs-l);line-height:var(--lh-l);letter-spacing:calc(var(--px-l)*2);color:var(--ink);text-shadow:var(--px-l) var(--px-l) 0 var(--dk);border-top:var(--d2) solid var(--acc);border-bottom:var(--d2) solid var(--acc);box-shadow:0 var(--d2) var(--dk)}
+  .vtitle span{display:block;max-width:624px;margin:0 auto;color:var(--ink);text-shadow:var(--px-m) var(--px-m) 0 var(--dk)}
+  /* 右下：按键、声音、离店 */
+  .corner{position:absolute;right:16px;bottom:16px;display:flex;gap:8px;z-index:3}.corner .on{color:var(--acc)}
   .game.vista .corner{display:none}
+  /* 遮罩里的框：按键说明、在另一个窗口、找不到猫、登记抽奖 */
   .ov{position:absolute;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:#140e1acc}
-  .ov .box{background:var(--card);box-shadow:0 0 0 3px #fff4dc,0 0 0 6px #140e1a;padding:16px 22px 18px;max-width:min(760px,92vw)}
-  .ov h3{margin:0 0 10px;font-size:15px;color:var(--acc);font-weight:600}
-  .ov .keys{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font-size:13px;color:#d8cce4}
-  .ov .keys div{white-space:nowrap}
-  .ov .box>button{margin-top:14px}
-  #elsewhere,#gone{position:fixed;z-index:70}#elsewhere p,#gone p{margin:0 0 12px;color:#d8cce4;font-size:13px}
+  .ov .box{width:min(calc(var(--fs-m)*26),calc(100vw - 48px));width:min(round(up,calc(var(--fs-m)*26),8px),calc(100vw - 48px));padding:16px 24px 20px;color:#d8cce4}
+  .ov h3{margin:0 0 12px;font-size:var(--fs-l);line-height:var(--lh-l);color:var(--acc);text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
+  #keyov .box{width:min(calc(var(--fs-s)*72),calc(100% - 48px));width:min(round(up,calc(var(--fs-s)*72),8px),calc(100% - 48px))}   /* round() 取整到 8 像素：居中时左边落在整像素上（老浏览器不认就用上一句） */
+  .ov .keys{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;font-size:var(--fs-s);line-height:calc(var(--px-s)*16 + var(--d2)*5)}
+  .ov .box>button{margin-top:16px}
+  #elsewhere,#gone{position:fixed;z-index:70}#elsewhere p,#gone p{margin:0 0 16px}
   /* 登记抽奖 */
   #lotto{position:fixed;z-index:60}
-  .lotto{width:min(420px,92vw)}
-  .lotto .lead{margin:0 0 10px;color:#d8cce4;font-size:13px;line-height:1.7}
-  .lotto label{display:flex;align-items:center;gap:10px;margin:8px 0}
-  .lotto label span{width:64px;flex:none;font-size:13px;color:var(--sub)}
-  .lotto input{flex:1;min-width:0;background:#140e1a;border:2px solid var(--line);color:var(--ink);padding:6px 10px;font:inherit;font-size:14px;outline:none}
-  .lotto input:focus{border-color:var(--acc)}.lotto input.bad{border-color:var(--bad)}
-  .lotto .note{margin:12px 0 0;font-size:12px;color:var(--dim);line-height:1.7}
-  .lotto .err{margin:6px 0 0;min-height:1.6em;font-size:12px;color:var(--bad)}
-  .lotto .row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
-  #devbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;flex-wrap:wrap;gap:4px 6px;align-items:center;padding:4px 10px;background:#140e1ae6;font-size:12px;color:var(--sub)}
-  #devbar button{background:none;border:1px solid var(--line);color:var(--ink);font-size:12px;padding:0 8px}#devbar input{width:120px;accent-color:#ffd84a}#devbar b{color:var(--ink);font-weight:400;min-width:28px}
+  .lotto .lead{margin:0 0 12px}
+  .lotto label{display:flex;align-items:center;gap:12px;margin:12px 0}
+  .lotto label span{flex:none;width:calc(var(--fs-m)*3 + 8px);color:var(--sub)}
+  .lotto input{flex:1;min-width:0;padding:4px 8px;border:0;outline:none;color:var(--ink);background:var(--dk);box-shadow:inset 0 0 0 var(--d2) var(--line);caret-color:var(--acc)}
+  .lotto input:focus{box-shadow:inset 0 0 0 var(--d2) var(--acc)}.lotto input.bad{box-shadow:inset 0 0 0 var(--d2) var(--bad)}
+  .lotto input::placeholder{color:#6a5a7a}
+  .lotto .note{margin:12px 0 0;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim)}
+  .lotto .err{margin:8px 0 0;min-height:var(--lh-s);font-size:var(--fs-s);line-height:var(--lh-s);color:var(--bad)}
+  .lotto .row{display:flex;gap:12px;justify-content:flex-end;margin-top:8px}
+  /* 开发工具条（?dev） */
+  #devbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:4px 12px 8px;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub);background:#140e1af2}
+  #devbar input{width:120px;accent-color:#ffd84a}#devbar b{color:var(--ink);min-width:28px}
   #devbar #dvP{margin-left:auto}
 </style>
 </head>
@@ -246,23 +313,23 @@
 <!-- 店里（加载时就在后台建好，进店以后才露出来） -->
 <div class="game" id="game" tabindex="0">
   <canvas id="pc"></canvas><canvas id="oc"></canvas>
-  <div class="hud tl"><div class="sb" id="sb">
+  <div class="hud tl"><div class="sb win" id="sb">
     <div class="sb-loc" id="room"><i id="rfl" data-f="f1">一楼</i><b id="rnm">门厅</b><span id="online"></span></div>
     <div class="sb-me" id="mecard" title="点一下，找到你自己（C）"><canvas id="mec" width="22" height="20"></canvas><div><p class="mn"><b id="mename">你</b><span id="mest">空着嘴</span></p><p class="st"><em title="挂进橱窗的才算交付"><canvas id="icYarn" width="7" height="7"></canvas>交付 <b id="stBall">0</b></em><em class="bk" id="stBook" title="点一下打开图鉴（B）"><canvas id="icPaw" width="7" height="7"></canvas>装置 <b id="stDisc">0</b></em></p></div></div>
     <div class="sb-task" id="panel" title="点一下，再看一眼便签"></div>
     <div class="sb-st" id="stamps"></div></div></div>
-  <div class="hud tr"><div class="mapbox" id="mapbox"><div class="floors" id="floors"></div><canvas class="mini" id="mm" width="200" height="188" title="小地图（你所在的这一层）：点一下，猫就走过去"></canvas></div></div>
-  <div class="hud news" id="news"></div>
-  <div class="hud prompt" id="prompt"></div>
-  <div class="hud cstack"><div class="toast" id="toast"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
-  <div class="hud vtitle" id="vtitle"></div><div class="hud vcap" id="vcap"></div>
-  <div class="tipbox" id="tip"></div>
-  <div class="menu" id="menu"></div>
+  <div class="hud tr"><div class="mapbox win" id="mapbox"><div class="floors" id="floors"></div><canvas class="mini" id="mm" width="204" height="115" title="小地图（你所在的这一层）：点一下，猫就走过去"></canvas></div></div>
+  <div class="hud news win" id="news"></div>
+  <div class="hud prompt win" id="prompt"></div>
+  <div class="hud cstack"><div class="toast win sm" id="toast"></div><div class="disc win" id="disc"></div><div class="reply win" id="reply"></div></div>
+  <div class="hud vtitle" id="vtitle"></div><div class="hud vcap win" id="vcap"></div>
+  <div class="tipbox win sm" id="tip"></div>
+  <div class="menu win sm" id="menu"></div>
   <div id="dlg"></div>
   <div class="bookov" id="bookov"></div>
-  <div class="photo" id="photo"><div class="polaroid"><canvas id="phc"></canvas><div class="who" id="phw"></div><a id="phs" download="1024猫咖合照.png">保存照片</a><button id="phx">关掉</button></div></div>
-  <div class="corner"><button id="bKeys" title="按键说明">按键 H</button><button id="bSnd">声音 关</button><button id="bOut" title="让这台浏览器忘掉你的猫">离店</button></div>
-  <div class="ov" id="keyov"><div class="box"><h3>按键</h3><div class="keys">
+  <div class="photo" id="photo"><div class="polaroid win"><canvas id="phc"></canvas><div class="who" id="phw"></div><a id="phs" class="pbtn sm" download="1024猫咖合照.png">保存照片</a><button id="phx" class="lbtn sm">关掉</button></div></div>
+  <div class="corner"><button id="bKeys" class="lbtn sm" title="按键说明">按键<kbd>H</kbd></button><button id="bSnd" class="lbtn sm">声音 关</button><button id="bOut" class="lbtn sm" title="让这台浏览器忘掉你的猫">离店</button></div>
+  <div class="ov" id="keyov"><div class="box win"><h3>按键</h3><div class="keys">
     <div><kbd>WASD</kbd> <kbd>↑↓←→</kbd> 走动，<kbd>Shift</kbd> 跑</div><div><kbd>E</kbd> <kbd>空格</kbd> 互动 · 打开便签</div>
     <div>鼠标点地面走过去，点东西、点猫也行</div><div>右键点猫：看名片 / 蹭蹭 / 舔毛 / 碰鼻子 / 一起玩 / 挨着睡 / 传球</div>
     <div><kbd>Q</kbd> 把毛线球传给鼠标下（或最近）的猫</div><div><kbd>F</kbd> 跟着一只猫走，<kbd>Esc</kbd> 不跟</div>
@@ -273,34 +340,37 @@
     <div><kbd>Z</kbd> 缩放 · <kbd>H</kbd> 这张说明</div></div><button class="lbtn">知道了</button></div></div>
 </div>
 <!-- 进店流程 -->
-<div id="entry"><canvas id="ehc"></canvas><canvas id="epc"></canvas><div id="eui"></div><button id="eskip"></button><button id="esnd"></button></div>
+<div id="entry"><canvas id="ehc"></canvas><canvas id="epc"></canvas><div id="eui"></div><button id="eskip" class="lbtn sm"></button><button id="esnd" class="lbtn sm"></button></div>
 <!-- 同一只猫在别的窗口里开着 -->
-<div class="ov" id="elsewhere"><div class="box"><h3>它在另一个窗口里醒着</h3><p>同一只猫只能待在一个地方（另一个窗口，或者另一台电脑）。要在这里接着玩吗？</p><button class="pbtn" id="wakeHere">在这里继续</button></div></div>
+<div class="ov" id="elsewhere"><div class="box win"><h3>它在另一个窗口里醒着</h3><p>同一只猫只能待在一个地方（另一个窗口，或者另一台电脑）。要在这里接着玩吗？</p><button class="pbtn" id="wakeHere">在这里继续</button></div></div>
 <!-- 被封禁、这个浏览器记着的猫店里不认了 -->
-<div class="ov" id="gone"><div class="box"><h3 id="goneh"></h3><p id="gonep"></p><button class="pbtn" id="goneb">好</button></div></div>
+<div class="ov" id="gone"><div class="box win"><h3 id="goneh"></h3><p id="gonep"></p><button class="pbtn" id="goneb">好</button></div></div>
 <!-- 登记抽奖：集齐三个章以后 -->
-<div class="ov" id="lotto"><div class="box lotto"><h3>登记抽奖</h3>
+<div class="ov" id="lotto"><div class="box lotto win"><h3>登记抽奖</h3>
   <div id="ltf"><p class="lead" id="ltlead"></p>
     <label><span>姓名</span><input id="lreal" maxlength="20" autocomplete="name"></label>
     <label><span>工号</span><input id="lemp" maxlength="32" autocomplete="off" spellcheck="false"></label>
-    <label><span>联系方式</span><input id="lcon" maxlength="60" autocomplete="off" spellcheck="false" placeholder="手机或邮箱都行"></label>
+    <label><span>手机号</span><input id="lcon" maxlength="20" inputmode="tel" autocomplete="tel" spellcheck="false" placeholder="11 位手机号"></label>
     <p class="note">这三项只用来抽奖和联系领奖，只有组织者看得到，活动结束后删除。一个工号只算一次抽奖机会。</p>
     <p class="err" id="lerr"></p>
     <div class="row"><button class="lbtn" id="lno">等会儿再说</button><button class="pbtn" id="lgo">登记</button></div></div>
   <div id="ltd" hidden><p class="lead" id="ltdp"></p><div class="row"><button class="pbtn" id="lok">好</button></div></div></div></div>
 <div id="devbar"></div>
 <!-- 加载页 -->
-<div id="boot"><div class="bt"><h1>1024 猫咖营业中</h1><canvas id="bootcv" width="160" height="34"></canvas><p id="bootmsg">开门……</p><div id="bootbox"></div></div></div>
+<div id="boot"><div class="bt"><h1>1024 猫咖营业中</h1><canvas id="bootcv" width="160" height="34"></canvas><p id="bootmsg">开门……</p><div id="boottip" class="tipsb win sm" hidden></div><div id="bootbox"></div></div></div>
 <script>
 /* 加载器：并行下载、按顺序执行；进度是真的（脚本到齐 → 建好店 → 认出你），显示上最快也要走一秒，让小猫把线球追完 */
 (()=>{
-const FILES=[['cat-sprites.js','把猫叫醒……'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['house-kit.js'],['outdoor-kit.js'],['props-kit.js'],['quest-bank.js','把毛线球装进篮子……'],
-  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world4-desk.js'],
-  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world-games.js','摆好抓娃娃机……'],['claw-art.js'],['world-more.js','给秋千系上绳子……'],['world-social.js'],['world-ambient.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
+const FILES=[['cat-sprites.js','把猫叫醒……'],['pixel-text.js'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['house-kit.js'],['outdoor-kit.js'],['skyline-art.js'],['props-kit.js'],['b1-kit.js'],['planet-art.js'],['quest-bank.js','把毛线球装进篮子……'],
+  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['map-b1.js','给舞池接上电……'],['map-planet.js'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world-eggs.js'],['world4-desk.js'],
+  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world-games.js','摆好抓娃娃机……'],['claw-art.js'],['world-more.js','给秋千系上绳子……'],['world-social.js'],['world-b1.js','往温泉里放热水……'],['cinema.js'],['world-rocket.js'],['world-ambient.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
   ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['app.js']];
 const msg=document.getElementById('bootmsg'),cv=document.getElementById('bootcv'),x=cv.getContext('2d');let real=0,shown=0,label='开门……',ready=false,failed=false,t0=performance.now(),doneCb=null;
 const say=s=>{if(s!=null)label=s;if(!failed)msg.textContent=label};
-function fail(f){failed=true;msg.innerHTML=`有一样东西没加载出来（${f}）<button class="lbtn" onclick="location.reload()">再试一次</button>`}
+function fail(f){failed=true;msg.innerHTML=`有一样东西没加载出来（${f}）<button class="lbtn sm" onclick="location.reload()">再试一次</button>`}
+// 题库（quest-bank.js 的 TIPS）一到，进度条下面出一条小贴士：随机一条猫猫咖啡馆的 Tips
+function tip(){if(typeof TIPS==='undefined')return;const L=Object.values(TIPS),t=L[Math.floor(Math.random()*L.length)],e=document.getElementById('boottip');if(!t||!e)return;
+  e.innerHTML='<i class="tb"><i></i>TIPS</i><p></p>';e.lastChild.textContent=t.t;e.hidden=false}
 // 小猫追着线球跑：线就是进度条
 function draw(ms){const t=(ms-t0)/1000;shown=Math.min(real,shown+(1/55));x.clearRect(0,0,160,34);const bx=10+Math.round(shown*136);
   x.fillStyle='#4a3a5c';x.fillRect(10,30,136,1);x.fillStyle='#e0533d';x.fillRect(10,30,bx-10,1);for(let i=12;i<bx-4;i+=6){x.fillStyle='#f7a58c';x.fillRect(i,30,2,1)}
@@ -312,7 +382,7 @@ let n=0;const total=FILES.length;
 function load(src,cb,err){const s=document.createElement('script');s.src=src;s.async=false;s.onload=cb;s.onerror=err;document.body.appendChild(s)}
 // config.js 可以没有（公开仓库里只有 config.example.js）
 load('config.js',()=>{},()=>{});
-FILES.forEach(([f,l])=>load('js/'+f,()=>{n++;real=n/total*.8;if(l)say(l);if(n===total)start()},()=>fail(f)));
+FILES.forEach(([f,l])=>load('js/'+f,()=>{n++;real=n/total*.8;if(l)say(l);if(f==='quest-bank.js')tip();if(n===total)start()},()=>fail(f)));
 function start(){const snd=document.getElementById('esnd'),paint=()=>{snd.textContent='声音 '+(Sound.on?'开':'关');snd.classList.toggle('on',Sound.on)};paint();snd.onclick=()=>{Sound.set(!Sound.on);paint()};
   document.getElementById('wakeHere').onclick=()=>App.sleep(false);EK.mount();
   App.boot(s=>{if(s===null){real=1;ready=true;return new Promise(r=>doneCb=r)}real=Math.max(real,s==='点灯……'?.85:.93);say(s)}).catch(e=>{console.error(e);fail(e.message)})}

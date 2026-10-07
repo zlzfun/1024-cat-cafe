@@ -12,28 +12,34 @@ addP({ridge:[30,62,94,168,198,226].map((x,i)=>({x,y:Y+247,z:Y+251.5,face:i<3?'L'
   lanterns:{x:372,y:Y+462},lanternAt:{x:366,y:Y+484},owlPerch:[{x:847,y:Y+351},{x:906,y:Y+325},{x:132,y:Y+204}],
   tankTop:[{x:892,y:Y+331,z:Y+388.6,face:'L'},{x:910,y:Y+331,z:Y+388.6,face:'R'}],tankAt:{x:900,y:Y+398},chimSeat:[{x:110,y:Y+249,z:Y+251.6,face:'R'},{x:154,y:Y+249,z:Y+251.6,face:'L'}]});
 M.WALK.push([250,Y+322,702,212],[8,Y+418,250,116],[814,Y+430,22,24]);
-M.BLOCK.push([792,Y+400,22,54],[836,Y+400,22,54],[814,Y+400,22,30],[884,Y+380,32,8],[450,Y+402,60,22],[602,Y+452,20,6],[676,Y+482,4,8],[736,Y+482,4,8],[772,Y+484,40,6],[820,Y+484,10,6],[836,Y+482,7,6],
-  [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[630,Y+488,40,10],[372,Y+468,16,6]);
+M.BLOCK.push([792,Y+400,22,54],[836,Y+400,22,54],[814,Y+400,22,30],[884,Y+380,32,8],[436,Y+404,90,26],[602,Y+452,20,6],[676,Y+482,4,8],[736,Y+482,4,8],[772,Y+484,40,6],[820,Y+484,10,6],[836,Y+482,7,6],
+  [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[630,Y+488,40,10],[372,Y+468,16,6],
+  [0,Y+526,188,14],[332,Y+526,628,14]);   // 南沿的矮栏杆（中间 188～332 没装栏杆，是屋檐边）
 M.portals.push({id:'s32',from:'roof',to:'f2',n:'楼梯（下二楼）',k:'walk',auto:1,walk:1,zone:[814,Y+434,22,12],at:{x:825,y:Y+442},dir:{x:0,y:-1},out:{x:784,y:Y2+412,face:'R'},outDir:{x:0,y:1}});
 M.lights.push({x:836,y:Y+64,r:90,col:'#c8d0ff',a:.5},{x:58,y:Y+322,r:24,col:'#ffcf70'},{x:310,y:Y+328,r:16,col:'#ffcf70'},{x:690,y:Y+328,r:16,col:'#ffcf70'},{x:132,y:Y+214,r:26,col:'#ffa060',a:.4},{x:810,y:Y+400,r:22,col:'#ffe08a'},{x:850,y:Y+400,r:22,col:'#ffe08a'},{x:838,y:Y+420,r:16,col:'#ffcf70'},{x:575,y:Y+470,r:30,col:'#ffcf70',a:.6},{x:40,y:Y+500,r:20,col:'#ffcf70'});
 const bg0=M.bg,wall0=M.wall,floor0=M.floor,over0=M.over;
 M.bg=function(){bg0.call(this);
   // 夜空、月亮、天边的屋顶剪影（不会动的部分画进底图）
-  nightSkyBase(0,Y,960,316);moonPx(P.moon.x,P.moon.y,22);skyline(0,Y+316,960,0);
+  // 天边那片夜城（skyline-art.js；没有就用原来那排剪影）
+  nightSkyBase(0,Y,960,316);moonPx(P.moon.x,P.moon.y,22);if(typeof roofSkyline==='function')roofSkyline(0,Y+316,960);else skyline(0,Y+316,960,0);
   // 平台从屋檐底下一直铺到右边；平台后沿一道矮墙；左边一面斜屋顶，屋脊高过天边，猫坐上去背后就是星空
   floorPlanks(0,Y+318,960,222,'deck');parapet(250,Y+306,710);roofTiles(0,Y+246,250,166);dormer(44,Y+300);dormer(180,Y+300,0);R(0,Y+412,250,4,'#5a4a42');R(0,Y+412,250,1,'#8a7a6e');
   for(let i=6;i<250;i+=24){R(i,Y+416,2,4,OL)}
   // 平台上两只花箱、一块圆垫子（观星的地方）
   [[300,Y+322,120],[560,Y+322,120]].forEach(([x,y,w])=>{R(x,y+6,w,10,OL);R(x+1,y+7,w-2,8,'#8a5a3a');R(x+1,y+7,w-2,1,'#b07a52');for(let i=x+4;i<x+w-3;i+=5){const h=4+Math.floor(hsh(i,7)*5);R(i,y+7-h,1,h,'#4a8a4e');P1(i,y+6-h,['#f4a6b8','#fff4dc','#ffd84a','#c8a0ff'][i%4])}});
   rugOval(560,Y+482,62,20,'#3f5a8a','#2e4470');rugOval(560,Y+482,46,13,'#5a78aa','#3f5a8a')
-  // 树干从平台中间的洞里长出来
-  disc(480,Y+418,34,10,OL);disc(480,Y+418,33,9,'#2a1e22');disc(480,Y+417,30,7,'#3a2a26');
+  // 树干从平台中间的一个大洞口长出来：一圈木框，洞里黑下去，最底下透上来二楼回廊的暖光（原来的洞只比树干宽一点，看不出能钻下去，2026-10-07 放大）
+  disc(480,Y+418,48,14,OL);disc(480,Y+418,47,13,'#c89060');disc(480,Y+418,45,12,'#8a5a3a');for(let i=0;i<20;i++){const a=i/20*Math.PI*2;P1(Math.round(480+Math.cos(a)*46),Math.round(Y+418+Math.sin(a)*13),'#e0a878')}
+  disc(480,Y+419,42,10,'#140e14');disc(480,Y+421,38,8,'#1e1418');disc(480,Y+423,32,6,'#2e1e18');disc(480,Y+425,24,4,'#5a3a22');disc(480,Y+426,16,2,'#a8703a');
+  for(let i=0;i<8;i++){const x=446+i*9+(i%2)*3;P1(x,Y+424+(i%3),'#ffcf70')}
   // 几盆小灌木、平台上的灯笼
   [[940,Y+486],[20,Y+484],[44,Y+490]].forEach(([x,y])=>potShrub(x,y))},
 M.wall=function(t,S,vis){wall0.call(this,t,S,vis);
-  if(!vis(0,Y,960,330))return;nightStars(0,Y,960,300,t,170,7);
-  // 天边窗户的灯一闪一闪
-  for(let i=0;i<14;i++){const x=Math.floor(hsh(i,301)*960),y=Y+290+Math.floor(hsh(i,302)*22);if((Math.floor(t*.4+hsh(i,303)*9)%7)===0)P1(x,y,'#ffd88a')}
+  // 星星不落在左边斜屋顶的瓦上（星星的位置不变，只是那一块不画；skyline-art.js 按同一组参数盖住落在城上的那几颗）
+  if(!vis(0,Y,960,330))return;C.save();C.beginPath();C.rect(0,Y,960,300);C.rect(0,Y+244,252,56);C.clip('evenodd');nightStars(0,Y,960,300,t,170,7);C.restore();
+  // 天边那片夜城里会动的（摩天轮、电视塔的红灯、电车、窗户一闪一闪；skyline-art.js）
+  if(typeof roofSkylineLive==='function')roofSkylineLive(0,Y+316,960,t);
+  else for(let i=0;i<14;i++){const x=Math.floor(hsh(i,301)*960),y=Y+290+Math.floor(hsh(i,302)*22);if((Math.floor(t*.4+hsh(i,303)*9)%7)===0)P1(x,y,'#ffd88a')}
   // 流星：每隔几秒一颗
   const per=7,k=(t%per)/1.1,n=Math.floor(t/per);if(k<1){const sx=80+hsh(n,311)*640,sy=Y+20+hsh(n,312)*120;shootingStar(sx,sy,90*(hsh(n,313)<.5?1:-1),50,k)}};
 M.floor=function(t,S,vis){floor0.call(this,t,S,vis)};
@@ -55,4 +61,8 @@ add(P.pole.x-2,P.pole.y,7,P.pole.h,P.pole.y+P.pole.h,()=>lightPole(P.pole.x,P.po
 add(P.hut.x-4,P.hut.y-2,78,82,P.hut.y+80,t=>{stairHut(P.hut.x,P.hut.y,t);antenna(P.hut.x+56,P.hut.y-20,22)});
 add(P.waterTank.x,P.waterTank.y-4,40,62,P.waterTank.y+58,()=>waterTank(P.waterTank.x,P.waterTank.y));
 add(P.lanterns.x,P.lanterns.y,16,12,P.lanterns.y+12,()=>lanternBasket(P.lanterns.x,P.lanterns.y));
+// 平台南沿：一道矮栏杆挡在最前面，中间缺一段（屋檐边），那一段只有一道檐沟，再往前就是后院
+addP({eaves:{x0:188,x1:332,y:Y+532}});
+add(0,Y+524,188,16,Y+539,()=>{railH(0,Y+524,186);R(186,Y+522,4,16,OL);R(187,Y+523,2,14,'#c8946a')});add(332,Y+524,628,16,Y+539,()=>{railH(334,Y+524,626);R(332,Y+522,4,16,OL);R(333,Y+523,2,14,'#c8946a')});
+add(188,Y+534,144,6,Y+539.5,()=>{R(190,Y+535,140,2,'#6a6a78');R(190,Y+537,140,1,'#3a3a48');R(190,Y+538,140,2,'#0e0a14')});
 })();

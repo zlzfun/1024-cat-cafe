@@ -8,7 +8,7 @@
    - 鸭子一家：鸭妈妈带三只小鸭在河上游；船、扑过去的猫靠近了，嘎嘎叫着游开。
    - 河里游着几条鱼的影子，猫会盯着看。 */
 const FISH_KINDS=[{id:'jiyu',n:'小鲫鱼',sz:[8,15],col:'#9aa8b0'},{id:'liyu',n:'鲤鱼',sz:[20,42],col:'#c8a050',big:1},{id:'jinli',n:'锦鲤',sz:[25,46],col:'#f08a4a',big:1},
-  {id:'guiyu',n:'鳜鱼',sz:[18,36],col:'#8a9a6a',big:1},{id:'niqiu',n:'泥鳅',sz:[10,18],col:'#6a5a4a'},{id:'xia',n:'小河虾',sz:[4,8],col:'#e0806a'},
+  {id:'guiyu',n:'桂鱼',sz:[18,36],col:'#8a9a6a',big:1},{id:'niqiu',n:'泥鳅',sz:[10,18],col:'#6a5a4a'},{id:'xia',n:'小河虾',sz:[4,8],col:'#e0806a'},
   {id:'pangxie',n:'小螃蟹',sz:[3,7],col:'#c8603a'},{id:'nianyu',n:'鲶鱼',sz:[30,60],col:'#5a6a6a',big:1},{id:'jinyu',n:'金鱼',sz:[6,12],col:'#ffd84a',rare:1},
   {id:'boot',n:'旧靴子',col:'#6a5040',junk:1},{id:'yarn',n:'一颗毛线球',col:'#e0533d',junk:1}];
 // 三个钓点各自爱咬钩的鱼（权重）
@@ -100,25 +100,30 @@ A.floors.push(vis=>{const t=now();for(const d of S.drift){const x=Math.round(d.x
 const seatAt=i=>({x:B.x+20+i*20,y:B.y+9,z:B.y+20.5});
 const riders=()=>B.riders.filter(c=>c&&!c.gone);
 const meIn=()=>riders().some(c=>c.me&&c.inBoat);
-const BX0=P.pier.x+P.pier.w+2,BX1=P.bridge.x-62,BY0=RV.y-4,BY1=RV.y+RV.h-26,TRIP=60;
+const BX0=P.pier.x+P.pier.w+2,BX1=P.boat2.x,BY0=RV.y-4,BY1=RV.y+RV.h-26,TRIP=60;
+// 两个码头：上游的栈桥、下游木桥边的小码头。船停在哪个（B.dock），就在哪个上下船；划到哪个码头边上都能靠岸
+const DOCKS={up:{x:P.boat.x,y:P.boat.y,board:P.boardAt,post:{x:P.pier.x+P.pier.w-2,y:P.pier.y+44},n:'栈桥'},down:{x:P.boat2.x,y:P.boat2.y,board:P.boardAt2,post:{x:P.pier2.x+2,y:P.pier2.y+32},n:'下游的小码头'}};
+B.dock='up';const DK0=()=>DOCKS[B.dock];
+const nearDockKey=()=>{for(const k in DOCKS){const d=DOCKS[k];if(Math.abs(B.x-d.x)<26&&Math.abs(B.y-d.y)<12)return k}return null};
+const closestDock=()=>Math.abs(B.x-DOCKS.up.x)<=Math.abs(B.x-DOCKS.down.x)?'up':'down';
 const NOTES=['如果你捡到这个瓶子：猫猫咖啡馆的猫也在飞书、钉钉、企业微信里接球','瓶子里一张纸条：今天的 CI 是绿的','纸条上画着一只猫，旁边写着：谢谢你把我捞上来',
   '纸条上写着：想要一只会写代码的猫','纸条：下游的木桥底下，住着一家鸭子','纸条上只有一行：TODO'];
-// 你开船：解开缆绳以后自己划；别的猫开船：顺着河漂到下游，再划回来
+// 你开船：解开缆绳以后自己划；别的猫开船：从船停着的码头划到另一个码头，靠岸下船
 function depart(){if(B.mode!=='moored'||!riders().length)return;B.t0=now();sfx('row');
   if(meIn()){B.mode='free';B.got=0;B.bottle=Math.random()<.4?now()+rr(10,40):0;B.vx=8;B.vy=0;B.tgt=null;driftT=.5;say(GS().boat?'解开缆绳了。捞毛线球，躲漂木，一分钟':'解开缆绳了。自己划：捞漂下来的毛线球，躲开漂木，一趟一分钟');news('你划着小船出发了')}
-  else{B.mode='out';B.dir=1;news(riders().map(c=>c.name).join('、')+' 坐着小船漂到下游去了')}}
-function dock(){B.mode='moored';B.x=P.boat.x;B.y=P.boat.y;B.vx=B.vy=0;B.tgt=null;B.landT=now();
+  else{B.mode='out';B.dir=B.dock==='up'?1:-1;news(riders().map(c=>c.name).join('、')+(B.dir>0?' 坐着小船漂到下游去了':' 坐着小船划回上游的栈桥'))}}
+function dock(k){k=k||nearDockKey()||closestDock();B.mode='moored';B.dock=k;B.x=DOCKS[k].x;B.y=DOCKS[k].y;B.vx=B.vy=0;B.tgt=null;B.landT=now();
   const n=B.got;B.got=0;let put=0;for(let i=0;i<n;i++)if(A.addBall())put++;
   if(meIn()){const g=GS(),bt=g.boat=g.boat||{},best=n>(bt.best||0);bt.trips=(bt.trips||0)+1;bt.total=(bt.total||0)+n;if(best)bt.best=n;A.guide.save();A.emit('game','boat');
-    say(n?`靠岸了。这一趟捞了 ${n} 颗毛线球${best&&bt.trips>1?'，新纪录':''}（最多一次 ${bt.best} 颗）${put?'，送进了门厅的毛线篮':''}`:'靠岸了。这一趟一颗也没捞到……')}
+    say(n?`在${DOCKS[k].n}靠岸了。这一趟捞了 ${n} 颗毛线球${best&&bt.trips>1?'，新纪录':''}（最多一次 ${bt.best} 颗）${put?'，送进了门厅的毛线篮':''}`:`在${DOCKS[k].n}靠岸了。这一趟一颗也没捞到……`)}
   riders().forEach(c=>{if(!c.me)after(rr(.5,2),()=>{if(c.inBoat)leaveBoat(c)})})}
 tick(dt=>{B.riders=B.riders.map((c,i)=>c&&!c.gone&&c.boatSeat===i?c:null);const n=riders().filter(c=>c.inBoat).length;B.bump=Math.max(0,B.bump-dt);
   if(B.mode==='moored'){B.rock=n?.8:.4;if(n>=2&&!B.wait&&!meIn())B.wait=now()+1.5;if(B.wait&&now()>B.wait){B.wait=0;depart()}if(n<2)B.wait=0;
     if(n===1&&riders().every(c=>!c.me)&&now()-(riders()[0].inT||0)>10)depart()}
   else if(B.mode==='free'||B.mode==='home'){const two=n>=2,MX=two?60:40;
-    if(B.mode==='free'&&now()-B.t0>TRIP){B.mode='home';say('一分钟到了，船慢慢往栈桥划回去')}
-    if(B.mode==='home'||B.tgt){const g=B.mode==='home'?{x:P.boat.x,y:P.boat.y}:B.tgt,dx=g.x-B.x,dy=g.y-B.y,d=Math.hypot(dx,dy);
-      if(d<3){if(B.mode==='home'){dock();return}B.tgt=null}else{B.vx+=(dx/d*70-B.vx*.6)*dt;B.vy+=(dy/d*40-B.vy*.6)*dt}}
+    if(B.mode==='free'&&now()-B.t0>TRIP){B.mode='home';B.home=closestDock();say('一分钟到了，船慢慢划到近的那个码头：'+DOCKS[B.home].n)}
+    if(B.mode==='home'||B.tgt){const g=B.mode==='home'?DOCKS[B.home]:B.tgt,dx=g.x-B.x,dy=g.y-B.y,d=Math.hypot(dx,dy);
+      if(d<3){if(B.mode==='home'){dock(B.home);return}B.tgt=null}else{B.vx+=(dx/d*70-B.vx*.6)*dt;B.vy+=(dy/d*40-B.vy*.6)*dt}}
     const k=Math.exp(-1.1*dt);B.vx=B.vx*k+(B.mode==='home'?0:6*dt);B.vy*=k;B.vx=Math.max(-MX,Math.min(MX,B.vx));B.vy=Math.max(-22,Math.min(22,B.vy));
     B.x+=B.vx*dt;B.y+=B.vy*dt;if(B.x<BX0){B.x=BX0;B.vx=Math.abs(B.vx)*.3}if(B.x>BX1){B.x=BX1;B.vx=-Math.abs(B.vx)*.3}if(B.y<BY0){B.y=BY0;B.vy=0}if(B.y>BY1){B.y=BY1;B.vy=0}
     B.rock=1+B.bump*3;if(Math.hypot(B.vx,B.vy)>6)B.oar=(B.oar+dt*1.3)%1;
@@ -131,28 +136,27 @@ tick(dt=>{B.riders=B.riders.map((c,i)=>c&&!c.gone&&c.boatSeat===i?c:null);const 
         // 掉回河里的那一颗漂在船后面，一秒半之内捞不回来
         if(B.got>0){B.got--;S.drift.push({k:'yarn',x:B.x-8,y:Math.max(RV.y+8,Math.min(RV.y+RV.h-12,B.y+14)),vx:10,ci:Math.floor(Math.random()*5),t0:now(),imm:now()+1.5});if(meIn())say(`咚！撞上漂木了，掉回河里一颗（还剩 ${B.got} 颗）`)}else if(meIn())say('咚！撞上漂木了')}}
     if(B.mode==='free'&&B.bottle&&now()>B.bottle){B.bottle=0;spawnDrift('bottle')}}
-  else{const sp=26;B.x+=B.dir*sp*dt;B.rock=1.2;B.oar=(B.oar+dt*1.1)%1;
-    if(B.mode==='out'&&B.x>=P.boatEnd){B.mode='back';B.dir=-1}
-    else if(B.mode==='back'&&B.x<=P.boat.x){B.x=P.boat.x;B.mode='moored';B.landT=now();riders().forEach(c=>{if(!c.me)after(rr(.5,2),()=>{if(c.inBoat)leaveBoat(c)})})}}
-  B.riders.forEach((c,i)=>{if(!c||!c.inBoat)return;const s=seatAt(i);c.x=s.x;c.y=s.y+Math.round(Math.sin(now()*1.6)*B.rock*.5);c.z=s.z;c.dy=0;c.face=B.vx<-4||B.mode==='back'?'L':'R'})});
-function leaveBoat(c){if(c.place)A.leavePlace(c);else run(c,[{jump:{...P.boardAt}},{fn:c=>{c.z=undefined;unclaim(c)}}])}
-const nearDock=()=>Math.abs(B.x-P.boat.x)<26&&Math.abs(B.y-P.boat.y)<12;
+  else{const sp=26;B.x+=B.dir*sp*dt;B.rock=1.2;B.oar=(B.oar+dt*1.1)%1;const to=B.dir>0?'down':'up',g=DOCKS[to];B.y+=(g.y-B.y)*Math.min(1,dt*2);
+    if(B.dir>0?B.x>=g.x:B.x<=g.x){B.x=g.x;B.y=g.y;B.dock=to;B.mode='moored';B.landT=now();riders().forEach(c=>{if(!c.me)after(rr(.5,2),()=>{if(c.inBoat)leaveBoat(c)})})}}
+  B.riders.forEach((c,i)=>{if(!c||!c.inBoat)return;const s=seatAt(i);c.x=s.x;c.y=s.y+Math.round(Math.sin(now()*1.6)*B.rock*.5);c.z=s.z;c.dy=0;c.face=B.vx<-4||B.mode==='out'&&B.dir<0?'L':'R'})});
+function leaveBoat(c){if(c.place)A.leavePlace(c);else run(c,[{jump:{...DK0().board}},{fn:c=>{c.z=undefined;unclaim(c)}}])}
+const nearDock=()=>!!nearDockKey();
 function boatSteer(dx,dy,dt){if(B.mode==='moored')return false;if(B.mode!=='free')return true;if(dx||dy)B.tgt=null;B.vx+=dx*80*dt;B.vy+=dy*55*dt;return true}
 function boatTap(x,y){if(B.mode==='moored')return false;if(B.mode==='free'&&y>RV.y-2&&y<RV.y+RV.h+4){B.tgt={x:Math.max(BX0,Math.min(BX1,x-30)),y:Math.max(BY0,Math.min(BY1,y-12))};return true}
-  say(B.mode==='free'?'船还在河上：划回栈桥边靠岸，才能下船':'船在往回划，等它靠岸');return true}
-T({id:'boat',n:'小船',hit:()=>[B.x,B.y-6,62,26],at:P.boardAt,near:[P.boardAt.x-10,P.boardAt.y-16,36,32],
+  say(B.mode==='free'?'船还在河上：划到码头边靠岸，才能下船':'船在往码头划，等它靠岸');return true}
+T({id:'boat',n:'小船',hit:()=>[B.x,B.y-6,62,26],at:()=>DK0().board,near:()=>{const b=DK0().board;return[b.x-10,b.y-16,36,32]},
   label:()=>B.mode!=='moored'?'小船在河上':riders().length?'坐上小船（两只猫一起划，快一半）':'坐上小船',ok:c=>!c.hold&&B.mode==='moored'&&B.riders.some(r=>!r||r.gone),no:c=>c.hold?'叼着东西，先放下':B.mode!=='moored'?'小船还没回来':'船上坐满了',ai:{mood:'play',w:c=>B.mode==='moored'&&!meIn()?1:0},
-  go(c){run(c,[{go:P.boardAt},{fn:c=>{const i=B.riders.findIndex(r=>!r||r.gone);if(i<0||B.mode!=='moored'){c.q=[];emote(c,'q');return}B.riders[i]=c;c.boatSeat=i;c.inT=now();c.doing='坐在小船上';
+  go(c){const bd=DK0().board;run(c,[{go:bd},{fn:c=>{const i=B.riders.findIndex(r=>!r||r.gone);if(i<0||B.mode!=='moored'){c.q=[];emote(c,'q');return}B.riders[i]=c;c.boatSeat=i;c.inT=now();c.doing='坐在小船上';
       c.onLeave=c=>{const j=B.riders.indexOf(c);if(j>=0)B.riders[j]=null;c.inBoat=false;c.boatSeat=null;c.doing=null};
       run(c,[{jump:()=>seatAt(i)},{fn:c=>{c.inBoat=true;stay(c,{k:'sit',ex:'happy',face:'R',dur:c.me?0:200,steer:boatSteer,tap:boatTap,
-        act:()=>{if(B.mode==='moored'){depart();return true}if(B.mode==='free'&&nearDock()){dock();return true}if(B.mode==='free')say('划回栈桥边才能靠岸');return true},
-        prompt:()=>B.mode==='moored'?'E · 解开缆绳 · WASD 下船':B.mode==='free'?(nearDock()?'E · 靠岸':`方向键划船 · 点河面也行 · 捞了 ${B.got} 颗 · 还剩 ${Math.max(0,Math.ceil(TRIP-(now()-B.t0)))} 秒`):'船在往回划……',
-        leave:c=>[{jump:{...P.boardAt}},{fn:c=>{c.z=undefined}}]});
-        if(c.place)c.place.stay=c=>{if(B.mode!=='moored'){say(B.mode==='free'?'船还在河上：划回栈桥边靠岸，才能下船':'船在往回划，等它靠岸');return true}return false};if(c.me)say(GS().boat?'坐上小船了。解开缆绳就出发':'坐上小船了。解开缆绳，自己划：捞漂下来的毛线球，躲开漂木')}}],true)}}])}});
+        act:()=>{if(B.mode==='moored'){depart();return true}if(B.mode==='free'&&nearDock()){dock();return true}if(B.mode==='free')say('划到码头边才能靠岸：上游的栈桥，或者下游木桥边的小码头');return true},
+        prompt:()=>B.mode==='moored'?'E · 解开缆绳 · WASD 下船':B.mode==='free'?(nearDock()?'E · 在'+DOCKS[nearDockKey()].n+'靠岸':`方向键划船 · 点河面也行 · 捞了 ${B.got} 颗 · 还剩 ${Math.max(0,Math.ceil(TRIP-(now()-B.t0)))} 秒`):'船在往回划……',
+        leave:c=>[{jump:{...DK0().board}},{fn:c=>{c.z=undefined}}]});
+        if(c.place)c.place.stay=c=>{if(B.mode!=='moored'){say(B.mode==='free'?'船还在河上：划到码头边靠岸，才能下船':'船在往码头划，等它靠岸');return true}return false};if(c.me)say(GS().boat?'坐上小船了。解开缆绳就出发':'坐上小船了。解开缆绳，自己划：捞漂下来的毛线球，躲开漂木')}}],true)}}])}});
 // 船（在河面上，排序按船底）、船尾的水纹、船头的灯笼光；船开的时候缆绳收起来
 A.drawers.push((L,vis)=>{if(!vis(B.x-20,B.y-10,100,40))return;L.push([B.y+20,()=>{const t=now(),moving=B.mode!=='moored'&&(Math.hypot(B.vx,B.vy)>6||B.mode==='out'||B.mode==='back');
-  if(moving)boatWake(B.vx<0||B.mode==='back'?B.x+60:B.x,B.y+12,t);boat(Math.round(B.x),Math.round(B.y),t,B.rock,moving||meIn()&&B.mode!=='moored'?B.oar:null);
-  if(B.mode==='moored')line(P.pier.x+P.pier.w-2,P.pier.y+44,Math.round(B.x)+4,Math.round(B.y)+10,'#d9d2c4')}])});
+  if(moving)boatWake(B.vx<0||B.mode==='out'&&B.dir<0?B.x+60:B.x,B.y+12,t);boat(Math.round(B.x),Math.round(B.y),t,B.rock,moving||meIn()&&B.mode!=='moored'?B.oar:null);
+  if(B.mode==='moored'){const p=DK0().post;line(p.x,p.y,Math.round(B.x)+(B.dock==='up'?4:58),Math.round(B.y)+10,'#d9d2c4')}}])});
 tick(()=>A.lights.push({x:B.x+59,y:B.y-2,r:16,col:'#ffd88a',a:.8},{x:B.x+59,y:B.y+22,r:10,col:'#ffd88a',a:.35}));
 
 /* ---------- 鸭子一家：鸭妈妈在前，三只小鸭跟着 ---------- */

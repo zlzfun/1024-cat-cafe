@@ -9,7 +9,7 @@
      接球的那只下线或 20 秒没回应，球退给传球的。
    - 同一只猫从第二个地方连上来，先连的那个收到 {t:'bye', why:'elsewhere'}。 */
 const fs=require('fs'),path=require('path'),vm=require('vm'),WS=require('./ws'),S=require('./store');
-const TICK=100,FAR_EVERY=10,HI_MS=5000,MAX_CONN=600,TREE_N=36,PASS_TTL=20000,WW=960,WH=2940;
+const TICK=100,FAR_EVERY=10,HI_MS=5000,MAX_CONN=600,TREE_N=36,PASS_TTL=20000,WW=960,WH=4940;   // 大图的高：一楼、二楼、屋顶、地下一层、猫猫星球（js/map-*.js）
 const KINDS=['scarf','hat','mitten','sock','sweater','flag'],TOYS=['cup','sugar','vase','cake','pot'];   // 咖啡桌上能推下去、叼回来的东西（js/world-cafe.js 的 CTOY）
 // 同一种消息最短间隔（秒）；回球、接球不限（它们受传球事务约束，丢了球就没了）
 const GAP=new Map([['emo',.45],['ph',.9],['rub',.45],['pass',.45],['hang',2.5],['s',.07],['v',.5]]);
@@ -24,7 +24,7 @@ const HOLD=new RegExp('^(y[0-4]|('+KINDS.join('|')+'):[0-4]|t:('+TOYS.join('|')+
 const okHold=h=>h===0||typeof h==='string'&&HOLD.test(h);
 function okState(s){if(!Array.isArray(s)||s.length!==9)return false;const [x,y,z,dy,k,f,e,h,fl]=s;
   return num(x,0,WW)&&num(y,0,WH)&&(z===null||num(z,0,WH+40))&&num(dy,-300,20)&&typeof k==='string'&&SPR.pose.has(k)&&(f===0||f===1)&&
-    (e===''||typeof e==='string'&&SPR.face.has(e))&&okHold(h)&&Number.isInteger(fl)&&fl>=0&&fl<4}
+    (e===''||typeof e==='string'&&SPR.face.has(e))&&okHold(h)&&Number.isInteger(fl)&&fl>=0&&fl<64}   // fl：几个开关拼成的数（1 藏着、2 镜像、4 彩虹色、8 头顶毛巾、16 炸毛）
 const okBall=b=>b&&typeof b==='object'&&Number.isInteger(b.ci)&&b.ci>=0&&b.ci<5&&KINDS.includes(b.kind)&&(b.qid==null||typeof b.qid==='string'&&/^[a-z0-9-]{1,24}$/.test(b.qid));
 const cleanBall=b=>({ci:b.ci,kind:b.kind,qid:b.qid||null,...(b.rv?{rv:1}:{})});
 const idx=(i,n)=>Number.isInteger(i)&&i>=0&&i<n;

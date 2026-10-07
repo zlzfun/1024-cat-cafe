@@ -27,6 +27,11 @@ const arp=(fs,d=.16,type='triangle',vol=.04,gap=.08)=>fs.forEach((f,i)=>tone(f,d
 const STEP={wood:()=>{noise(.05,{vol:.022,hp:300,lp:1400});tone(170,.04,{vol:.01})},carpet:()=>noise(.06,{vol:.012,hp:200,lp:600}),grass:()=>noise(.09,{vol:.016,hp:2200}),
   stone:()=>{noise(.035,{vol:.02,hp:1600});tone(320,.03,{type:'triangle',vol:.006})},tile:()=>{noise(.03,{vol:.016,hp:2800});tone(900,.02,{type:'triangle',vol:.004})},plank:()=>{tone(140,.07,{vol:.022,slide:.8});noise(.05,{vol:.012,hp:500,lp:1600})},
   rubber:()=>noise(.04,{vol:.01,hp:300,lp:900})};
+// 第五轮的音效（地下一层、彩蛋）：egg 找到彩蛋、shark 鲨鱼游过（两声低低的"咚、咚"）、splat 从屋顶拍在地上、gulp 一口闷、popcorn 爆米花、scratch2 搓碟、beepdown 倒数、rocket 火箭发射的轰隆
+const SFX5={egg:()=>{arp([784,988,1175,1568],.18,'triangle',.035,.07);tone(2093,.4,{vol:.015,delay:.32})},shark:()=>{tone(58,.55,{slide:.8,vol:.09});tone(52,.6,{slide:.8,vol:.09,delay:.5})},
+  splat:()=>{tone(80,.25,{slide:.5,vol:.1});noise(.25,{vol:.07,hp:300,lp:1600})},gulp:()=>{for(let i=0;i<3;i++)tone(220-i*20,.08,{slide:1.4,vol:.035,delay:i*.22})},
+  popcorn:()=>noise(.03,{vol:.04,hp:2500}),scratch2:()=>{tone(300,.12,{type:'sawtooth',slide:2.2,vol:.02});tone(660,.1,{type:'sawtooth',slide:.4,vol:.02,delay:.12})},
+  beepdown:()=>tone(880,.12,{type:'square',vol:.02}),rocket:()=>{noise(2.6,{vol:.09,hp:60,lp:500});tone(70,2.4,{slide:2.2,vol:.05,attack:.3})}};
 const SFX={bell:()=>{tone(1318,.5,{vol:.04});tone(1046,.6,{vol:.035,delay:.12})},pop:()=>tone(880,.08,{type:'triangle',slide:1.6,vol:.04}),note:i=>tone(SCALE[(i||0)%12],.35,{type:'triangle',vol:.05}),
   shutter:()=>{noise(.08,{vol:.07});tone(2000,.03,{type:'square',vol:.015,delay:.05})},beep:()=>tone(1500,.08,{type:'square',vol:.02}),meow:v=>meow(v),
   purr:()=>{for(let i=0;i<4;i++)tone(46+i%2*4,.22,{type:'sawtooth',vol:.012,delay:i*.24,attack:.06})},knit:()=>arp([784,988,1318],.18),hang:()=>tone(1046,.3,{type:'triangle',vol:.035}),treat:()=>arp([659,784,988,1318]),
@@ -68,15 +73,15 @@ const SFX={bell:()=>{tone(1318,.5,{vol:.04});tone(1046,.6,{vol:.035,delay:.12})}
   groom:()=>{for(let i=0;i<3;i++)noise(.08,{vol:.012,hp:2500,lp:6000,delay:i*.22})},boop:()=>tone(1760,.06,{vol:.025,slide:1.4}),
   scuffle:()=>{for(let i=0;i<5;i++){noise(.05,{vol:.02,hp:1200,delay:i*.09});if(i%2)tone(700+Math.random()*300,.06,{type:'triangle',vol:.008,delay:i*.09})}},
   step2:k=>{(STEP[k]||STEP.wood)()}};
-function sfx(k,a){if(!on||!SFX[k])return;init();if(!AC)return;const now=performance.now();if(now-(lastSfx[k]||0)<45)return;if(now-sfxWin>1000){sfxWin=now;sfxN=0}if(++sfxN>16)return;lastSfx[k]=now;try{SFX[k](a)}catch(e){}}
+function sfx(k,a){if(!on||!SFX[k]&&!SFX5[k])return;init();if(!AC)return;const now=performance.now();if(now-(lastSfx[k]||0)<45)return;if(now-sfxWin>1000){sfxWin=now;sfxN=0}if(++sfxN>16)return;lastSfx[k]=now;try{(SFX[k]||SFX5[k])(a)}catch(e){}}
 
 /* ---------- 环境声：几条一直在的（流水、夜风、壁炉的低音），按大小推拉；虫鸣、青蛙、壁炉的噼啪是隔一会儿响一下 ---------- */
 const LOOPS={};let LV={},lastT=0;
 function loop(k,mk){if(LOOPS[k])return LOOPS[k];const s=AC.createBufferSource(),g=AC.createGain();s.buffer=nbuf();s.loop=true;g.gain.value=0;const tail=mk(s);tail.connect(g).connect(BUS.amb);s.start();return LOOPS[k]={s,g}}
 const lpf=(f,q=.7)=>{const b=AC.createBiquadFilter();b.type='lowpass';b.frequency.value=f;b.Q.value=q;return b},bpf=(f,q=1)=>{const b=AC.createBiquadFilter();b.type='bandpass';b.frequency.value=f;b.Q.value=q;return b};
-const MAKE={river:s=>s.connect(lpf(620)),brook:s=>s.connect(bpf(2600,.8)),wind:s=>s.connect(lpf(380)),fire:s=>s.connect(lpf(180))};
-const GAIN={river:.11,brook:.05,wind:.12,fire:.07};
-let chirpT=0,croakT=0,crackT=0,purrT=0;
+const MAKE={river:s=>s.connect(lpf(620)),brook:s=>s.connect(bpf(2600,.8)),wind:s=>s.connect(lpf(380)),fire:s=>s.connect(lpf(180)),bath:s=>s.connect(bpf(1100,.5))};
+const GAIN={river:.11,brook:.05,wind:.12,fire:.07,bath:.05};
+let chirpT=0,croakT=0,crackT=0,purrT=0,dripT=0,projT=0,humT=0;
 function amb(lv){if(!on||!AC||AC.state!=='running')return;LV=lv||{};const t=AC.currentTime,dt=Math.min(.5,t-(lastT||t));lastT=t;
   for(const k in MAKE){const v=(LV[k]||0)*GAIN[k]*(k==='wind'?.7+.3*Math.sin(t*.35):k==='river'?.85+.15*Math.sin(t*.9):1);if(v<=0&&!LOOPS[k])continue;const L=loop(k,MAKE[k]);L.g.gain.setTargetAtTime(v,t,.4)}
   // 虫鸣：两只蟋蟀，一串三四声
@@ -84,6 +89,10 @@ function amb(lv){if(!on||!AC||AC.state!=='running')return;LV=lv||{};const t=AC.c
   if(LV.frogs>0&&(croakT-=dt)<=0){croakT=2+Math.random()*5;const d=Math.random()*.2;for(let i=0;i<2+(Math.random()*2|0);i++)tone(95+Math.random()*20,.08,{type:'square',vol:.008*LV.frogs,slide:1.3,delay:d+i*.1,bus:'amb'})}
   if(LV.fire>0&&(crackT-=dt)<=0){crackT=.08+Math.random()*.35;noise(.015+Math.random()*.03,{vol:.03*LV.fire,hp:1800,bus:'amb'})}
   if(LV.purr>0&&(purrT-=dt)<=0){purrT=1.1;for(let i=0;i<4;i++)tone(44+i%2*5,.22,{type:'sawtooth',vol:.01*LV.purr,delay:i*.26,attack:.06,bus:'amb'})}
+  // 澡堂：一滴水落进池子；电影院：放映机咔嗒咔嗒；猫猫星球：很轻的一层嗡嗡声，像远处有人在哼歌
+  if(LV.drip>0&&(dripT-=dt)<=0){dripT=1.2+Math.random()*3;tone(1500+Math.random()*500,.09,{slide:.45,vol:.012*LV.drip,bus:'amb'})}
+  if(LV.proj>0&&(projT-=dt)<=0){projT=.125;noise(.012,{vol:.008*LV.proj,hp:3000,bus:'amb'})}
+  if(LV.hum>0&&(humT-=dt)<=0){humT=2.4;[110,164.8,220].forEach((f,i)=>tone(f*(Math.random()<.5?1:1.5),2.6,{vol:.008*LV.hum,attack:.8,delay:i*.3,bus:'amb'}))}
   music(LV.music||0,LV.track||0)}
 function ambStop(){if(!AC)return;const t=AC.currentTime;for(const k in LOOPS){const L=LOOPS[k];L.g.gain.setTargetAtTime(0,t,.15);try{L.s.stop(t+.8)}catch(e){}delete LOOPS[k]}if(BUS.mus)BUS.mus.gain.setTargetAtTime(0,t,.1);M.on=false}
 
@@ -106,7 +115,13 @@ const TR=[
     ...[[0,36],[2,43],[4,41],[6,48],[8,43],[10,50],[12,36],[14,43]].map(([b,n])=>[b,n,.8,'b']),
     ...[[0,[60,64,67]],[4,[60,65,69]],[8,[59,62,67]],[12,[60,64,67]]].flatMap(([b,ns])=>[...CHORD(b+1,ns,.35),...CHORD(b+3,ns,.35)]),
     ...[[0,72,.5],[1,74,.5],[1.5,77,.5],[2,79,1],[3,77,.5],[3.5,76,.5],[4,77,.5],[5,81,.5],[5.5,79,.5],[6,77,1],[7,76,1],[8,74,.5],[8.5,76,.5],[9,77,.5],[9.5,79,.5],[10,81,1],[11,79,1],[12,76,.5],[12.5,74,.5],[13,72,1],[14,79,.5],[15,72,1]].map(([b,n,l])=>[b,n,l,'l']),
-    ...Array.from({length:16},(_,i)=>[i,0,.1,i%2?'s':'k'])]}];
+    ...Array.from({length:16},(_,i)=>[i,0,.1,i%2?'s':'k'])]},
+  // 第四首只在地下的迪斯科舞厅里放（点唱机里没有）：四四拍的底鼓、反拍的镲、二四拍的拍手、八度跳的贝斯
+  {n:'喵喵迪斯科',bpm:120,len:16,notes:[
+    ...[45,45,45,45,41,41,41,41,48,48,48,48,43,43,43,43].flatMap((n,b)=>[[b,n,.45,'b'],[b+.5,n+12,.45,'b']]),
+    ...[[0,[69,72,76]],[4,[65,69,72]],[8,[64,67,72]],[12,[62,67,71]]].flatMap(([b,ns])=>[1.5,3.5].flatMap(o=>CHORD(b+o,ns,.25))),
+    ...[[0,76,.5],[.5,76,.5],[1,81,1],[2,79,.5],[2.5,76,.5],[3,79,1],[4,77,.5],[4.5,76,.5],[5,72,1],[6,74,1],[7,76,1],[8,76,.5],[8.5,79,.5],[9,76,1],[10,72,.5],[10.5,74,.5],[11,76,1],[12,74,.5],[12.5,71,.5],[13,74,1],[14,79,1],[15,76,1]].map(([b,n,l])=>[b,n,l,'l']),
+    ...Array.from({length:16},(_,i)=>[[i,0,.1,'k'],[i+.5,0,.1,'h'],...(i%2?[[i,0,.1,'s']]:[])]).flat()]}];
 TR.forEach(T=>T.notes.sort((a,b)=>a[0]-b[0]));
 const INST={b:(f,t,d)=>tone(f,d,{type:'triangle',vol:.06,delay:t,bus:'mus',attack:.01}),c:(f,t,d,w)=>tone(f,d,{type:w?'sine':'triangle',vol:.016,delay:t,bus:'mus',attack:.01}),
   l:(f,t,d,w,k)=>tone(f,d,{type:k===2?'square':'triangle',vol:k===2?.012:.03,delay:t,bus:'mus',attack:.015}),m:(f,t,d)=>{tone(f,Math.max(.5,d),{vol:.035,delay:t,bus:'mus'});tone(f*2,.3,{vol:.008,delay:t,bus:'mus'})},
@@ -121,4 +136,4 @@ function music(level,track){if(!AC)return;const t=AC.currentTime;BUS.mus.gain.se
 document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidden)AC.suspend();else if(on)AC.resume()});
 // 点唱机隔 0.2 秒才被叫一次，排得再勤一点，免得卡顿时断拍
 setInterval(()=>{if(on&&AC&&AC.state==='running'&&M.on)music(LV.music||0,LV.track||0)},150);
-return{sfx,amb,TRACKS:TR.map(T=>T.n),get on(){return on},set(v){on=!!v;try{localStorage.setItem('cat1024.sound',on?'1':'0')}catch(e){}if(on)init();else ambStop()},init:()=>{if(on)init()}}})();
+return{sfx,amb,TRACKS:TR.slice(0,3).map(T=>T.n),DISCO:3,get on(){return on},set(v){on=!!v;try{localStorage.setItem('cat1024.sound',on?'1':'0')}catch(e){}if(on)init();else ambStop()},init:()=>{if(on)init()}}})();

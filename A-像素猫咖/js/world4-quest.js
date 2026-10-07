@@ -75,7 +75,7 @@ function refresh(q,force){if(showing(q))A.dlg.update(spec(q));else if(force&&!A.
 A.Q.open=()=>{if(Q.cur)open(Q.cur)};
 // 联机：走流程的 Review 那一步请真人的猫看一眼（world-online.js），它看完球回来了
 A.Q.flowAt=()=>flowAt();
-A.Q.reviewDone=(q,name)=>{if(!q||q.d.type!=='flow')return;q.flow.review=1;q.chain.push(name,'你');say(`${name} review 过了 ✓ 最后一步：去合并门禁`);refresh(q)};
+A.Q.reviewDone=(q,name)=>{if(!q||q.d.type!=='flow')return;q.flow.review=1;q.chain.push(name,'你');say(`${name} review 过了。最后一步：去合并门禁`);refresh(q)};
 
 /* ---------- 在对话框里选 ---------- */
 function pick(q,i){const d=q.d;if(q.st!=='pick'||q.wrong.has(i))return;
@@ -147,22 +147,22 @@ A.Q.onCatalog=c=>{const q=memQ();if(!q)return false;q.st='go';q.hint=true;open(q
 T({id:'q_test',n:'写测试',hidden:c=>!(c.me&&flowAt()==='test'),hit:()=>null,near:[P.desk.x-4,P.desk.y+26,P.desk.w+8,24],at:()=>P.kbdFloor[1],label:'写测试（跳上桌踩键盘）',
   go(c){const i=[0,1,2].sort((a,b)=>Math.abs(P.kbdFloor[a].x-c.x)-Math.abs(P.kbdFloor[b].x-c.x))[0],k=P.kbds[i],q=Q.cur;
     run(c,[{go:P.kbdFloor[i]},{jump:{x:k.x+11,y:P.desk.y+10,z:P.desk.y+32.5}},{fn:c=>{c.face='R'}},{k:'knead',dur:2.4,ex:'focus'},
-      {fn:()=>{if(Q.cur!==q)return;q.flow.test=1;say('测试写好了：先红，再绿 ✓ 下一步：跑 CI');refresh(q)}},{jump:{...P.kbdFloor[i]}},{fn:c=>{c.z=undefined}}])}});
+      {fn:()=>{if(Q.cur!==q)return;q.flow.test=1;say('测试写好了：先红，再绿。下一步：跑 CI');refresh(q)}},{jump:{...P.kbdFloor[i]}},{fn:c=>{c.z=undefined}}])}});
 const CIAT={x:P.ci.x+6,y:P.kbdFloor[0].y};
 T({id:'q_ci',n:'跑 CI',hidden:c=>!(c.me&&flowAt()==='ci'),hit:()=>null,near:[P.desk.x-4,P.desk.y+26,P.desk.w+8,24],at:CIAT,label:'跑 CI（按一下，等它变绿）',
   go(c){const q=Q.cur;run(c,[{go:CIAT},{fn:c=>{c.face='R'}},{k:'maneki',dur:.6,fn:()=>{S.ci.state='run';S.ci.t=2.4;S.ci.p=0}},{k:'sit',dur:2.6,ex:'lookUp'},
-    {fn:()=>{if(Q.cur!==q)return;q.flow.ci=1;say('CI 绿了 ✓ 下一步：请一只别的猫 review（靠近它按 Q）');refresh(q)}}])}});
+    {fn:()=>{if(Q.cur!==q)return;q.flow.ci=1;say('CI 绿了。下一步：请一只别的猫 review（靠近它按 Q）');refresh(q)}}])}});
 A.Q.mergeLabel=c=>{const q=Q.cur;if(!c.me||!q||q.d.type!=='flow'||q.st!=='flow')return null;return flowAt()==='merge'?'过门禁，合并':'门禁（还差：'+['测试','CI','Review'].filter((n,i)=>!q.flow[['test','ci','review'][i]]).join('、')+'）'};
 A.Q.onMerge=c=>{const q=Q.cur;if(!c.me||flowAt()!=='merge')return false;
   run(c,[{go:P.mergeAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.6,fn:()=>{S.mergeT=now()+3;sfx('goal')}},{k:'sit',dur:.9,ex:'happy'},{fn:()=>{q.chain.push('门禁');q.reply='合进主干了，main 还是绿的。';solve(q)}}]);return true};
 tick(()=>{const q=Q.cur,f=q&&q.d.type==='flow'&&(q.st==='flow'||q.st==='solving')?q.flow:null;S.merge.lights=f?[f.test,f.ci,f.review]:[0,0,0];const o=S.mergeT>now()?1:0;S.merge.open+=(o-S.merge.open)*.15});
 // review 的猫在看球的时候算"在忙"：别的事（大毛线团、CI 红了）不会把它叫走；15 秒还没还回来就兜底还给你
 function review(q,o){const y=q.y;if(o.hold||o.hidden||o.gone){say(`${o.name}现在腾不出嘴，换一只猫吧`);return}me.hold=null;q.rev={o,t0:now()};A.throwTo(me,o,y,()=>{o.hold=y;const keep=o.place||o.working;o.working=true;o.doing='在帮你 review';
-  A.run(o,[{k:'alert',dur:.4},{k:'sit',dur:1.8,ex:'focus',fn:o=>speak(o,o.pal===2?'边界条件漏了一个，已经补上。LGTM':rnd(['LGTM ✓','看过了，没问题','这里还能再简洁点……好吧，LGTM']),2.8)},
-    {fn:o=>{o.hold=null;o.working=false;o.doing=null;A.throwTo(o,me,y,()=>{q.rev=null;if(me.hold){S.baskets[0].push(y);return}me.hold=y;q.flow.review=1;q.chain.push(o.name,'你');say(`${o.name} review 过了 ✓ 最后一步：去合并门禁`);refresh(q)})}}],!!keep)});
+  A.run(o,[{k:'alert',dur:.4},{k:'sit',dur:1.8,ex:'focus',fn:o=>speak(o,o.pal===2?'边界条件漏了一个，已经补上。LGTM':rnd(['LGTM！','看过了，没问题','这里还能再简洁点……好吧，LGTM']),2.8)},
+    {fn:o=>{o.hold=null;o.working=false;o.doing=null;A.throwTo(o,me,y,()=>{q.rev=null;if(me.hold){S.baskets[0].push(y);return}me.hold=y;q.flow.review=1;q.chain.push(o.name,'你');say(`${o.name} review 过了。最后一步：去合并门禁`);refresh(q)})}}],!!keep)});
   say(`请${o.name}帮你 review`)}
 tick(()=>{const q=Q.cur,r=q&&q.rev;if(!r||now()-r.t0<15)return;const o=r.o,y=q.y;q.rev=null;if(me.hold===y)return;
-  if(o.hold===y){o.hold=null;o.working=false;o.doing=null;run(o,[{k:'sit',dur:.5}])}if(me.hold)return;me.hold=y;q.flow.review=1;q.chain.push(o.name,'你');say(`${o.name} review 过了 ✓ 最后一步：去合并门禁`);refresh(q)});
+  if(o.hold===y){o.hold=null;o.working=false;o.doing=null;run(o,[{k:'sit',dur:.5}])}if(me.hold)return;me.hold=y;q.flow.review=1;q.chain.push(o.name,'你');say(`${o.name} review 过了。最后一步：去合并门禁`);refresh(q)});
 
 /* ---------- 传球：派单、Review、乒乓球熔断；附近没猫时的"虚空传球" ---------- */
 const pass0=A.pass;

@@ -14,7 +14,7 @@ function run(look,name){const S=EK.stage(),{LW,LH}=S,Y0=Math.round(LH*.5),Y1=Mat
   function caption(){if(ui)ui.remove();const S1=`<div class="cap tut"><b>走两步</b><div class="kk"><span class="pad">${kbd('u','W')}<br>${kbd('l','A')}${kbd('d','S')}${kbd('r','D')}</span><i>或</i><span class="pad">${kbd('u','↑')}<br>${kbd('l','←')}${kbd('d','↓')}${kbd('r','→')}</span><i>或</i><span class="ms">点一下地面</span></div><em class="prog"><i></i></em></div>`,
       S2=`<div class="cap tut"><b>碰一碰毛线球</b><div class="kk"><span>走到它旁边</span>${kbd('e','E')}<i>或</i>${kbd('sp','空格')}<i>或</i><span class="ms">直接点它</span></div></div>`,
       S3=`<div class="cap tut"><b>走进光里</b><div class="kk"><span>店就在那边</span></div></div>`;
-    ui=EK.dom([S1,S2,S3][st.step],{top:S.cy(Y1)+18})}
+    ui=EK.dom([S1,S2,S3][st.step],{top:S.cy(Y1)+18});const l=innerWidth/2-ui.getBoundingClientRect().width/2;ui.style.left=(window.PXF?PXF.snap(l):Math.round(l))+'px'}   // 居中、左边对到整像素（不用 translateX(-50%)）
   const setStep=n=>{st.step=n;st.t0=S.t;if(n<3)caption();Sound.sfx('step')};
   const skipOff=EK.skip('跳过引导',()=>{if(!st.leap)leap(true)});
   const offKey=EK.onKey(e=>{const k=e.key.toLowerCase(),m=KEYS[k];if(m){pressed[m]=e.type==='keydown';e.preventDefault();if(e.type==='keydown')cat.tgt=null;light(m,pressed[m])}

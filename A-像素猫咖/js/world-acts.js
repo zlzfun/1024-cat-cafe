@@ -439,9 +439,10 @@ function doWork(c){const opts=S.baskets.map((b,i)=>[i,b.length]).filter(([,n])=>
 const usedNames=A.usedNames=new Set();let botTarget=0,botT=0,visitT=rr(12,25);   // A.usedNames：成品里把玩家的名字也放进去，机器人就不会重名
 function botName(){const f=BOT_NAMES.filter(n=>!usedNames.has(n));const n=f.length?rnd(f):rnd(BOT_NAMES)+(2+Math.floor(Math.random()*8));usedNames.add(n);return n}
 const MOODW=()=>({work:rr(1,4),play:rr(1.5,4),rest:rr(1,3),social:rr(1,3),afk:rr(.3,1.5),explore:rr(.5,2)});
-// 每只补位的猫有一层最喜欢的楼（一楼 45%、二楼 30%、屋顶 25%）：逛的时候多半在那一层，做事也更爱挑那一层的东西。屋顶是看星星的地方，要有猫
-const FAVW={f1:45,f2:30,roof:25},roomsOf=f=>M.rooms.filter(r=>r.f===f);
-const pickRoom=f=>{const L=f?roomsOf(f):M.rooms;return pickW(Object.fromEntries(L.map(r=>[r.id,r.in[2]*r.in[3]])))};
+// 每只补位的猫有一层最喜欢的楼（一楼 40%、二楼 25%、屋顶 20%、地下 15%）：逛的时候多半在那一层，做事也更爱挑那一层的东西。屋顶是看星星的地方，地下是跳舞泡澡的地方，都要有猫
+// 猫猫星球（secret）不在里面：补位的猫不去
+const FAVW={f1:40,f2:25,roof:20,b1:15},roomsOf=f=>M.rooms.filter(r=>r.f===f);
+const pickRoom=f=>{const L=f?roomsOf(f):M.rooms.filter(r=>FAVW[r.f]!=null);return pickW(Object.fromEntries(L.map(r=>[r.id,r.in[2]*r.in[3]])))};
 function addBot(instant){const fav=pickW(FAVW),mw=MOODW();if(fav==='roof'){mw.work*=.35;mw.rest*=1.6}
   const c=A.mkCat(7+Math.floor(Math.random()*COATS.length*COLLARS.length),botName(),{kind:'bot',def:rnd(BOT_FACES),sp:rr(26,36),moods:mw,mood:null,moodUntil:0,fav});
   if(instant){Object.assign(c,randIn(pickRoom(fav)));c.wait=rr(0,4)}

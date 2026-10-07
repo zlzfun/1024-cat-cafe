@@ -219,6 +219,14 @@ function p_wrapped(t){const f=Math.floor(t*5)%2,G=blank(28,22),S=sit(0);face(S,0
 const PLAYS=['swing','bat','kick','belly','cocoon','wrapped'];   // 解球时随机挑一个
 const PLAY_NAMES={swing:'拍吊球',bat:'下巴贴地拨球',kick:'侧躺抱球蹬',belly:'翻肚皮',cocoon:'毛线茧',wrapped:'线绕在身上'};
 
+/* ================= 第五轮：背影、拍扁 ================= */
+// 背影：端坐的轮廓不变，脸上的五官、胡须换成毛，耳朵内侧换成耳背的暗色，项圈留着
+function st_back(tf=0){const G=sit(tf);for(let y=0;y<=12;y++)for(let x=0;x<20;x++){const c=G[y][x];
+    if('ewVqyMnm'.includes(c))G[y][x]='b';else if(c==='p')G[y][x]='d';else if(c==='k')G[y][x]='.';else if(c==='o'&&y>=7&&y<=11&&x>=5&&x<=13)G[y][x]='b'}return G}
+// 拍扁：脸贴地趴着、身子压扁拉长（耳朵那两行去掉、身子中间多出几列），眼睛是两个叉；f 只换尾巴尖
+function st_splat(f=0){const rows=toRows(st_lie({expr:'dizzy',ears:1,tail:f})).filter((r,y)=>y!==1&&y!==3),X=20,N=4;
+  return rows.map(r=>[...(r.slice(0,X)+r[X].repeat(N)+r.slice(X))])}
+
 /* ================= 新点子 ================= */
 // 慢眨眼：猫的"我喜欢你"。睁 → 半闭 → 闭 → 停 → 半闭
 const SLOW=[['normal',1.4],['halfOpen',.25],['content',.25],['content',.7],['halfOpen',.25]];
@@ -291,6 +299,10 @@ const POSE={
   knead:(t,tf)=>({G:st_knead(Math.floor(t*2.5)%2,tf),cx:9.5}),
   stretch:t=>({G:st_stretch(Math.floor(t*.8)%2),cx:19.5}),
   leap:()=>({G:st_pounce(2),cx:18.5}),                                           // 跳上跳下（扑出去那一帧）
+  // 第五轮：背影（电影院的座位、温泉里、趴在水族馆玻璃前，背对着我们）、跳舞（舞池）、拍扁（从屋顶掉下来，头上转星星）
+  back:(t,tf)=>({G:st_back(tf),cx:9.5}),
+  dance:t=>{const f=Math.floor(t*4)%4;return{G:f%2?st_happy(f>>1):st_maneki(0,f>>1),cx:9.5,dy:f%2?-1:0,flip:f>1}},
+  splat:t=>({G:st_splat(Math.floor(t*3)%2),cx:13.5}),
 };
 const FACING=new Set(['lie','sleep','bat','kick','belly','stretch','pounce','leap']);   // 这些姿态跟着猫的朝向水平翻转
 const DUR={pounce:2,lick:2.4,stretch:1.6,slowBlink:2.9};                         // 一次完整动作的秒数（其余可任意时长）

@@ -3,6 +3,8 @@
    - 一楼：点唱机（离它越近越响）、河水和小溪、后院的虫鸣、许愿池边的青蛙；在屋里的时候，屋外的声音小很多。
    - 二楼：大客厅的壁炉；站在巨树回廊的天井边，隐约听得到楼下点唱机的音乐。
    - 屋顶：夜风。
+   - 地下：迪斯科舞厅放《喵喵迪斯科》（Sound.DISCO，点唱机里没有；门厅里隔着墙闷闷地听得到）；澡堂的水声和滴水；电影院放映机的咔嗒。
+   - 猫猫星球：很轻的一层嗡嗡声。
    - 挨着睡着的猫躺下，听得见呼噜。 */
 WORLD_MODS.push(A=>{
 const {S,P,me,roomAt}=A;
@@ -18,7 +20,8 @@ const OUT=r=>r==='yard'||r==='river';
 function surface(){const r=roomAt(me.x,me.y).id,x=me.x,y=me.y;
   if(r==='river'){if(x>=P.pier.x-2&&x<=P.pier.x+P.pier.w+2&&y<=P.pier.y+P.pier.h)return'plank';if(x>=P.bridge.x-4&&x<=P.bridge.x+P.bridge.w+4)return'plank';return'grass'}
   if(r==='yard')return y<640&&x>740?'stone':'grass';
-  return{hall:'wood',gallery:'wood',stage:'wood',bar:'tile',cafe:'wood',stairs:'stone',lab:'rubber',well:'wood',library:'wood',lounge:x>60&&x<270&&y>P.kotatsu.y-16&&y<P.kotatsu.y+46?'carpet':'wood',nap:'carpet',roof:x<250&&y<Y3+414?'tile':'wood'}[r]||'wood'}
+  return{hall:'wood',gallery:'wood',stage:'wood',bar:'tile',cafe:'wood',stairs:'stone',lab:'rubber',well:'wood',library:'wood',lounge:x>60&&x<270&&y>P.kotatsu.y-16&&y<P.kotatsu.y+46?'carpet':'wood',nap:'carpet',roof:x<250&&y<Y3+414?'tile':'wood',
+    disco:'tile',b1hall:'carpet',bath:'tile',cinema:'carpet'}[r]||(A.floorOf(y).id==='planet'?'rubber':'wood')}
 let stepT=0,ambT=0;
 tick(dt=>{if(!A.play||!window.Sound||!Sound.on)return;
   // 脚步：只有你自己的
@@ -31,6 +34,9 @@ tick(dt=>{if(!A.play||!window.Sound||!Sound.on)return;
     const J=S.juke;if(J&&J.on){const d=Math.hypot(me.x-(P.juke.x+12),me.y-(P.juke.y+30));lv.music=fall(d,460)*(out?.35:1);lv.track=J.track}}
   else if(f==='f2'){lv.fire=fall(Math.hypot(me.x-(P.fire.x+30),me.y-(P.fire.y+50)),280);const J=S.juke;if(J&&J.on&&r==='well'){lv.music=.22;lv.track=J.track}}
   else if(f==='roof')lv.wind=1;
+  else if(f==='b1'){const d=Math.hypot(me.x-264,me.y-(Y4+164));lv.music=r==='disco'?fall(d,520)*.9+.1:r==='b1hall'?.28:.08;lv.track=Sound.DISCO;
+    if(r==='bath'){lv.bath=1;lv.drip=1}if(r==='cinema'){lv.proj=fall(Math.hypot(me.x-P.projector.x,me.y-P.projector.y),360);if(A.cinema&&A.cinema.playing()){lv.music=.45;lv.track=1}else lv.music=0}}
+  else if(f==='planet')lv.hum=1;
   // 挨着睡着的猫：呼噜
   if(me.k==='sleep'||me.k==='lie')lv.purr=S.cats.some(c=>c!==me&&c.k==='sleep'&&!c.hidden&&Math.hypot(c.x-me.x,c.y-me.y)<22)?1:0;
   Sound.amb(lv)});

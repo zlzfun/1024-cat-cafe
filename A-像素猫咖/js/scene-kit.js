@@ -189,8 +189,9 @@ const GLOW={};
 function glowTex(r,col){const k=r+col;if(GLOW[k])return GLOW[k];const c=document.createElement('canvas');c.width=c.height=r*2;const g=c.getContext('2d'),gr=g.createRadialGradient(r,r,0,r,r,r);
   gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,r*2,r*2);return GLOW[k]=c}
 // 夜色：整屏乘一层颜色（tint，屋里点着灯，暖一点、亮一点），out 是屋外的几块（{rects:[[x,y,w,h]…], tint}，冷一点、暗一点），再把灯光叠上去
-function applyTod(w,h,tod,lights=[],tint,out){if(tod==='day')return;C.save();C.globalCompositeOperation='multiply';const base=tod==='dusk'?'#ffd6b4':tint||'#6c68a8';
+// out.bright：本身就是光源的几块（电影院的银幕、舞厅的发光舞池），夜色不压暗它们
+function applyTod(w,h,tod,lights=[],tint,out){if(tod==='day')return;C.save();const br=out&&out.bright||[];if(br.length){C.beginPath();C.rect(0,0,w,h);br.forEach(r=>C.rect(r[0],r[1],r[2],r[3]));C.clip('evenodd')}C.globalCompositeOperation='multiply';const base=tod==='dusk'?'#ffd6b4':tint||'#6c68a8';
   if(tod==='night'&&out&&out.rects.length){C.save();C.beginPath();C.rect(0,0,w,h);out.rects.forEach(r=>C.rect(r[0],r[1],r[2],r[3]));C.clip('evenodd');C.fillStyle=base;C.fillRect(0,0,w,h);C.restore();
     C.fillStyle=out.tint||'#6c68a8';out.rects.forEach(r=>C.fillRect(r[0],r[1],r[2],r[3]))}
   else{C.fillStyle=base;C.fillRect(0,0,w,h)}
-  C.globalCompositeOperation='lighter';lights.forEach(l=>{if(l.when&&l.when!==tod)return;C.globalAlpha=(tod==='dusk'?.35:.55)*(l.a||1);C.drawImage(glowTex(l.r,l.col),l.x-l.r,l.y-l.r)});C.restore()}
+  if(br.length){C.restore();C.save()}C.globalCompositeOperation='lighter';lights.forEach(l=>{if(l.when&&l.when!==tod)return;C.globalAlpha=(tod==='dusk'?.35:.55)*(l.a||1);C.drawImage(glowTex(l.r,l.col),l.x-l.r,l.y-l.r)});C.restore()}

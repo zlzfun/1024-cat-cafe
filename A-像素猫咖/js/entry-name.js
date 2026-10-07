@@ -9,9 +9,11 @@ const HINT='店里用这个名字叫它，别的猫也看得见';
 function show(o={}){const ui=EK.ui,r=CW.fieldRect(innerWidth,innerHeight);
   return new Promise(res=>{let names=[],sel=-1,seq=0,busy=false;
     const root=document.createElement('div');root.className='nm';ui.appendChild(root);
-    root.innerHTML=`<h2 class="nm-t" style="top:${r.y-50}px">给你的猫挑个名字</h2>
-      <div class="pxf" style="left:${r.x-6}px;top:${r.y-6}px;width:${r.w+12}px"><div class="o2"><div class="nm-val" aria-live="polite"></div></div></div>
-      <div class="nm-low" style="top:${r.y+r.h+16}px;left:${r.x-6}px;width:${r.w+12}px">
+    // 名字框和 Clowder 动画最后那一格叠在一起（里面便签纸色，框是店里的像素窗框，画在框外面）；左边对到整的屏幕像素上，像素字才不发虚
+    const X=window.PXF?PXF.snap(r.x):r.x;
+    root.innerHTML=`<h2 class="nm-t" style="bottom:calc(100% - ${r.y-20}px)">给你的猫挑个名字</h2>
+      <div class="pxf win" style="left:${X}px;top:${r.y}px;width:${r.w}px"><div class="nm-val" aria-live="polite"></div></div>
+      <div class="nm-low" style="top:${r.y+r.h+28}px;left:${X-8}px;width:${r.w+16}px">
         <p class="nm-st"></p><div class="nm-sug"></div>
         <div class="nm-acts"><button class="nm-go pbtn" disabled>就叫它</button></div></div>`;
     const $=q=>root.querySelector(q),go=$('.nm-go'),val=$('.nm-val');
@@ -22,7 +24,7 @@ function show(o={}){const ui=EK.ui,r=CW.fieldRect(innerWidth,innerHeight);
       const j=await Account.offer(N,names);if(my!==seq||!root.isConnected)return;busy=false;
       if(!j.names||!j.names.length){status('店门口网不好，<a>再试一次</a>','bad');$('.nm-st a').onclick=fill;paint();return}
       names=j.names;sel=0;const box=$('.nm-sug');
-      box.innerHTML=names.map((n,i)=>`<button type="button" data-i="${i}">${esc(n)}</button>`).join('')+'<button type="button" class="re">换一批</button>';
+      box.innerHTML=names.map((n,i)=>`<button type="button" class="lbtn" data-i="${i}">${esc(n)}</button>`).join('')+'<button type="button" class="lbtn re">换一批</button>';
       box.querySelectorAll('button').forEach(b=>b.onclick=()=>{Sound.sfx('tick');if(b.classList.contains('re')){fill();return}sel=+b.dataset.i;paint();go.focus()});
       if(!o.msg)status(HINT);paint();go.focus()}
     function submit(){if(busy||sel<0)return;Sound.sfx('ok');done({name:names[sel]})}

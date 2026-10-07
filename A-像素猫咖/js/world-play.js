@@ -26,6 +26,8 @@ const COLLARS=['#e0533d','#5B9BD5','#9B7EBD','#5B8C5A','#e8b83a','#f4a6b8'];
 const PAL=[...BREEDS];COATS.forEach(c=>COLLARS.forEach(col=>PAL.push({...c,collar:col})));
 // 前台猫：蓝色重点色的布偶猫，金项圈、蓝眼睛——和宪宪（海豹色、紫项圈）一眼能分开。放在所有玩家毛色后面，机器人不会挑到
 const DESK_PAL=PAL.length;PAL.push({name:'前台猫',body:'#f2efe9',light:'#ffffff',shade:'#d6d2cc',outline:'#4a4c5a',points:'#7c889c',collar:'#e8b83a',whisk:'#9a98a4',eye:'#4a7fd0'});
+// 彩虹色（彩蛋"老秘籍"，world-eggs.js）：六种颜色轮着换；也放在最后，机器人不会挑到
+const RAINBOW=[['#ff7a7a','#d85a5a'],['#ffb05a','#d8903a'],['#ffe05a','#d8b83a'],['#7ae07a','#5ab85a'],['#6ab8ff','#4a90d8'],['#b88aff','#9068d8']].map(([body,shade])=>(PAL.push({name:'彩虹',body,light:'#ffffff',shade,outline:'#3a2630',collar:'#ffffff',whisk:'#ffffff'}),PAL.length-1));
 const BOT_FACES=['normal','content','curious','blep','sparkle','meh','sleepy','happy','smug','wink'];
 const BOT_NAMES=`年糕 汤圆 芝麻 豆包 可乐 布丁 团子 咸鱼 拿铁 摩卡 奶盖 花卷 麻薯 栗子 桃酥 果冻 芋圆 黑糖 肉松 饼干 雪球 煤球 小满 阿福 锅巴 米粒 毛豆 蛋挞 酥酥 嘟嘟
   大橘 小橘 二花 奥利奥 可颂 贝果 松饼 曲奇 泡芙 抹茶 焦糖 奶茶 豆花 冰粉 春卷 小笼 烧卖 馄饨 粽子 麦芽 燕麦 玉米 土豆 地瓜 南瓜 柚子 橙子 柠檬 青提 蓝莓
@@ -42,17 +44,25 @@ const FK=(()=>{const bl=(T,o)=>((T+o)*1000%3000)<150?1:0,f=(T,r)=>Math.floor(T*r
     sleep:(T,tf,o)=>''+Math.floor((T+o)*1.6)%4+Math.floor((T+o)*.9)%2+Math.floor((T+o)*1.2)%2+tf,meow:(T,tf,o)=>(Math.floor((T+o)*2.5)%3?1:0)+'.'+tf,
     happy:T=>f(T,4),hold:T=>f(T,2.5),alert:T=>f(T,3),pounce:T=>POUNCE_SEQ[Math.floor(T*5.5)%POUNCE_SEQ.length],swing:T=>Math.round(21+Math.sin(T*2.6)*4),
     bat:T=>{const k=(T*1.1)%1;return k<.22?'h':14+Math.round(Math.sin((k-.22)/.78*Math.PI)*4)},kick:T=>f(T,4),belly:T=>f(T,4),cocoon:T=>f(T,6),wrapped:T=>f(T,5),
-    slowBlink:(T,tf)=>{let k=T%ST,i=0;while(k>SLOW[i][1]){k-=SLOW[i][1];i++}return i+'.'+tf},maneki:(T,tf)=>f(T,3)+'.'+tf,knead:(T,tf)=>f(T,2.5)+'.'+tf,stretch:T=>f(T,.8),leap:()=>0}})();
+    slowBlink:(T,tf)=>{let k=T%ST,i=0;while(k>SLOW[i][1]){k-=SLOW[i][1];i++}return i+'.'+tf},maneki:(T,tf)=>f(T,3)+'.'+tf,knead:(T,tf)=>f(T,2.5)+'.'+tf,stretch:T=>f(T,.8),leap:()=>0,
+    back:(T,tf)=>tf,dance:T=>Math.floor(T*4)%4,splat:T=>Math.floor(T*3)%2}})();
 const SPR=new Map(),SPR_MAX=4000;   // 最近用过的放在后面，满了先丢最久没用的
 function catImg(k,T,tf,o,e,pi,yi,flip){const f=FK[k],key=k+'|'+(f?f(T,tf,o,e):T.toFixed(2))+'|'+pi+'|'+yi+'|'+(flip?1:0);let s=SPR.get(key);if(s){SPR.delete(key);SPR.set(key,s);return s}
   const P=POSE[k](T,tf,o,e),G=P.G,h=G.length,w=Math.max(...G.map(r=>r.length)),cv=mkCanvas(w,h),pal=yi!=null?{...PAL[pi],yarn:YARN[yi]}:PAL[pi];
   drawF(cv.getContext('2d'),G,pal,flip?w-P.cx:P.cx,h,{cx:P.cx,flip,blink:P.blink});
   s={cv,w,h,cx:P.cx,dy:P.dy||0};if(SPR.size>=SPR_MAX){let n=0;for(const k2 of SPR.keys()){SPR.delete(k2);if(++n>=400)break}}SPR.set(key,s);return s}
 // 画一只猫（脚底 x,y 为整数），返回头顶的 y
+// rainbowUntil：彩虹色（轮着换毛色）；puffUntil：吹风机吹完、被鲨鱼吓到，毛炸成一圈（world-b1.js）
 function drawCat3(ctx,c,x,y,t,ol){const k=c.k,loc=WLOCAL.has(k)&&c.t0!=null,tt=loc?t-c.t0:t,o=loc?0:(c.o||0),tf=(Math.floor(tt*2)+c.pal)%2,T=tt+o,e=c.ex??c.def;
-  const f0=k==='walkL'||(c.face==='L'&&FACING.has(k)),flip=c.mirror?!f0:f0,yi=c.yarn!=null&&k!=='sit'?c.yarn:null,s=catImg(k,T,tf,o,e,c.pal,yi,flip);
+  const pal=c.rainbowUntil>t?RAINBOW[Math.floor(t*6+c.id)%RAINBOW.length]:c.pal;
+  const f0=k==='walkL'||(c.face==='L'&&FACING.has(k)),flip=c.mirror?!f0:f0,yi=c.yarn!=null&&k!=='sit'?c.yarn:null,s=catImg(k,T,tf,o,e,pal,yi,flip);
   const top=Math.round(y-s.h+s.dy),dx=flip?Math.round(x+s.cx-1)-(s.w-1):Math.round(x-s.cx),a=c.alpha??1;if(a<1)ctx.globalAlpha=a;
+  if(c.puffUntil>t)ctx.drawImage(fluffOf(s,PAL[pal]),dx-3,top-3);
   if(ol)ctx.drawImage(outlineOf(s,ol),dx-1,top-1);ctx.drawImage(s.cv,dx,top);if(a<1)ctx.globalAlpha=1;if(ol)c._ring=[ringOf(s,ol),dx-1,top-1];return top}
+// 炸毛：贴图往外胀三圈（最外一圈描边色，里面两圈浅毛色），画在猫后面；按贴图算一次，存在贴图上
+function fluffOf(s,P){const key=P.light+P.outline;if(s.fl&&s.flk===key)return s.fl;const cv=mkCanvas(s.w+6,s.h+6),x=cv.getContext('2d'),blob=(r,col)=>{const o=mkCanvas(s.w+6,s.h+6),q=o.getContext('2d');
+    for(let a=-r;a<=r;a++)for(let b=-r;b<=r;b++)if(Math.abs(a)+Math.abs(b)<=r+(r>2?0:1))q.drawImage(s.cv,3+a,3+b);q.globalCompositeOperation='source-in';q.fillStyle=col;q.fillRect(0,0,o.width,o.height);return o};
+  x.drawImage(blob(3,P.outline),0,0);x.drawImage(blob(2,P.light),0,0);s.fl=cv;s.flk=key;return cv}
 // v4：给"你"描一圈 1px 的边（按贴图算一次，存在贴图上）
 function outlineOf(s,col){if(s.ol&&s.olc===col)return s.ol;const cv=mkCanvas(s.w+2,s.h+2),x=cv.getContext('2d');for(const [a,b] of [[0,1],[2,1],[1,0],[1,2]])x.drawImage(s.cv,a,b);
   x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,cv.width,cv.height);s.ol=cv;s.olc=col;return cv}
@@ -110,7 +120,9 @@ function findPath1(x0,y0,x1,y1,kind){pathN++;const g=GRID[kind],fr=FREE[kind],s=
   const pts=[];for(let k=goal;k!==s&&k!==-1;k=from[k])pts.push(cellPt(k));pts.reverse();if(!pts.length)return[end];pts[pts.length-1]=end;
   const out=[];let cur=start,i=0;while(i<pts.length){let j=Math.min(pts.length-1,i+40);while(j>i&&!los(fr,cur,pts[j]))j--;out.push(pts[j]);cur=pts[j];i=j+1}return out}
 const roomAt=(x,y)=>M.rooms.find(r=>inR(x,y,[r.x,r.y,r.w,r.h]))||M.rooms[0];
-function randFree(rect){const [x0,y0,w,h]=rect||rnd(M.rooms).in;for(let n=0;n<60;n++){const x=rr(x0,x0+w),y=rr(y0,y0+h);if(free(x,y)&&!inPortal(x,y))return{x,y}}return{...M.home}}
+// 随便挑一间房：不挑猫猫星球这种只能坐火箭去的（secret）
+const OPEN_ROOMS=M.rooms.filter(r=>!(FLID[r.f]&&FLID[r.f].secret));
+function randFree(rect){const [x0,y0,w,h]=rect||rnd(OPEN_ROOMS).in;for(let n=0;n<60;n++){const x=rr(x0,x0+w),y=rr(y0,y0+h);if(free(x,y)&&!inPortal(x,y))return{x,y}}return{...M.home}}
 const randIn=id=>randFree(M.rooms.find(q=>q.id===id).in);
 
 /* ---------- 猫 ---------- */
@@ -122,7 +134,8 @@ function setK(c,k,ex){c.k=k;c.t0=now;c.ex=ex??c.myFace;c.mirror=false}
 function unclaim(c){const f=c.onLeave;c.onLeave=null;if(f)f(c)}
 function run(c,steps,keep){if(c.puppet)return;if(!keep){c.q=[];c.cur=null;c.dy=0;c.place=null;unclaim(c)}c.q.push(...steps)}
 const idle=c=>!c.cur&&!c.q.length;
-const restPose=c=>c.hold&&!c.hold.knit?'hold':'sit';
+// 站着不动时的姿势：叼着球是 hold，别的是 sit；A.restHook(c) 可以改（站在地下舞池上就是 dance，world-b1.js）
+const restPose=c=>c.hold&&!c.hold.knit?'hold':(A.restHook&&A.restHook(c))||'sit';
 function startStep(c,s){
   if(s.fn)s.fn(c);if(c.cur!==s)return;
   if(s.go||s.chase){s.tgt=s.chase?s.chase():typeof s.go==='function'?s.go():s.go;s.path=s.direct?[s.tgt]:findPath(c.x,c.y,s.tgt.x,s.tgt.y);s.re=now+.6;c.z=s.z}
@@ -211,24 +224,29 @@ function render(cx,vx,vy,vw,vh,{marker=true}={}){vx=Math.round(vx);vy=Math.round
   cx.restore();
   const fv=floorOf(vy+vh/2),tod=fv.tod||S.tod;
   // 屋外（后院、河边）的夜色冷一点、暗一点：这一层的 out 矩形和画面相交的部分
-  const outR=(fv.out||[]).filter(r=>vis(...r)).map(r=>[r[0]-vx,r[1]-vy,r[2],r[3]]);
-  applyTod(vw,vh,tod,[...M.lights,...A.lights].filter(l=>(!l.when||l.when===tod)&&vis(l.x-l.r,l.y-l.r,l.r*2,l.r*2)).map(l=>({...l,x:l.x-vx,y:l.y-vy})),fv.tint,{rects:outR,tint:fv.tintOut});
+  const outR=(fv.out||[]).filter(r=>vis(...r)).map(r=>[r[0]-vx,r[1]-vy,r[2],r[3]]),brR=(fv.bright||[]).filter(r=>vis(...r)).map(r=>[r[0]-vx,r[1]-vy,r[2],r[3]]);
+  applyTod(vw,vh,tod,[...M.lights,...A.lights].filter(l=>(!l.when||l.when===tod)&&vis(l.x-l.r,l.y-l.r,l.r*2,l.r*2)).map(l=>({...l,x:l.x-vx,y:l.y-vy})),fv.tint,{rects:outR,tint:fv.tintOut,bright:brR});
   if(marker&&me.transit){const T=me.transit,k=(now-T.t0)/(T.ph?T_IN:T_OUT),a=T.ph?1-k:k;if(a>0){cx.fillStyle=`rgba(10,6,16,${Math.min(1,a).toFixed(3)})`;cx.fillRect(0,0,vw,vh)}}
   lastView={x:vx,y:vy,w:vw,h:vh};use(o)}
-// 高清层：名字、说的话（像素字只有英文，名字用系统字体画在另一张画布上）
+// 高清层：名字、说的话。像素字（FusionPixel，见 fonts/）画成 12×k 个画布像素（k 取整，约 12 个 CSS 像素；画布按屏幕像素画），字的左边、基线都落在整像素上；
+// 框是硬边的像素框：四角各切一格，说话的气泡和你的名牌多一格深色描边和一个台阶形的小尖（不用圆角）
 let hoverCat=null;
-function hud(hx,scale,dpr=1){const v=lastView,W2=hx.canvas.width,H2=hx.canvas.height;hx.clearRect(0,0,W2,H2);const fs=Math.round(12*dpr);hx.font=`${fs}px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='center';hx.textBaseline='middle';
-  const tag=(c,text,{fg='#fff4dc',bg='rgba(36,26,46,.82)',say=false}={})=>{const sx=(c.x-v.x)*scale,sy=((c.top??c.y-22)-v.y)*scale-(c.emote&&now<c.emoteUntil?9*scale:3*scale);const w=hx.measureText(text).width+10*dpr,h=fs+6*dpr;
-    if(sx<-w||sx>W2+w||sy<-h||sy>H2+h)return;hx.fillStyle=bg;const x0=Math.round(sx-w/2),y0=Math.round(sy-h);if(hx.roundRect){hx.beginPath();hx.roundRect(x0,y0,w,h,4*dpr);hx.fill()}else hx.fillRect(x0,y0,w,h);
-    if(say){hx.beginPath();hx.moveTo(sx-4*dpr,y0+h);hx.lineTo(sx,y0+h+5*dpr);hx.lineTo(sx+4*dpr,y0+h);hx.fill()}hx.fillStyle=fg;hx.fillText(text,sx,y0+h/2+.5)};
+function hud(hx,scale,dpr=1){const v=lastView,W2=hx.canvas.width,H2=hx.canvas.height;hx.clearRect(0,0,W2,H2);let k=Math.max(1,Math.floor(dpr));if(k*(k+1)<dpr*dpr)k++;
+  hx.font=`${12*k}px FusionPixel,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='left';hx.textBaseline='alphabetic';
+  // 一块像素框：fill 底色，line 一格描边（不给就不描），cx 给了就在底边这一列加一个往下指的小尖
+  const box=(x,y,w,h,fill,line,cx)=>{if(line){hx.fillStyle=line;hx.fillRect(x+k,y,w-2*k,h);hx.fillRect(x,y+k,w,h-2*k);if(cx!=null){hx.fillRect(cx-2*k,y+h,5*k,k);hx.fillRect(cx-k,y+h+k,3*k,k);hx.fillRect(cx,y+h+2*k,k,k)}}
+    hx.fillStyle=fill;if(line){hx.fillRect(x+k,y+k,w-2*k,h-2*k);if(cx!=null){hx.fillRect(cx-k,y+h-k,3*k,2*k);hx.fillRect(cx,y+h+k,k,k)}}else{hx.fillRect(x+k,y,w-2*k,h);hx.fillRect(x,y+k,k,h-2*k);hx.fillRect(x+w-k,y+k,k,h-2*k)}};
+  // 名牌、气泡：字上下各空两个点、左右各空三个点（汉字右边自带一个点的空）
+  const tag=(c,text,{fg='#fff4dc',bg='rgba(36,26,46,.85)',line=null,say=false}={})=>{const p=line?k:0,w=Math.ceil(hx.measureText(text).width/k)*k+5*k+2*p,h=15*k+2*p,
+      sx=Math.round((c.x-v.x)*scale),sy=Math.round(((c.top??c.y-22)-v.y)*scale-(c.emote&&now<c.emoteUntil?9*scale:3*scale));
+    if(sx<-w||sx>W2+w||sy<-h||sy>H2+h)return;const x0=sx-Math.round(w/2),y0=sy-h;box(x0,y0,w,h,bg,line,say?sx:null);hx.fillStyle=fg;hx.fillText(text,x0+p+3*k,y0+p+12*k)};
   let n=0;for(const c of S.cats){if(c.hidden||c.gone||c.x<v.x-20||c.x>v.x+v.w+20||c.y<v.y||c.y>v.y+v.h+30)continue;
-    if(c.say&&now<c.sayUntil){tag(c,(c.me?'':c.name+'：')+c.say,{fg:'#241a2e',bg:'#fff8e8',say:true});continue}
+    if(c.say&&now<c.sayUntil){tag(c,(c.me?'':c.name+'：')+c.say,{fg:'#241a2e',bg:'#fff8e8',line:'#241a2e',say:true});continue}
     if(c===hoverCat||c===me.follow||(!c.me&&play&&n<14&&Math.hypot(c.x-me.x,c.y-me.y)<40)){n++;tag(c,c.name+(c.kind==='npc'?' · 店猫':''),{fg:c.kind==='npc'?'#ffd84a':'#fff4dc'})}}
-  // v4：你的名牌永远画在最上面，黄底，带一个往下指的小尖
-  if(hi&&play&&!me.hidden&&!(me.say&&now<me.sayUntil)){const b=Math.round(Math.sin(now*4)*1.5*dpr);hx.font=`600 ${fs}px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif`;
-    const text=me.label||'你',sx=(me.x-v.x)*scale,sy=((me.top??me.y-22)-v.y)*scale-(me.emote&&now<me.emoteUntil?9*scale:3*scale)-4*dpr+b,w=hx.measureText(text).width+14*dpr,h=fs+8*dpr,x0=Math.round(sx-w/2),y0=Math.round(sy-h);
-    hx.fillStyle='#241a2e';hx.fillRect(x0-2*dpr,y0-2*dpr,w+4*dpr,h+4*dpr);hx.fillStyle='#ffd84a';hx.fillRect(x0,y0,w,h);hx.beginPath();hx.moveTo(sx-6*dpr,y0+h);hx.lineTo(sx,y0+h+7*dpr);hx.lineTo(sx+6*dpr,y0+h);hx.fill();
-    hx.fillStyle='#241a2e';hx.fillText(text,sx,y0+h/2+.5)}
+  // v4：你的名牌永远画在最上面：黄底、深色描边，带一个往下指的小尖，轻轻上下浮
+  if(hi&&play&&!me.hidden&&!(me.say&&now<me.sayUntil)){const b=Math.round(Math.sin(now*4)*1.5*dpr),text=me.label||'你',w=Math.ceil(hx.measureText(text).width/k)*k+7*k,h=17*k,
+      sx=Math.round((me.x-v.x)*scale),sy=Math.round(((me.top??me.y-22)-v.y)*scale-(me.emote&&now<me.emoteUntil?9*scale:3*scale)-4*dpr)+b,x0=sx-Math.round(w/2),y0=sy-h;
+    box(x0,y0,w,h,'#ffd84a','#241a2e',sx);hx.fillStyle='#241a2e';hx.fillText(text,x0+4*k,y0+13*k)}
   A.huds.forEach(f=>f(hx,scale,dpr,v))}
 // 小地图：只画你所在的这一层（缩小的底图），你在的那间房描一圈；点是猫（红黄方块是你）
 const MINIS={};let miniT=null;
@@ -249,20 +267,21 @@ const miniTo=(px,py)=>miniT?{x:miniT.f.x+px/miniT.k,y:miniT.f.y+py/miniT.k}:null
 const keys={};let pendingTap=null,run2=false;
 const busy=()=>{if(me.transit)return true;const s=me.cur||me.q[0];return !!s&&(s.lock||!s.go&&!s.chase&&!s.soft)};
 function catAt(x,y){let best=null,bz=-1e9;for(const c of S.cats){if(c.hidden||c.gone||c.me)continue;const top=c.top??c.y-22;if(x>c.x-10&&x<c.x+10&&y>top-2&&y<c.y+(c.dy||0)+2){const z=c.z??c.y;if(z>bz){bz=z;best=c}}}return best}
-function pressE(){if(!play||busy())return;if(me.place){if(me.place.act&&me.place.act(me)!==false)return;leavePlace(me);return}if(me.hidden)return;me.follow=null;
+function pressE(){if(!play||busy()||me.stunUntil>now)return;if(me.place){if(me.place.act&&me.place.act(me)!==false)return;leavePlace(me);return}if(me.hidden)return;me.follow=null;
   // 人多的时候旁边总有猫，所以 E 不自动传球：传球要按 Q、右键点猫或者直接点猫
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me));if(ok)return act(me,th);
   if(me.hold&&!me.hold.knit)return A.solveHere(me);
   if(th)return act(me,th);
   const c=nearCatOf(me,24);if(c)return A.social(me,c,'auto');   // 按它在干什么：蹭蹭 / 一起玩 / 挨着睡（world-social.js）
   if(me.hold)say('叼着织好的东西，去橱窗挂上吧')}
-function promptText(){if(me.place)return me.place.prompt?me.place.prompt(me):'WASD / 方向键 · 离开';if(busy()||me.hidden)return '';if(me.follow)return '跟着'+me.follow.name+' · Esc 不跟了';
+// A.promptOver(me)：小游戏正在进行时（舞池跳一曲），提示条先给它写（返回 null 就照常）
+function promptText(){if(A.promptOver){const s=A.promptOver(me);if(s!=null)return s}if(me.place)return me.place.prompt?me.place.prompt(me):'WASD / 方向键 · 离开';if(busy()||me.hidden)return '';if(me.follow)return '跟着'+me.follow.name+' · Esc 不跟了';
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me)),ball=me.hold&&!me.hold.knit;if(ok)return 'E · '+lab(th,me);
   if(ball){const o=nearCatOf(me,120);return 'E · '+(A.ballPrompt?A.ballPrompt(me):'就地解开')+(o?' · Q 传给'+o.name:'')}
   if(th)return 'E · '+lab(th,me)+'（'+(th.no?th.no(me):'现在不行')+'）';
   if(me.hold)return '叼着'+KNIT_NAMES[me.hold.kind][0]+' · 挂进一楼的橱窗才算交付';
   const c=nearCatOf(me,24);if(c)return 'E · '+(A.socialLabel?A.socialLabel(me,c):'蹭蹭'+c.name);return ''}
-function tap(mx,my){if(!play)return;poke();if(me.place&&me.place.tap&&me.place.tap(mx,my))return;if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving){leavePlace(me);if(me.place)return}if(me.hidden&&!leaving)return;
+function tap(mx,my){if(!play||me.stunUntil>now)return;poke();if(me.place&&me.place.tap&&me.place.tap(mx,my))return;if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving){leavePlace(me);if(me.place)return}if(me.hidden&&!leaving)return;
   const go=steps=>run(me,steps,leaving);me.follow=null;
   const o=catAt(mx,my);if(o){go([{chase:()=>({x:o.x+(me.x<o.x?-16:16),y:o.z!=null?o.z+6:o.y+2}),near:22},{fn:()=>A.social(me,o,'auto')}]);return}
   if(!leaving&&A.vacAt){const v=A.vacAt(mx,my);if(v&&!me.hold){A.ride(me,v);return}}
@@ -276,7 +295,8 @@ function afk(dt,moving){if(moving){poke();return}if(me.place||me.hidden||!idle(m
   if(afkT>12&&!afkDid&&!me.hold){afkDid=true;const k=rnd(['lick','meow']);run(me,[{k,dur:k==='lick'?DUR.lick:1.6,soft:1}])}
   if(afkT>35&&!me.hold){settle(me,{k:'sleep'});poke()}}
 // 待在某个地方时，place.steer(dx,dy,dt) 可以接管方向键（划船、弹琴挪爪子、跑轮、荡秋千、开扫地机器人）：返回 true 就不离开；松开时也调一次（0,0）
-function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(!dx&&!dy){keyMove.held=0;me.portalLock=0;if(me.place&&me.place.steer)me.place.steer(0,0,dt);return false}
+function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(me.stunUntil>now)return !!(dx||dy);   // 僵直（从屋顶掉下来拍在地上，world-eggs.js）：按什么都不动
+  if(!dx&&!dy){keyMove.held=0;me.portalLock=0;if(me.place&&me.place.steer)me.place.steer(0,0,dt);return false}
   if(busy())return true;if(me.place){if(me.place.steer&&me.place.steer(dx,dy,dt)){keyMove.held=1;return true}if(!keyMove.held)leavePlace(me);keyMove.held=1;return true}keyMove.held=0;if(me.hidden)return true;me.follow=null;if(me.q.length||me.cur)run(me,[]);
   // 脚下不是空地（被挤进了家具的占地里）：先挪到最近的空地，不然往哪边挪一步都还在里面
   if(me.z==null&&!free(me.x,me.y))snapFree(me);
@@ -324,7 +344,9 @@ function tick(t,dt){now=t;S.now=t;
 const clampIn=(v,a,len,vlen)=>len<=vlen?a+(len-vlen)/2:Math.max(a,Math.min(a+len-vlen,v));
 function camera(vw,vh,dt,oy=0){const ov=A.camHook&&A.camHook(vw,vh),f=floorOf(ov?ov.y:me.y),cx=ov?ov.x:me.x,cy=ov?ov.y:me.y-12+oy+(f.camDy||0)*vh;
   const tx=clampIn(cx-vw/2,f.x,f.w,vw),ty=clampIn(cy-vh/2,f.y,f.h,vh),k=Math.min(1,dt*(ov?ov.k||3:5));camX+=(tx-camX)*k;camY+=(ty-camY)*k;
-  if(!ov||ov.k>=1000){if(Math.abs(tx-camX)>vw||Math.abs(ty-camY)>vh||floorOf(camY+vh/2)!==f){camX=tx;camY=ty}}return{x:Math.round(camX),y:Math.round(camY)}}
+  if(!ov||ov.k>=1000){if(Math.abs(tx-camX)>vw||Math.abs(ty-camY)>vh||floorOf(camY+vh/2)!==f){camX=tx;camY=ty}}
+  // A.shakeUntil：画面震一下（从屋顶掉下来拍在地上，world-eggs.js）
+  const sh=A.shakeUntil>now?Math.max(1,Math.round((A.shakeUntil-now)*8)):0;return{x:Math.round(camX)+(sh?Math.round(Math.sin(now*90)*sh):0),y:Math.round(camY)+(sh?Math.round(Math.cos(now*77)*sh):0)}}
 
 const cmd={face:()=>{const f=Object.keys(FACE_NAMES),i=f.indexOf(me.myFace||'normal');me.myFace=me.ex=f[(i+1)%f.length];return FACE_NAMES[me.myFace]},
   coat:()=>{const i=me.pal<7?0:Math.floor((me.pal-7)/6)+1;me.pal=i>=COATS.length?0:7+i*6;return i>=COATS.length?'白色（原来的）':COATS[i].name},

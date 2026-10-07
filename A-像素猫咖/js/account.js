@@ -33,11 +33,13 @@ const okLook=l=>l&&Number.isInteger(l.coat)&&l.coat>=0&&l.coat<9&&Number.isInteg
 
 /* ---------- 抽奖登记：姓名、工号、联系方式 ---------- */
 const clip=s=>String(s??'').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g,'').trim();
-const entryClean=e=>({real:clip(e.real),emp:clip(e.emp).replace(/\s+/g,''),contact:clip(e.contact)});
+// 联系方式只收手机号（2026-10-07 定：组织者要打电话、发短信通知领奖）：去掉空格、短横、括号和前面的 +86，剩下 11 位、1 开头、第二位 3～9
+const phoneClean=s=>{let p=clip(s).replace(/[\s\-()（）]/g,'');if(/^(\+?86|0086)1\d{10}$/.test(p))p=p.replace(/^(\+?86|0086)/,'');return p};
+const entryClean=e=>({real:clip(e.real),emp:clip(e.emp).replace(/\s+/g,''),contact:phoneClean(e.contact)});
 function entryWhy(e){if(!e||typeof e!=='object')return{field:'real',why:'填一下姓名'};const {real,emp,contact}=entryClean(e);
   if(!real)return{field:'real',why:'填一下姓名'};if([...real].length>20)return{field:'real',why:'姓名最多 20 个字'};
   if(!emp)return{field:'emp',why:'填一下工号'};if(!/^[A-Za-z0-9_-]{2,32}$/.test(emp))return{field:'emp',why:'工号是字母和数字，2～32 位'};
-  if([...contact].length<3)return{field:'contact',why:'留个手机或邮箱'};if([...contact].length>60)return{field:'contact',why:'联系方式最多 60 个字'};
+  if(!contact)return{field:'contact',why:'留个手机号'};if(!/^1[3-9]\d{9}$/.test(contact))return{field:'contact',why:'手机号是 11 位数字，1 开头'};
   return null}
 // 按工号去重时比的东西：去掉空白、转大写
 const empKey=emp=>clip(emp).replace(/\s+/g,'').toUpperCase();

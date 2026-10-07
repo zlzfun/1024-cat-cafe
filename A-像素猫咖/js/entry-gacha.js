@@ -32,7 +32,9 @@ function run(name,{look:keepLook,commit}={}){const S=EK.stage(),{LW,LH}=S,FY=Mat
   const st={ph:keepLook?'signing':'drop',t0:0,mx:MX,cats:keepLook?[mk(keepLook,MX+10,0)]:[],sel:0,rolls:0,cap:null,top:null,bot:null,popT:0,walkEnd:0,fx:[],flap:0,turn:0,jig:0,coin:null,wig:0};
   const set=(ph)=>{st.ph=ph;st.t0=S.t};let ui=null,card=null,resolve;
   const clear=()=>{if(ui){ui.remove();ui=null}if(card){card.remove();card=null}};
-  const cap=(html,y,x)=>{clear();ui=EK.dom(`<div class="cap">${html}</div>`,{top:S.cy(y),left:x==null?null:S.cx(x)});};
+  // 字幕：中线对着 x（不给就是画面正中），左边取整到屏幕像素（不用 translateX(-50%)，像素字才不发虚）
+  const snapX=v=>window.PXF?PXF.snap(v):Math.round(v);
+  const cap=(html,y,x)=>{clear();ui=EK.dom(`<div class="cap">${html}</div>`,{top:S.cy(y)});const cx=x==null?innerWidth/2:S.cx(x);ui.style.left=snapX(cx-ui.getBoundingClientRect().width/2)+'px'};
   const catSpot=()=>({x:MX+10,y:RY});
   // 一排 n 只时第 i 只站在哪：以画面中线为中心排开
   const slotX=(i,n)=>MX+Math.round((i-(n-1)/2)*GAP);
@@ -51,8 +53,8 @@ function run(name,{look:keepLook,commit}={}){const S=EK.stage(),{LW,LH}=S,FY=Mat
     requestAnimationFrame(()=>requestAnimationFrame(()=>{el.style.left=S.cx(slot.x)+'px';el.style.top=S.cy(slot.y)+'px';el.style.transform='translate(-50%,-50%) scale(.2)';el.style.opacity='0'}));setTimeout(()=>el.remove(),700)}
   // 卡片写的是选中的那只；放在队尾那只的右边，窗口窄就往左收
   function showCard(){const n=st.cats.length,left=MAX_REROLL-st.rolls;
-    card=EK.dom(`<div class="gc"><small class="no"></small><b>${esc(name)}</b><p class="d"></p><div class="acts"><button class="go pbtn">就是它了</button>${left>0?`<button class="re lbtn">再扭一次<small>还有 ${left} 次</small></button>`:''}</div>${n>1?'<p class="hint"><kbd class="k">←</kbd> <kbd class="k">→</kbd> 或者点一只猫，换着看</p>':''}</div>`,{left:S.cx(slotX(n-1,n)+24),top:S.cy(RY-34)});
-    const over=card.offsetLeft+card.offsetWidth-(innerWidth-12);if(over>0)card.style.left=(card.offsetLeft-over)+'px';
+    card=EK.dom(`<div class="gc win"><small class="no"></small><b>${esc(name)}</b><p class="d"></p><div class="acts"><button class="go pbtn">就是它了</button>${left>0?`<button class="re lbtn">再扭一次<small>还有 ${left} 次</small></button>`:''}</div>${n>1?'<p class="hint"><kbd class="k">←</kbd> <kbd class="k">→</kbd> 或者点一只猫，换着看</p>':''}</div>`,{left:S.cx(slotX(n-1,n)+24),top:S.cy(RY-34)});
+    const over=card.offsetLeft+card.offsetWidth-(innerWidth-24);card.style.left=snapX(card.offsetLeft-Math.max(0,over))+'px';
     fill();card.querySelector('.go').onclick=take;const re=card.querySelector('.re');if(re)re.onclick=again;
     setTimeout(()=>card&&card.querySelector('.go').focus(),50)}
   function fill(){if(!card)return;const d=EA.describe(look());card.querySelector('.no').textContent=st.cats.length>1?`扭到了 · 第 ${st.sel+1} 只`:'扭到了';card.querySelector('.d').innerHTML=`${d.coat} · ${d.collar}<br>${esc(d.face)}`}
@@ -71,7 +73,7 @@ function run(name,{look:keepLook,commit}={}){const S=EK.stage(),{LW,LH}=S,FY=Mat
     if(r&&r.cat){st.cat=r.cat;Sound.sfx('hang');set('done');return}
     if(r&&(r.err==='taken'||r.err==='name')){finish({taken:true,look:look()});return}
     const sp=catSpot(),store=r&&r.err==='store';set('err');
-    card=EK.dom(`<div class="gc"><b>${store?'这个浏览器存不下东西':'店门口网不好'}</b><p>${store?'可能是无痕模式，换个窗口再试':'等一下再试一次'}</p><div class="acts"><button class="go pbtn">再试一次</button></div></div>`,{left:S.cx(sp.x+26),top:S.cy(sp.y-34)});
+    card=EK.dom(`<div class="gc win"><b>${store?'这个浏览器存不下东西':'店门口网不好'}</b><p>${store?'可能是无痕模式，换个窗口再试':'等一下再试一次'}</p><div class="acts"><button class="go pbtn">再试一次</button></div></div>`,{left:S.cx(sp.x+26),top:S.cy(sp.y-34)});
     card.querySelector('.go').onclick=sign;setTimeout(()=>card&&card.querySelector('.go').focus(),50)}
   function finish(v){offKey();offClick();EK.pc.removeEventListener('pointermove',onMove);EK.pc.style.cursor='';clear();EK.stop();resolve(v)}
 

@@ -39,12 +39,15 @@ const API={
   'GET /health':()=>[200,{ok:true,cats:Object.keys(db.cats).length,online:live.stats().online,up:Math.round(process.uptime())}]};
 
 /* ---------- 静态文件 ---------- */
-const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown; charset=utf-8','.ico':'image/x-icon'};
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown; charset=utf-8','.ico':'image/x-icon','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
 function serveFile(req,res,p){if(p==='/')p='/index.html';let f;try{f=path.join(S.ROOT,decodeURIComponent(p))}catch(e){res.writeHead(400);return res.end()}
   if(!f.startsWith(S.ROOT+path.sep)||f.startsWith(__dirname)||f===S.DATA||f.startsWith(S.DATA+path.sep)){res.writeHead(404);return res.end()}
   // 没有 config.js 就现给一份；接口地址写相对的 api，放在反向代理的子路径下（/cat/）也能用
   if(p==='/config.js'&&!fs.existsSync(f)){res.writeHead(200,{'Content-Type':MIME['.js'],'Cache-Control':'no-cache'});return res.end("window.CAT1024_CONFIG={api:'api'};")}
-  fs.stat(f,(e,st)=>{if(e||!st.isFile()){res.writeHead(404);return res.end('not found')}res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'});fs.createReadStream(f).pipe(res)})}
+  fs.stat(f,(e,st)=>{if(e||!st.isFile()){res.writeHead(404);return res.end('not found')}
+    // 不缓存，但带上修改时间：没改过的文件（字体一百多 KB）浏览器问一声就用自己手里的
+    const lm=st.mtime.toUTCString(),ims=req.headers['if-modified-since'];if(ims&&Date.parse(ims)>=Math.floor(st.mtimeMs/1000)*1000){res.writeHead(304,{'Last-Modified':lm,'Cache-Control':'no-cache'});return res.end()}
+    res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-cache','Last-Modified':lm,'X-Content-Type-Options':'nosniff'});fs.createReadStream(f).pipe(res)})}
 
 function reply(res,out){if(out&&out.csv!=null){res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(out.name),'Cache-Control':'no-store'});return res.end(out.csv)}
   res.writeHead(out[0],{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(out[1]))}

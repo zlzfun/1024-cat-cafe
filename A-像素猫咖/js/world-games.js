@@ -13,7 +13,8 @@ let newsT=0;const news1=s=>{if(now()<newsT)return;newsT=now()+6;news(s)};
 
 /* ================= 成绩 ================= */
 const GAMES=[{id:'boat',n:'小船',room:'一楼 · 河边',th:'boat'},{id:'fish',n:'钓鱼',room:'一楼 · 河边',th:'fish0'},{id:'piano',n:'地板钢琴',room:'二楼 · 大客厅',th:'piano'},
-  {id:'claw',n:'抓娃娃机',room:'一楼 · 1024 舞台',th:'claw'},{id:'wheel',n:'猫跑轮',room:'屋顶',th:'wheel'},{id:'swing',n:'秋千',room:'一楼 · 后院',th:'swing'}];
+  {id:'claw',n:'抓娃娃机',room:'一楼 · 1024 舞台',th:'claw'},{id:'wheel',n:'猫跑轮',room:'屋顶',th:'wheel'},{id:'swing',n:'秋千',room:'一楼 · 后院',th:'swing'},
+  {id:'dance',n:'迪斯科舞池',room:'地下 · 迪斯科舞厅',th:'dancefloor'}];   // 第七样：world-b1.js
 const fishKinds=()=>{const L=A.guide.fishLog();return FISH_KINDS.filter(f=>!f.junk&&L[f.id]).length},fishAll=()=>FISH_KINDS.filter(f=>!f.junk).length;
 function recLine(id){const g=GS();
   if(id==='boat')return g.boat&&g.boat.trips?`一趟最多捞了 ${g.boat.best||0} 颗毛线球`:'';
@@ -21,7 +22,8 @@ function recLine(id){const g=GS();
   if(id==='piano'){const n=Object.keys((g.piano||{}).songs||{}).length;return n?`会弹 ${n}/${SONGS.length} 首`:''}
   if(id==='claw'){const n=Object.keys((g.claw||{}).got||{}).length;return n?`玩偶 ${n}/${PRIZES.length} 种`:''}
   if(id==='wheel')return g.wheel&&g.wheel.best?`最快 ${g.wheel.best.toFixed(1)} 秒点亮串灯`:'';
-  if(id==='swing')return g.swing&&g.swing.hits?`正中落叶堆 ${g.swing.hits} 次`:'';return''}
+  if(id==='swing')return g.swing&&g.swing.hits?`正中落叶堆 ${g.swing.hits} 次`:'';
+  if(id==='dance')return g.dance&&g.dance.plays?`一曲最多踩中 ${g.dance.best||0} 块`:'';return''}
 A.games={GAMES,rec:recLine,summary:()=>GAMES.map(G=>({...G,rec:recLine(G.id)}))};
 
 /* ================= 地板钢琴 + 曲谱架 ================= */
@@ -59,15 +61,16 @@ A.overs.push(vis=>{if(PZ.by!==me||!me.place||!vis(PN.x,PN.y-10,100,40))return;co
   R(x-2,PN.y-6+b,5,1,'#241a2e');R(x-1,PN.y-5+b,3,1,'#241a2e');P1(x,PN.y-4+b,'#241a2e');R(x-1,PN.y-6+b,3,1,'#ffd84a');P1(x,PN.y-5+b,'#ffd84a');
   alpha(.55,()=>R(PN.x+1+PZ.cur*8,PN.y+1,7,22,'#ffd84a'))});
 // 曲谱卡画在钢琴上方（镜头贴着房间底边，钢琴在画面下方，卡片不能压着它）
-A.huds.push((hx,scale,dpr,v)=>{if(PZ.by!==me||!me.place)return;const song=SONGS[PZ.song],W=hx.canvas.width,H=hx.canvas.height,fs=Math.round(13*dpr),step=Math.round(19*dpr);
+// 曲谱卡：像素字（12×k 个画布像素，k 和名牌一样按像素密度取整），硬边的像素窗框
+A.huds.push((hx,scale,dpr,v)=>{if(PZ.by!==me||!me.place)return;let pk=Math.max(1,Math.floor(dpr));if(pk*(pk+1)<dpr*dpr)pk++;const song=SONGS[PZ.song],W=hx.canvas.width,H=hx.canvas.height,fs=12*pk,step=Math.round(19*dpr);
   const w=Math.max(song.k.length*step+28*dpr,220*dpr),h=Math.round(58*dpr),px=(PN.x+49-v.x)*scale,py=(PN.y-30-v.y)*scale,t=now();
   const x0=Math.round(Math.max(8*dpr,Math.min(W-w-8*dpr,px-w/2))),y0=Math.round(Math.max(8*dpr,py-h));
-  hx.save();hx.fillStyle='#241a2ee8';hx.fillRect(x0,y0,w,h);hx.strokeStyle='#fff4dc';hx.lineWidth=2*dpr;hx.strokeRect(x0+dpr,y0+dpr,w-2*dpr,h-2*dpr);
-  hx.font=`600 ${Math.round(12*dpr)}px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='left';hx.textBaseline='middle';hx.fillStyle='#ffd84a';
+  hx.save();const k=pk;hx.fillStyle='#140e1a';hx.fillRect(x0+k,y0,w-2*k,h);hx.fillRect(x0,y0+k,w,h-2*k);hx.fillStyle='#fff4dc';hx.fillRect(x0+2*k,y0+k,w-4*k,h-2*k);hx.fillRect(x0+k,y0+2*k,w-2*k,h-4*k);hx.fillStyle='#241a2e';hx.fillRect(x0+2*k,y0+2*k,w-4*k,h-4*k);
+  hx.font=`${12*pk}px FusionPixel,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='left';hx.textBaseline='middle';hx.fillStyle='#ffd84a';
   const g=GS().piano,n=g?Object.keys(g.songs||{}).length:0;hx.fillText(`曲谱架 · 《${song.n}》`,x0+12*dpr,y0+14*dpr);hx.fillStyle='#b8aec8';hx.textAlign='right';hx.fillText(`会弹 ${n}/${SONGS.length} 首 · 曲谱架上能翻页`,x0+w-12*dpr,y0+14*dpr);
-  hx.textAlign='center';hx.font=`700 ${fs}px ui-monospace,Menlo,Consolas,monospace`;const sx=x0+w/2-(song.k.length-1)*step/2;
+  hx.textAlign='center';hx.font=`${fs}px FusionPixel,ui-monospace,Menlo,monospace`;const sx=x0+w/2-(song.k.length-1)*step/2;
   song.k.forEach((k,i)=>{const {d,hi}=jp(k),x=sx+i*step,y=y0+38*dpr,done=i<PZ.pos,nx=i===PZ.pos;hx.fillStyle=done?'#ffd84a':nx?(Math.floor(t*3)%2?'#ffffff':'#8a7aa8'):'#6a5e80';
-    hx.fillText(d,x,y);if(hi){hx.beginPath();hx.arc(x,y-9*dpr,1.6*dpr,0,7);hx.fill()}});hx.restore()});
+    hx.fillText(d,Math.round(x),Math.round(y));if(hi)hx.fillRect(Math.round(x-k),Math.round(y-9*dpr-k),2*k,2*k)});hx.restore()});
 T({id:'sheet',n:'曲谱架',hit:[P.musicStand.x-1,P.musicStand.y,12,24],at:P.standAt,near:[P.standAt.x-14,P.standAt.y-16,30,26],label:()=>`翻到下一首（现在是《${SONGS[PZ.song].n}》）`,ai:{mood:'play',w:.15},
   go(c){run(c,[{go:P.standAt},{fn:c=>{c.face='L'}},{k:'maneki',dur:.5,fn:()=>{PZ.song=(PZ.song+1)%SONGS.length;PZ.pos=0;sfx('page')}},
     {fn:c=>{if(c.me)say(`曲谱架翻到了《${SONGS[PZ.song].n}》：${SONGS[PZ.song].k.map(k=>jp(k).d+(jp(k).hi?'̇':'')).join(' ')}`)}},{k:'sit',dur:.6,ex:'curious',soft:1}])}});

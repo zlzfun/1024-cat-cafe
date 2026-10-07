@@ -87,10 +87,27 @@ const GUIDE={
   stargaze:{n:'观星毯',room:'roof',what:'躺下看满天星：多看一会儿，星星会连成星座；看到流星可以许个愿',tip:'dream'},
   scope:{n:'望远镜',room:'roof',what:'凑过去看月亮'},firefly:{n:'萤火虫',room:'roof',what:'扑……差一点'},
   hammock:{n:'吊床',room:'roof',what:'躺进去，在星星底下晃呀晃',tip:'dream'},wheel:{n:'猫跑轮',room:'roof',hint:'跑得越快，灯亮得越快',what:'跑起来发电，那一串大灯泡一颗颗亮；跑得越快亮得越快，十六颗全亮，屋顶放一场烟花',tip:'game'},
-  treetop:{n:'树顶瞭望台',room:'roof',what:'爬到树顶，看夜里的整条街，还能放烟花'},
+  treetop:{n:'树顶瞭望台',room:'roof',what:'爬到树顶看整座夜城：雪山、海和灯塔、河上的桥、亮着灯的摩天轮，还能放烟花'},
   lantern:{n:'孔明灯',room:'roof',what:'放一盏，它慢慢飘进夜空，越飘越小',tip:'dream'},owl:{n:'猫头鹰',room:'roof',what:'停在楼梯小屋的天线上。盯着它看，它把头转半圈；扑过去，它飞到水塔或者烟囱上'},
-  wtank:{n:'水塔',room:'roof',what:'顺着支架爬到顶上：屋顶上除了巨树最高的地方'},chimney:{n:'烟囱',room:'roof',what:'爬上斜屋顶，挨着烟囱趴着，暖和；烟囱时不时冒一个烟圈'}};
-const GID=id=>id.startsWith('q_')||id.startsWith('st:')?null:id==='treeslide2'?'treeslide':id.replace(/^(basket|win|feed|plate|shelf|toyback|table|chair|stool|fish|bed|bean)\d$/,'$1');
+  wtank:{n:'水塔',room:'roof',what:'顺着支架爬到顶上：屋顶上除了巨树最高的地方'},chimney:{n:'烟囱',room:'roof',what:'爬上斜屋顶，挨着烟囱趴着，暖和；烟囱时不时冒一个烟圈'},
+  eaves:{n:'屋檐边',room:'roof',what:'趴在平台南沿那段没装栏杆的地方，探头往下看：好高，下面是后院'},
+  // 一楼 · 舞台（第五轮）
+  tipboard:{n:'Tips 大屏',room:'stage',hint:'猫猫咖啡馆的小贴士',what:'舞台背板隔一会儿变成一块大屏，滚动一条猫猫咖啡馆的小贴士；凑过去看全文和链接',tie:'每一条都是猫猫咖啡馆真有的用法',tip:'wait'},
+  // 地下一层（第五轮）
+  dancefloor:{n:'舞池',room:'disco',hint:'跳一曲，踩亮的金格子',what:'站上去就跳舞。"跳一曲"是三十秒的小游戏：格子一块块亮成金色，赶在它暗下去之前踩上去，连着踩中有连击',tie:'猫猫咖啡馆的猫也会一起玩游戏',tip:'game'},
+  mball:{n:'镜面球',room:'disco',what:'拉一下墙上的链子，镜面球降下来越转越快：二十秒迪斯科时间，附近的猫都跑上舞池'},
+  dj:{n:'DJ 台',room:'disco',what:'跳到唱盘后面搓碟，呲啦一声，舞池换一套颜色'},speaker:{n:'大音箱',room:'disco',what:'蹲在跟前，低音一下一下把毛吹得往后飘'},
+  booth:{n:'卡座',room:'disco',what:'跳累了窝进去歇一会儿'},
+  poster:{n:'海报墙',room:'b1hall',what:'五张"本周上映"的海报：身份、记忆、传球、门禁、一键开店，每张是猫猫咖啡馆的一项能力，点进去有链接',tie:'海报上写的都是猫猫咖啡馆真有的功能',tip:'multi'},
+  popcorn:{n:'爆米花机',room:'b1hall',what:'拍一下，噼里啪啦爆一锅，几颗蹦到地上，附近的猫过来抢'},ticket:{n:'售票亭',room:'b1hall',what:'领一张电影票，上面写着第几排第几座，猫自己走过去坐下'},
+  onsen:{n:'温泉池',room:'bath',what:'泡进去，头上顶一块小毛巾，背对着我们看玻璃里的鱼；泡够十秒就暖乎乎的',tie:'猫会照顾你：忙久了会提醒你歇一歇',tip:'care'},
+  aqwall:{n:'水族馆玻璃墙',room:'bath',what:'趴在玻璃前，凑近看一整面海：鱼群、水母、海龟、鳐鱼……偶尔还游过一个大家伙'},
+  milk:{n:'牛奶冰柜',room:'bath',what:'拿一瓶咖啡牛奶喝掉'},dryer:{n:'吹风机',room:'bath',what:'坐到罩子底下呼呼吹一阵，出来炸成一颗毛球'},
+  massage:{n:'按摩椅',room:'bath',what:'窝进去，跟着椅子一起嗡嗡抖，抖着抖着就睡着了'},scale:{n:'体重秤',room:'bath',what:'站上去，指针晃两下停住；隔一天再称，会胖一点或瘦一点'},
+  buckets:{n:'木桶',room:'bath',what:'扒拉一下，哗啦倒一地，过一会儿店猫又摞回去'},
+  cseat:{n:'电影院座位',room:'cinema',hint:'坐下就开演',what:'坐下，画面切到银幕：一部讲猫猫咖啡馆的像素小电影',tie:'电影里讲的都是猫猫咖啡馆真有的功能',tip:'multi'},
+  projector:{n:'放映机',room:'cinema',what:'换一卷：跳到下一段'}};
+const GID=id=>id.startsWith('q_')||id.startsWith('st:')?null:id==='treeslide2'?'treeslide':id.replace(/^(basket|win|feed|plate|shelf|toyback|table|chair|stool|fish|bed|bean|poster|booth)\d$/,'$1');
 
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,rnd,run,emote,say,sfx,after,TH,dist}=A;
@@ -106,7 +123,9 @@ const G=A.guide={GUIDE,disc:store.disc,total:Object.keys(GUIDE).length,count:()=
   load:s=>{store=Object.assign({disc:{},rooms:{}},s||{});delete store.camp;G.disc=store.disc},
   fishLog:()=>store.fish=store.fish||{},qseen:()=>store.qseen=store.qseen||{},save:()=>save(),
   // 小游戏的成绩（world-games.js、world-river.js）、店猫和你熟不熟（world-social.js）
-  games:()=>store.games=store.games||{},friends:()=>store.friends=store.friends||{}};
+  games:()=>store.games=store.games||{},friends:()=>store.friends=store.friends||{},
+  // 彩蛋（world-eggs.js）：{key:{at,steps}}
+  eggs:()=>store.eggs=store.eggs||{}};
 A.on('solve',()=>{store.balls=(store.balls||0)+1;save()});A.on('hang',()=>{store.hung=(store.hung||0)+1;save()});
 
 /* ---------- 第一次玩到某样东西：新发现 ---------- */
@@ -131,7 +150,7 @@ A.overs.push(()=>{if(!A.play||me.hidden||me.place||A.busy())return;const th=A.th
 
 /* ---------- 指路：任务要去的地方 / 点了"交付"章时的毛线篮；画在高清层上 ---------- */
 // 要去的地方不在这一层：先指向楼梯口，写"上楼 · 图书馆"
-function viaStairs(tg){const fa=A.floorOf(me.y),fb=A.floorOf(tg.y);if(fa===fb)return tg;const p=A.nextPortal(fa,fb);if(!p)return tg;const up=A.FL.indexOf(A.FLID[p.to])>A.FL.indexOf(fa);
+function viaStairs(tg){const fa=A.floorOf(me.y),fb=A.floorOf(tg.y);if(fa===fb)return tg;const p=A.nextPortal(fa,fb);if(!p)return tg;const up=(A.FLID[p.to].lv||0)>(fa.lv||0);   // 上还是下看楼层的高低（lv），不看在列表里的先后
   return{x:p.at.x,y:p.at.y,label:(up?'上楼':'下楼')+' · '+tg.label}}
 A.viaStairs=viaStairs;
 // 页面的界面（左上状态块、右上地图）盖着的地方：A.hudAvoid() 给出覆盖层画布上的几个矩形。目标在底下就当它在画面外；箭头和字落在里面就沿着画面边挪出来
@@ -139,15 +158,21 @@ const inR=(x,y,r)=>x>r[0]&&x<r[0]+r[2]&&y>r[1]&&y<r[1]+r[3];
 function dodge(x,y,av,W,H,m,pw=0,ph=0){for(let n=0;n<2;n++){const r=av.find(r=>inR(x,y,[r[0]-pw,r[1]-ph,r[2]+pw*2,r[3]+ph*2]));if(!r)break;
     const c=[[r[0]+r[2]+pw+1,y],[r[0]-pw-1,y],[x,r[1]+r[3]+ph+1],[x,r[1]-ph-1]].filter(([a,b])=>a>=m&&a<=W-m&&b>=m&&b<=H-m&&!av.some(q=>q!==r&&inR(a,b,q)));
     if(!c.length)break;c.sort((p,q)=>Math.hypot(p[0]-x,p[1]-y)-Math.hypot(q[0]-x,q[1]-y));[x,y]=c[0]}return[x,y]}
+// 像素箭头：在 15×15 的小格子里按角度算出哪些格子在箭头里（外面一圈是深色描边），每格画成 k×k；角度分成 64 份存起来
+const ARW={};function arrowCells(a){const q=Math.round(a/(Math.PI*2)*64)&63;if(ARW[q])return ARW[q];const A2=q/64*Math.PI*2,c=Math.cos(A2),s=Math.sin(A2),P=[[7,0],[-4,-5.5],[-1.5,0],[-4,5.5]];
+  const inside=(x,y)=>{const u=x*c+y*s,w=-x*s+y*c;let n=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if((yi>w)!==(yj>w)&&u<(xj-xi)*(w-yi)/(yj-yi)+xi)n=!n}return n};
+  const fill=[],ol=[];for(let y=-7;y<=7;y++)for(let x=-7;x<=7;x++){if(inside(x,y))fill.push([x,y]);else if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>inside(x+dx,y+dy)))ol.push([x,y])}return ARW[q]={fill,ol}}
+function pixArrow(hx,cx,cy,a,k,col){const C2=arrowCells(a),X=Math.round(cx),Y=Math.round(cy);hx.fillStyle='#241a2e';C2.ol.forEach(([x,y])=>hx.fillRect(X+x*k,Y+y*k,k,k));hx.fillStyle=col;C2.fill.forEach(([x,y])=>hx.fillRect(X+x*k,Y+y*k,k,k))}
 A.huds.push((hx,scale,dpr,v)=>{if(!A.play||A.dlg.open)return;const tg0=(A.Q&&A.Q.target&&A.Q.target())||A.guideTarget();if(!tg0)return;const tg=viaStairs(tg0),t=now(),av=(A.hudAvoid&&A.hudAvoid())||[];
   const sx=(tg.x-v.x)*scale,sy=(tg.y-v.y)*scale,W=hx.canvas.width,H=hx.canvas.height,m=34*dpr,in_=sx>m&&sx<W-m&&sy>m&&sy<H-m&&!av.some(r=>inR(sx,sy-20*dpr,r));hx.save();
-  hx.font=`600 ${Math.round(12*dpr)}px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='center';hx.textBaseline='middle';
-  const pill=(x,y,s)=>{const w=hx.measureText(s).width+12*dpr,h=18*dpr;[x,y]=dodge(x,y,av,W,H,w/2,w/2,h/2);hx.fillStyle='#241a2ee6';hx.fillRect(x-w/2,y-h/2,w,h);hx.strokeStyle='#ffd84a';hx.lineWidth=dpr;hx.strokeRect(x-w/2+.5,y-h/2+.5,w-1,h-1);hx.fillStyle='#ffd84a';hx.fillText(s,x,y+.5)};
-  if(in_){const b=Math.sin(t*5)*4*dpr,top=sy-(tg.cat?32:10)*scale-b;hx.fillStyle='#ffd84a';hx.strokeStyle='#241a2e';hx.lineWidth=3*dpr;
-    hx.beginPath();hx.moveTo(sx-10*dpr,top-14*dpr);hx.lineTo(sx+10*dpr,top-14*dpr);hx.lineTo(sx,top);hx.closePath();hx.stroke();hx.fill();pill(sx,top-28*dpr,tg.label)}
+  // 指路的小牌：像素字（12×k 个画布像素，k 取整，和名牌一样），深底、一格金色描边、四角切掉；字的左边、基线落在整像素上
+  let pk=Math.max(1,Math.floor(dpr));if(pk*(pk+1)<dpr*dpr)pk++;hx.font=`${12*pk}px FusionPixel,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='left';hx.textBaseline='alphabetic';
+  const pill=(x,y,s)=>{const k=pk,w=Math.ceil(hx.measureText(s).width/k)*k+7*k,h=17*k;[x,y]=dodge(x,y,av,W,H,w/2,w/2,h/2);const x0=Math.max(2*k,Math.min(W-w-2*k,Math.round(x-w/2))),y0=Math.max(2*k,Math.min(H-h-2*k,Math.round(y-h/2)));   // 字宽了也不出画面
+    hx.fillStyle='#ffd84a';hx.fillRect(x0+k,y0,w-2*k,h);hx.fillRect(x0,y0+k,w,h-2*k);hx.fillStyle='#241a2e';hx.fillRect(x0+k,y0+k,w-2*k,h-2*k);hx.fillStyle='#ffd84a';hx.fillText(s,x0+4*k,y0+13*k)};
+  const ak=pk+1;   // 箭头一格比字的一格大一点，和原来的矢量箭头差不多大
+  if(in_){const b=Math.round(Math.sin(t*5)*2)*pk,top=sy-(tg.cat?32:10)*scale-b;pixArrow(hx,sx,top-7*ak,Math.PI/2,ak,'#ffd84a');pill(sx,top-15*ak-14*dpr,tg.label)}
   else{const cx=W/2,cy=H/2,dx=sx-cx,dy=sy-cy,k=Math.min((W/2-m)/Math.abs(dx||1),(H/2-m)/Math.abs(dy||1)),a=Math.atan2(dy,dx);let ex=cx+dx*k,ey=cy+dy*k;[ex,ey]=dodge(ex,ey,av,W,H,m,16*dpr,16*dpr);
-    hx.translate(ex,ey);hx.rotate(a);hx.fillStyle='#ffd84a';hx.strokeStyle='#241a2e';hx.lineWidth=3*dpr;hx.beginPath();hx.moveTo(14*dpr,0);hx.lineTo(-8*dpr,-11*dpr);hx.lineTo(-3*dpr,0);hx.lineTo(-8*dpr,11*dpr);hx.closePath();hx.stroke();hx.fill();
-    hx.setTransform(1,0,0,1,0,0);const d=Math.round(Math.hypot(tg.x-me.x,tg.y-me.y)/10);pill(Math.max(60*dpr,Math.min(W-60*dpr,ex-Math.cos(a)*40*dpr)),Math.max(20*dpr,Math.min(H-20*dpr,ey-Math.sin(a)*28*dpr)),`${tg.label} · ${d} 步`)}
+    pixArrow(hx,ex,ey,a,ak,'#ffd84a');const d=Math.round(Math.hypot(tg.x-me.x,tg.y-me.y)/10);pill(Math.max(60*dpr,Math.min(W-60*dpr,ex-Math.cos(a)*40*dpr)),Math.max(20*dpr,Math.min(H-20*dpr,ey-Math.sin(a)*28*dpr)),`${tg.label} · ${d} 步`)}
   hx.restore()});
 
 /* ---------- 进一间新房间：告诉你这里有几样能玩 ---------- */

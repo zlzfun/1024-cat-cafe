@@ -61,6 +61,10 @@ function bigBasket(x,y,balls,t){const n=Math.min(balls.length,9);
   R(x-2,y+13,4,5,OL);R(x-1,y+14,2,3,'#c9954e');R(x+38,y+13,4,5,OL);R(x+39,y+14,2,3,'#c9954e');if(n)spark(x+42,y+4,t)}
 // 门洞招牌居中：cx 门洞中线
 function signOver(cx,y,label,icon,col){const ic=icon&&SIGN_IC[icon],iw=ic?Math.max(...ic.map(r=>r.length))+3:0,w=txtW(label)+iw+8;return signBoard(Math.round(cx-w/2),y,label,icon,col)}
+// 竖墙（侧墙）上的门洞：招牌用一根铁架从墙头挑出来，两根链子挂在铁架上（wallX 是墙的那一边；原来只画了往上的链子，看着悬在半空）
+function signSide(cx,y,label,icon,wallX,col){const ic=icon&&SIGN_IC[icon],iw=ic?Math.max(...ic.map(r=>r.length))+3:0,w=txtW(label)+iw+8,x=Math.round(cx-w/2),a=Math.min(wallX,x-3),b=Math.max(wallX,x+w+2);
+  R(a,y-3,b-a+1,2,OL);R(a+1,y-3,b-a-1,1,'#8a8a98');R(wallX-1,y-6,3,8,OL);R(wallX,y-5,1,6,'#6a6a78');const far=wallX<x?b:a;P1(far,y-4,OL);P1(far+(wallX<x?1:-1),y-5,OL);P1(far+(wallX<x?1:-1),y-6,OL);
+  const d=wallX<x?-1:1;for(let i=1;i<=5;i++)P1(wallX-d*i,y-1+Math.round(i*.8),OL);R(x+3,y-1,1,1,OL);R(x+w-4,y-1,1,1,OL);return signBoard(x,y,label,icon,col)}
 
 /* ---------- 吧台 ---------- */
 // 后吧台：靠墙的柜子，台面上摆东西，墙上两层架子放杯子和咖啡豆。(x,y) 是台面左上角，w 宽，base=y+22
@@ -122,7 +126,7 @@ function wellHole(x,y,w,h){R(x-2,y-2,w+4,h+4,OL);R(x,y,w,h,'#1c1218');for(let j=
 /* ---------- 门洞上的招牌：一块木牌，一个小图标加英文 ---------- */
 const SIGN_IC={cup:["..o.o.","......","oooooo","owwwwoo","owwwwo.",".oooo."],book:["oooooo","owwrwo","owwrwo","owwrwo","oooooo"],gear:[".o.o.","ooooo","oo.oo","ooooo",".o.o."],
   sofa:["oooooo","owwwwo","oooooo","o....o"],star:["..o..",".ooo.","ooooo",".ooo.","o...o"],up:["..o..",".ooo.","ooooo","..o..","..o.."],down:["..o..","..o..","ooooo",".ooo.","..o.."],
-  heart:[".o.o.","ooooo","ooooo",".ooo.","..o.."],moon:[".oo..","o....","o....","o....",".oo.."],yarn:[".ooo.","oo.oo","o.o.o","oo.oo",".ooo."],paw:["o.o.o","....." ,".ooo.","ooooo",".ooo."]};
+  heart:[".o.o.","ooooo","ooooo",".ooo.","..o.."],moon:[".ooo..o","ooo....","oo.....","ooo....",".ooo..."],yarn:[".ooo.","oo.oo","o.o.o","oo.oo",".ooo."],paw:["o.o.o","....." ,".ooo.","ooooo",".ooo."]};
 function signBoard(x,y,label,icon,col='#ffd84a'){const ic=icon&&SIGN_IC[icon],iw=ic?Math.max(...ic.map(r=>r.length))+3:0,w=txtW(label)+iw+8;
   R(x+3,y,1,4,OL);R(x+w-4,y,1,4,OL);R(x,y+4,w,11,OL);R(x+1,y+5,w-2,9,'#8a5a3a');R(x+1,y+5,w-2,1,'#b07a52');R(x+1,y+13,w-2,1,'#5e3e28');
   if(ic)grid(x+4,y+9-Math.floor(ic.length/2),ic,{o:col,w:'#8a5a3a',r:'#e0533d','.':null});txt(label,x+4+iw,y+7,'#fff4dc');return w}   // w×15
@@ -163,7 +167,7 @@ function coatRack(x,y){R(x+5,y,2,40,OL);R(x+6,y,1,40,'#a8784a');R(x+1,y+38,10,2,
 // 墙上一排相框：每个里面一只猫
 function catFrames(x,y,list){list.forEach(([dx,b],i)=>frame(x+dx,y,16,16,(ix,iy)=>cat(i%2?'sit':'lie',b,ix+8,iy+15,0,0,i%2?'L':'R')))}
 // 楼层指示牌（楼梯间墙上）：每层一行，一个图标加几个字母
-function floorDirectory(x,y){box(x,y,42,36,'#2f2340','#8a5a3a');[['RF','star','#ffd84a'],['2F','book','#a8d0f0'],['1F','cup','#f4a6b8']].forEach(([s,ic,col],i)=>{const yy=y+4+i*11;txt(s,x+4,yy+1,col);grid(x+16,yy,SIGN_IC[ic],{o:col,w:'#2f2340',r:'#e0533d','.':null});R(x+26,yy+2,12,1,'#5a4e7a');R(x+26,yy+4,8,1,'#5a4e7a')})}   // 42×36
+function floorDirectory(x,y){box(x,y,42,44,'#2f2340','#8a5a3a');[['RF','star','#ffd84a'],['2F','book','#a8d0f0'],['1F','cup','#9ccc98'],['B1','heart','#f0a8d8']].forEach(([s,ic,col],i)=>{const yy=y+3+i*10;txt(s,x+4,yy+1,col);grid(x+16,yy,SIGN_IC[ic],{o:col,w:'#2f2340',r:'#e0533d','.':null});R(x+26,yy+2,12,1,'#5a4e7a');R(x+26,yy+4,8,1,'#5a4e7a')})}   // 42×44（四层：屋顶、二楼、一楼、地下）
 // 长木凳（楼梯间、二楼回廊）：凳面落脚 y+5，w 宽，base=y+12
 function longBench(x,y,w){R(x,y,w,7,OL);R(x+1,y+1,w-2,3,'#c98d5c');R(x+1,y+1,w-2,1,'#e0a878');R(x+1,y+4,w-2,2,'#8a5a3a');R(x+3,y+7,3,5,OL);R(x+w-6,y+7,3,5,OL)}
 // 大懒人沙发（午睡角）：46×30，base=y+30；靠背鼓在左上，座位的凹陷在右边。col=[主色, 暗, 亮]。能坐两只：(x+15,y+14)、(x+31,y+15)
