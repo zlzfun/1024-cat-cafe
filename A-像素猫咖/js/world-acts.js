@@ -42,7 +42,7 @@ tick(dt=>{
 A.drawers.push((L,vis)=>rolling.forEach(a=>{if(vis(a.x-4,a.y-4,8,8))L.push([a.y+3,()=>yarnBall(Math.round(a.x),Math.round(a.y),2,a.ci,a.spin)])}));
 function takeYarn(c,i){const b=S.baskets[i];if(!b.length)return false;c.hold=b.pop();c.hold.knit=false;c.hold.easy=false;return true}
 P.baskets.forEach((b,i)=>T({id:'basket'+i,n:'毛线篮',hit:[b.x-2,b.y-4,44,30],at:()=>({x:b.x+20+rr(-10,10),y:b.y+32+rr(0,4)}),near:[b.x-8,b.y+18,56,24],
-  label:'叼一颗毛线球',ok:c=>!c.hold&&S.baskets[i].length>0,no:c=>c.hold?'嘴里已经叼着一个了':'这个篮子空了，看看别的篮子',
+  label:'叼一颗毛线球',ok:c=>!c.hold&&S.baskets[i].length>0,no:c=>c.hold?(c.hold.knit?`嘴里叼着织好的${KNIT_NAMES[c.hold.kind][0]}：先挂进一楼的橱窗，才算交付`:'嘴里已经叼着一个了'):'这个篮子空了，看看别的篮子',
   go(c){if(!takeYarn(c,i))return;run(c,[{k:'hold',dur:.8,soft:1}]);if(c.me){if(A.onTake)A.onTake(c);else say(`叼起一颗毛线球。便签上写着：「${c.hold.note}」`)}}}));
 // 解开：扑过去 → 随机一种玩法 → 冒一团烟织成小物件（跟小黄鸭讲过一遍的，解得快）
 function solveSteps(c,pounce=true){const easy=c.hold&&c.hold.easy;return[...(pounce&&!easy?[{k:'pounce',dur:DUR.pounce}]:[]),{k:rnd(PLAYS),dur:easy?1.2:3.2,yarn:true},

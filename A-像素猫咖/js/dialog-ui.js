@@ -2,7 +2,7 @@
    人类不出场：人类的话永远写在一张便签上（纸色、红图钉）；猫说的话带像素头像。
    用法：const d=makeDialog(el,{pick(i),act(id),link(key)});d.render(spec|null)；d.key(e) 在对话框开着时处理按键（返回 true 表示吃掉了）。
    spec 由 world4-things.js / world4-quest.js 生成：{kind, head:{icon,ci,title,chips}, note, noteKey, blocks:[...], tip:{t,l}, acts:[{id,t,key}]}
-   blocks：text · task · choices{items:[{t,sub,pal,state,why}]} · say{pal,name,t} · steps{items:[{t,sub,done,cur}]} · progress{p,t} · right{t} · result{t} · book{t} · links{items} · words{items} */
+   blocks：text · h（小标题）· task · choices{items:[{t,sub,pal,state,why}]} · say{pal,name,t} · steps{items:[{t,sub,done,cur}]} · progress{p,t} · right{t} · result{t} · book{t} · links{items} · words{items} */
 const DLG_CSS=`
 .dlg{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(860px,calc(100% - 28px));z-index:5;display:none;font-size:14px;line-height:1.65;color:#fff4dc}
 .dlg.static{position:relative;left:auto;bottom:auto;transform:none;width:100%;display:block;z-index:auto}
@@ -25,6 +25,7 @@ const DLG_CSS=`
 .dlg .task{color:#fff4dc;margin:0 0 8px}
 .dlg .task:before{content:"任务";font-size:12px;color:#241a2e;background:#ffd84a;padding:0 5px;margin-right:8px;border-radius:2px;vertical-align:1px}
 .dlg .txt{color:#d8cce4;margin:0 0 8px;white-space:pre-line}
+.dlg .h{color:#ffd84a;font-weight:600;margin:2px 0 6px}
 .dlg ol{list-style:none;margin:0 0 6px;padding:0;display:grid;gap:5px}
 .dlg ol.c2{grid-template-columns:1fr 1fr}
 .dlg ol li{display:flex;align-items:center;gap:10px;padding:5px 10px;border:1px solid #4a3a5c;cursor:pointer;background:#261c34}
@@ -107,7 +108,7 @@ function makeDialog(root,cb={},{isStatic=false}={}){
     let html='';if(s.note){const full=typed[s.noteKey]||isStatic;html+=`<div class="note"><span class="nt">${full?esc(s.note):''}</span>${full?'':'<i class="cur"></i>'}<small>—— 门缝里塞进来的便签${h.chips&&h.chips[0]?' · '+esc(h.chips[0]):''}</small></div>`}
     const ch=(s.blocks||[]).find(b=>b.k==='choices'),key=ch?ch.items.map(i=>i.t+i.state).join('|'):'';if(key!==chKey){chKey=key;cur=ch?Math.max(0,ch.items.findIndex(i=>i.state!=='wrong')):0}
     for(const b of s.blocks||[]){
-      if(b.k==='text')html+=`<p class="txt">${esc(b.t)}</p>`;else if(b.k==='task')html+=`<p class="task">${esc(b.t)}</p>`;
+      if(b.k==='text')html+=`<p class="txt">${esc(b.t)}</p>`;else if(b.k==='h')html+=`<p class="h">${esc(b.t)}</p>`;else if(b.k==='task')html+=`<p class="task">${esc(b.t)}</p>`;
       else if(b.k==='choices')html+=`<ol${b.cols===2?' class="c2"':''}>`+b.items.map((it,i)=>`<li data-i="${i}" class="${it.state==='wrong'?'wrong':(isStatic?i===s.sel:i===cur)?'on':''}"><span class="n">${i+1}</span>${it.pal!=null?`<canvas data-pal="${it.pal}"></canvas>`:''}<div><b>${esc(it.t)}</b>${it.sub||it.why?`<small>${esc(it.why||it.sub)}</small>`:''}</div></li>`).join('')+'</ol>';
       else if(b.k==='say')html+=`<div class="say"><canvas data-pal="${b.pal}"></canvas><div><b>${esc(b.name)}</b>${esc(b.t)}</div></div>`;
       else if(b.k==='steps')html+='<ul class="steps">'+b.items.map(it=>`<li class="${it.done?'done':it.cur?'cur':''}"><span>${esc(it.t)}${it.sub?` <small>${esc(it.sub)}</small>`:''}</span></li>`).join('')+'</ul>';

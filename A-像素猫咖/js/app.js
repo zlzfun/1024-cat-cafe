@@ -1,6 +1,6 @@
-/* 1024 猫咖 · 成品页面：店里的界面（左上头像卡和任务条、右上小地图和集章卡、提示条、图鉴、右键菜单、合照）+ 进店流程 + 存档。
+/* 1024 猫咖 · 成品页面：店里的界面（左上一整块状态块：地名、你、毛线球、集章抽奖；右上楼层签和小地图；房间名大字、提示条、图鉴、右键菜单、合照）+ 进店流程 + 存档。
    由 index.html 的加载器在所有脚本到齐后调用 App.boot(progress)。
-   - 店里的记录（图鉴、训练营、解了几颗球、集章、上次站在哪）跟着账号存：Account.save，隔几秒存一次，关页面前再存一次。
+   - 店里的记录（图鉴、解了几颗球、交付了几件、集章、上次站在哪）跟着账号存：Account.save，隔几秒存一次，关页面前再存一次。
    - 同一只猫在两个窗口里开着：后开的那个接着玩，先开的那个显示"它在另一个窗口醒着"。
    - 其他在线的猫：接了服务端就联机（net.js + world-online.js，见 docs/联机.md），人少时由机器人补位（数量在 config.js 里）。人类始终不出场。
    - 时段跟着现实的钟，天气跟着日子变。
@@ -10,7 +10,7 @@ const CFG=window.CAT1024_CONFIG||{},DEV=/[?&]dev\b/.test(location.search);
 const $=id=>document.getElementById(id),dpr=Math.min(2,window.devicePixelRatio||1),WW=Math.min(...WORLD.floors.map(f=>f.w)),WH=Math.min(...WORLD.floors.map(f=>f.h));   // 画面最大不超过最小的那一层
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 if(CFG.links)for(const k in CFG.links)if(LINKS[k]&&CFG.links[k])LINKS[k].url=CFG.links[k];
-let game=null,cat=null,pctx,octx,mctx,VW=480,VH=270,SC=3,zoomPref=0,toastT=0,discT=0,replyT=0,zoneT=0,playing=false,asleep=false,veil=null,curFloor=null;
+let game=null,cat=null,pctx,octx,mctx,VW=480,VH=270,SC=3,zoomPref=0,toastT=0,discT=0,replyT=0,playing=false,asleep=false,veil=null,curFloor=null,floorJust=null,hudR=[];
 const sfx=(k,a)=>Sound.sfx(k,a);
 
 /* ---------- 存档：跟着账号 ---------- */
@@ -22,32 +22,43 @@ function flush(keep){if(!cat||asleep||!playing)return;dirty=false;Account.save(s
 
 /* ---------- 界面回调（和样页 v4 一样，去掉了说明页的部分） ---------- */
 const NEWS=[];
-const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s&&!dlg.open&&playing?'block':'none'},toast:s=>{$('toast').textContent=s;$('toast').style.opacity=1;toastT=3.2},
-  // 换了房间：左上角的地名牌换掉，画面正上方淡入房间名；第一次来，下面多一行这间房有什么
-  room:r=>{const f=WORLD.floors.find(x=>x.id===r.f)||WORLD.floors[0];$('rfl').textContent=f.n;$('rfl').dataset.f=f.id;$('rnm').textContent=r.n;drawFloors(f.id);if(!playing)return;
+// 提示条一次只放一条：盖章那一条（hold）至少停 2.6 秒，这期间来的下一条排在它后面
+let toastHold=0,toastNext=null;
+const ui={prompt:s=>{$('prompt').textContent=s;$('prompt').style.display=s&&!dlg.open&&playing?'block':'none'},
+  toast:(s,hold)=>{const t=performance.now();if(!hold&&t<toastHold){toastNext=s;return}$('toast').textContent=s;$('toast').style.opacity=1;toastT=3.2;if(hold)toastHold=t+2600},
+  // 换了房间：左上角状态块的地名换掉，画面上方三分之一处淡入房间名；第一次来，下面多一行这间房有什么；刚换了楼层，下面一行是这层有哪几间房
+  room:r=>{const f=WORLD.floors.find(x=>x.id===r.f)||WORLD.floors[0],fl=floorJust;floorJust=null;$('rfl').textContent=f.n;$('rfl').dataset.f=f.id;$('rnm').textContent=r.n;drawFloors(f.id);if(!playing)return;
     const first=!!(game&&game.A.firstRoom&&game.A.firstRoom(r.id));
-    if(first&&r.id==='cafe'){bigTitle('咖啡厅','毛线巨树','它从这里长上去，穿过二楼，树冠在屋顶上 · 爬上去试试');zone(r,null);return}
-    if(first&&r.id==='roof'){game.A.reveal&&game.A.reveal();bigTitle('屋顶','星空','这里永远是晴天的夜里 · 跳上屋脊，或者躺在观星毯上',900,5200);zone(r,null);return}
-    zone(r,first?r.d:null)},
-  floor:f=>{if(!playing)return;bigTitle(f.n,f.n,f.sub,200,2600)},
+    if(first&&r.id==='cafe'){title('一楼 · 咖啡厅','毛线巨树','它从这里长上去，穿过二楼，树冠在屋顶上 · 爬上去试试',{delay:1600,hold:4400,big:1});return}
+    if(first&&r.id==='roof'){game.A.reveal&&game.A.reveal();title('屋顶','星空','这里永远是晴天的夜里 · 跳上屋脊，或者躺在观星毯上',{delay:900,hold:5200,big:1});return}
+    roomTitle(r,first?r.d:fl?fl.sub:null,!!fl)},
+  // 换了楼层：不另出楼层大字，等紧跟着的换房间一起出（world-play.js 先换层、同一帧里再报房间）
+  floor:f=>{floorJust=f},
   vista:v=>{$('game').classList.toggle('vista',!!v);if(v){$('vcap').innerHTML=`<b>${esc(v.n)}</b><span>${esc(v.sub)}</span><span class="sc" id="vsc"></span><span>${esc(v.hint)}</span><span><kbd>Esc</kbd> 回到店里</span>`;$('tip').style.display='none';closeMenu()}},
   vistaCap:s=>{const e=$('vsc');if(e)e.textContent=s},
   news:s=>{NEWS.push({s,t:performance.now()});if(NEWS.length>5)NEWS.shift();drawNews()},sfx,photo:showPhoto,
   dialog:s=>{dlg.render(s);$('prompt').style.display=s?'none':$('prompt').style.display;if(s){closeMenu();$('tip').style.display='none'}},
   discover:d=>{sfx('disc');$('disc').innerHTML=`<h5>新发现 · ${esc(d.n)}</h5><p>${esc(d.what)}</p>${d.tie?`<p class="tie">${esc(d.tie)}</p>`:''}`;$('disc').classList.add('show');discT=6},
   reply:r=>{sfx('bell');$('reply').innerHTML=`<h5>📮 人类回信 · 毛线球 #${r.no}</h5><q>${esc(r.thx)}</q><div class="chain">球权链：${r.chain.map(esc).join(' → ')}</div>`;$('reply').classList.add('show');replyT=8;drawStamps()},
-  stamps:()=>{sfx('stamp');drawStamps();touch()},camp:()=>{panelKey=''},book:()=>openGuide(),renamed:n=>{if(cat)cat.name=n;meKey=''},prizes:L=>L.forEach(queuePrize)};
-// 房间名：画面正上方淡入，一秒半后淡出；第一次来多一行描述（多停一会儿）。在两间房的交界来回走，同一间房 8 秒内不再弹
+  stamps:()=>{drawStamps();touch()},book:()=>openGuide(),renamed:n=>{if(cat)cat.name=n;meKey=''},prizes:L=>L.forEach(queuePrize)};
+// 画面上方三分之一处的大字，同一时间只出一个：大号（进店欢迎、第一次见到巨树和星空）出来的时候，房间名不叠着出；大号来了，直接换掉房间名
+let ttlT1=0,ttlT2=0,ttlBig=0;
+function title(a,b,c,{delay=0,hold=2400,big=0}={}){const t=performance.now();if(!big&&t<ttlBig)return;if(big)ttlBig=t+delay+hold+600;const el=$('vtitle');clearTimeout(ttlT1);clearTimeout(ttlT2);
+  const set=()=>{el.classList.toggle('big',!!big);el.innerHTML=(a?`<small>${esc(a)}</small>`:'')+`<b>${esc(b)}</b>`+(c?`<span>${esc(c)}</span>`:'');el.style.top=titleTop()+'px';el.classList.add('show')};
+  if(delay)ttlT1=setTimeout(set,delay);else set();ttlT2=setTimeout(()=>el.classList.remove('show'),delay+hold)}
+// 大字默认在画面高度 20% 处；正上方的提示、新发现、人类回信还亮着，就挪到它们下面（最低到 42%）
+function titleTop(){const g=$('game').getBoundingClientRect();let y=g.height*.2;
+  for(const id of ['toast','disc','reply']){const e=$(id),on=id==='toast'?+e.style.opacity>0:e.classList.contains('show');if(on)y=Math.max(y,e.getBoundingClientRect().bottom-g.top+12)}return Math.round(Math.min(y,g.height*.42))}
+// 房间名：上面一行小字是楼层（屋顶那层只写房间名）；第一次来、刚换楼层多一行、多停一会儿。在两间房的交界来回走，同一间房 8 秒内不再弹
 const zoneSeen={};
-function zone(r,desc){const t=performance.now();if(!desc&&t-(zoneSeen[r.id]||-1e9)<8000)return;zoneSeen[r.id]=t;
-  const el=$('zone');el.innerHTML=`<b>${esc(r.n)}</b>`+(desc?`<p>${esc(desc)}</p>`:'');el.classList.add('show');zoneT=desc?5.5:1.8}
-// 右上角小地图上面那一排楼层签：你在的那层亮着
-function drawFloors(id){if(curFloor===id)return;curFloor=id;$('floors').innerHTML=WORLD.floors.slice().reverse().map(f=>`<span class="${f.id===id?'on':''}">${esc(f.n)}</span>`).join('')}
-let bigT1=0,bigT2=0;function bigTitle(a,b,c,delay=1600,hold=4400){const el=$('vtitle');el.innerHTML=`<small>${esc(a)}</small><b>${esc(b)}</b><span>${esc(c)}</span>`;clearTimeout(bigT1);clearTimeout(bigT2);
-  bigT1=setTimeout(()=>el.classList.add('show'),delay);bigT2=setTimeout(()=>el.classList.remove('show'),delay+hold)}
+function roomTitle(r,desc,force){const t=performance.now();if(!desc&&!force&&t-(zoneSeen[r.id]||-1e9)<8000)return;zoneSeen[r.id]=t;
+  const f=WORLD.floors.find(x=>x.id===r.f);title(f&&f.n!==r.n?f.n:'',r.n,desc,{hold:desc?4600:2400})}
+// 右上角地图上面那一排楼层签：你在的那层亮着，颜色和左上角的楼层色块一样
+function drawFloors(id){if(curFloor===id)return;curFloor=id;$('floors').innerHTML=WORLD.floors.slice().reverse().map(f=>`<span data-f="${f.id}" class="${f.id===id?'on':''}">${esc(f.n)}</span>`).join('')}
 function drawNews(){const now=performance.now();$('news').innerHTML=NEWS.filter(n=>now-n.t<12000).map(n=>`<div style="opacity:${now-n.t>9000?.4:1}">${esc(n.s)}</div>`).join('')}
 let dlg;
-function openLink(k){const L=LINKS[k];if(!L)return;if(L.url)window.open(L.url,'_blank','noopener');else ui.toast('内源主页的地址还没配（config.js 里的 links.inner），先照样盖章');game.A.visit(k);if(dlg.open)dlg.render(dlg.spec);$('game').focus()}
+function openLink(k){const L=LINKS[k];if(!L)return;if(L.url)window.open(L.url,'_blank','noopener');game.A.visit(k);if(!L.url)ui.toast('内源主页的地址还没配（config.js 里的 links.inner），先照样盖章');
+  if(dlg.open)/^welcome-/.test(dlg.spec.id||'')?game.A.openWelcome():dlg.render(dlg.spec);$('game').focus()}   // 立牌那段里列着三个章：重新生成一遍，刚盖的打上勾
 
 /* ---------- 画面大小：铺满窗口，按整数倍放大像素 ---------- */
 function layout(){const aw=innerWidth,ah=innerHeight,auto=aw>=1300&&ah>=700?3:2;SC=Math.max(zoomPref||auto,Math.ceil(ah/WH),Math.ceil(aw/WW));
@@ -56,18 +67,36 @@ function layout(){const aw=innerWidth,ah=innerHeight,auto=aw>=1300&&ah>=700?3:2;
   for(const c of [pc,oc]){c.style.width=VW*SC+'px';c.style.height=VH*SC+'px'}const g=$('game');g.style.width=Math.min(aw,VW*SC)+'px';g.style.height=Math.min(ah,VH*SC)+'px';
   if(game){game.A.live.view=[VW,VH];const v=game.camera(VW,VH,1);game.render(pctx,v.x,v.y,VW,VH);game.hud(octx,SC*dpr,dpr)}}
 
-/* ---------- 左上：头像卡、任务条 / 训练营；右上：集章卡 ---------- */
-let meKey='',panelKey='';
-function drawMe(){const m=game.me,h=m.hold,G=game.A.guide,st=h?(h.knit?'叼着织好的'+KNIT_NAMES[h.kind][0]:'叼着一颗毛线球'):m.ctoy?'叼着'+CTOY_NAMES[m.ctoy.kind]:m.place?'窝着':m.hidden?'躲起来了':'空着嘴',k=m.pal+'|'+st+'|'+G.balls()+'|'+G.count()+'|'+m.name;if(k===meKey)return;meKey=k;
-  drawPortrait($('mec'),m.pal,0,m.myFace);$('mename').textContent=m.name;$('mest').textContent=st;$('stBall').textContent=G.balls();$('stDisc').textContent=G.count()+' / '+G.total}
-function drawPanel(){const A=game.A,tr=A.Q.tracker();let html='';
-  if(tr){html=`<h4>🧶 毛线球 #${tr.no}<i>${esc(tr.type)} · E 打开便签</i></h4><div class="q">「${esc(tr.q)}」</div>`+(tr.steps?'<ul>'+tr.steps.map(s=>`<li class="${s.done?'done':s.cur?'cur':''}">${esc(s.t)}</li>`).join('')+'</ul>':`<div class="ln">${esc(tr.line)}</div>`)}
-  else if(A.camp.on&&!A.camp.done.finished){const c=A.camp.cur();html=`<h4>🎓 新猫训练营<i>${A.camp.steps.filter(s=>A.camp.done[s.id]).length}/${A.camp.steps.length}</i></h4><ul>`+A.camp.steps.map(s=>`<li class="${A.camp.done[s.id]?'done':s===c?'cur':''}">${esc(s.t)}${s===c?`<br><small>${esc(s.sub)}</small>`:''}</li>`).join('')+'</ul>'}
-  if(html!==panelKey){panelKey=html;$('panel').innerHTML=html}}
-function drawStamps(){const s=game.S.stamps,n=(s.ball?1:0)+(s.inner?1:0)+(s.site?1:0),en=cat&&cat.entry;$('stamps').innerHTML=`<h4>集章卡<i>${n}/3${n===3?' · 集齐了！':''}</i></h4><div class="row">`+
-  [['ball','解球','解一颗球'],['inner','内源','内源主页'],['site','官网','官网 / GitHub']].map(([k,a,b])=>`<div><div class="s ${s[k]?'on':''}">${s[k]?'已盖':a}</div>${b}</div>`).join('')+'</div>'+
-  (n===3&&cat?`<div class="lt ${en?'done':''}">${en?'已登记抽奖 · 点这里改':'点这里登记抽奖 →'}</div>`:'')}
+/* ---------- 左上状态块：地名（ui.room）、你、毛线球、集章抽奖 ---------- */
+let meKey='',panelKey='',hadTask=false;
+function drawMe(){const m=game.me,h=m.hold,G=game.A.guide,st=h?(h.knit?'叼着织好的'+KNIT_NAMES[h.kind][0]:'叼着一颗毛线球'):m.ctoy?'叼着'+CTOY_NAMES[m.ctoy.kind]:m.place?'窝着':m.hidden?'躲起来了':'空着嘴',k=m.pal+'|'+st+'|'+G.hung()+'|'+G.count()+'|'+m.name;if(k===meKey)return;meKey=k;
+  drawPortrait($('mec'),m.pal,0,m.myFace);$('mename').textContent=m.name;$('mest').textContent=st;$('stBall').textContent=G.hung();$('stDisc').textContent=G.count()+' / '+G.total}
+// 毛线球：便签那句话；一颗球的一生三段（解开 → 挂进橱窗 → 回信），走到哪段亮哪段；再一行写这一段做什么（走流程时是四小步）
+const LIFE=['解开','挂进橱窗','回信'];
+function drawPanel(){const tr=game.A.Q.tracker();let html='';
+  if(tr)html=`<h4><canvas data-ci="${tr.ci}" width="7" height="7"></canvas>毛线球 #${tr.no}<i>${esc(tr.type)}</i>${tr.open?'<span class="op"><kbd>E</kbd>便签</span>':''}</h4><p class="q">「${esc(tr.q)}」</p>`+
+    `<div class="lc">${LIFE.map((t,i)=>`<span class="${i<tr.stage?'done':i===tr.stage?'cur':''}">${i<tr.stage?'✓ ':''}${t}</span>`).join('<i>▸</i>')}</div>`+
+    `<p class="ln${tr.ok?' ok':''}">${tr.steps?tr.steps.map(s=>s.done?`<u>${esc(s.t)} ✓</u>`:s.cur?`▸ ${esc(s.t)}`:`<s>${esc(s.t)}</s>`).join(' · '):esc(tr.line)}</p>`;
+  if(html===panelKey)return;panelKey=html;const el=$('panel');el.innerHTML=html;const cv=el.querySelector('canvas');if(cv){const o=C;use(cv.getContext('2d'));yarnBall(3,3,2,+cv.dataset.ci);use(o)}
+  if(!!tr!==hadTask){hadTask=!!tr;drawStamps()}}   // 有任务时集章卡收成一行
+// 集章抽奖：三个章就是抽奖的条件。刚盖上的那个"啪"地盖下去，上方弹一条还差什么
+const STAMPS=[['ball','交付','解球·挂进橱窗'],['inner','内源','逛内源主页'],['site','官网','官网/GitHub']];
+let stPrev=null;
+function drawStamps(){const s=game.S.stamps,n=STAMPS.filter(([k])=>s[k]).length,en=cat&&cat.entry,el=$('stamps'),
+    fresh=stPrev?STAMPS.filter(([k])=>s[k]&&!stPrev[k]).map(([k])=>k):[];stPrev={...s};
+  if(fresh.length&&playing){sfx('stamp');const left=STAMPS.filter(([k])=>!s[k]).map(([,a])=>a);ui.toast(`盖章 · ${STAMPS.find(([k])=>k===fresh[0])[1]}（${n}/3）`+(left.length?` · 还差${left.join('、')}，集齐就能登记抽奖`:' · 集齐了，可以登记抽奖'),1)}
+  el.classList.toggle('fold',hadTask);el.title=n===3?'':'集齐三个章，就能登记抽奖';
+  if(hadTask){el.innerHTML=`<h4>集章抽奖</h4><span class="dots">${STAMPS.map(([k,a])=>`<span class="${s[k]?'on':''}${fresh.includes(k)?' new':''}">${a[0]}</span>`).join('')}</span><i>${n} / 3${n<3?' · 集齐就能抽奖':en?' · 已登记':' · 可以登记了'}</i>`;return}
+  el.innerHTML=`<h4>集章抽奖<span class="r">${n} / 3</span></h4><div class="row">`+STAMPS.map(([k,a,b])=>`<div data-st="${k}" class="${s[k]?'on':''}"><div class="s${fresh.includes(k)?' new':''}">${a}</div>${b}</div>`).join('')+'</div>'+
+    `<p class="lt ${n<3?'':en?'done':'go'}">${n<3?'集齐三个章，就能登记抽奖':en?'已登记抽奖 · 点这里修改':'集齐了！点这里登记抽奖 →'}</p>`}
+// 点集章卡：集齐了就登记抽奖；点没盖的"交付"——叼着球就打开便签，没叼着就指向最近的毛线篮；别的地方打开迎宾立牌那段介绍（规矩 + 链接）
+function clickStamps(e){const A=game.A,k=(e.target.closest('[data-st]')||{}).dataset;if(cat&&full()){openLotto();return}
+  if(k&&k.st==='ball'&&!game.S.stamps.ball){const me=game.me,h=me.hold;if(A.Q.cur)A.Q.open();else if(h&&h.knit)ui.toast(`叼着织好的${KNIT_NAMES[h.kind][0]}：挂进一楼的橱窗，就盖上这个章`);else if(h)A.solveHere(me);
+    else{A.seekBasket();ui.toast('跟着箭头去毛线篮：叼一颗，解开，挂进一楼的橱窗')}return}
+  A.openWelcome()}
 function findMe(){game.A.findMe();$('game').focus()}
+// 左上状态块、右上地图在覆盖层画布上占的地方（设备像素，外扩 8px）：指路箭头和它的字躲开这两块
+function hudRects(){const g=$('game').getBoundingClientRect();return['sb','mapbox'].map(id=>{const r=$(id).getBoundingClientRect();return[(r.left-g.left-8)*dpr,(r.top-g.top-8)*dpr,(r.width+16)*dpr,(r.height+16)*dpr]})}
 
 /* ---------- 图鉴 ---------- */
 const ROOM_ORDER=['hall','gallery','stage','bar','cafe','stairs','yard','river','lab','well','library','lounge','nap','roof'];
@@ -129,7 +158,7 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
   menu.addEventListener('pointerdown',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b||b.disabled)return;
     if(b.dataset.ph!=null)game.cmd.say(phrasesList[+b.dataset.ph]);else if(menuCat){const a=b.dataset.a;if(a==='follow')game.cmd.follow(menuCat);game.cmd.social(menuCat,a==='follow'?'follow':a)}closeMenu();gameEl.focus()});
   $('mm').addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const m=$('mm'),r=m.getBoundingClientRect(),w=game.miniTo((e.clientX-r.left)/r.width*m.width,(e.clientY-r.top)/r.height*m.height);if(w)game.tap(w.x,w.y)});
-  $('mecard').onclick=e=>{e.stopPropagation();findMe()};$('stBook').onclick=e=>{e.stopPropagation();openGuide()};$('panel').onclick=e=>{e.stopPropagation();if(game.A.Q.cur)game.A.Q.open();gameEl.focus()};$('stamps').onclick=e=>{e.stopPropagation();if(cat&&full()){openLotto();return}game.A.openWelcome();gameEl.focus()};
+  $('mecard').onclick=e=>{e.stopPropagation();findMe()};$('stBook').onclick=e=>{e.stopPropagation();openGuide()};$('panel').onclick=e=>{e.stopPropagation();if(game.A.Q.cur)game.A.Q.open();gameEl.focus()};$('stamps').onclick=e=>{e.stopPropagation();gameEl.focus();if(live()&&!game.A.vista.on)clickStamps(e)};
   $('bookov').addEventListener('pointerdown',e=>{e.stopPropagation();const d=e.target.closest('[data-go]');if(!d)return;const id=d.dataset.go,th=game.A.TH.find(t=>t.id===id||t.id.replace(/\d$/,'')===id);closeGuide();if(!th)return;
     const h=typeof th.hit==='function'?th.hit(game.me):th.hit,at=typeof th.at==='function'?th.at(game.me):th.at;if(h&&h[2])game.tap(h[0]+h[2]/2,h[1]+h[3]/2);else if(at)game.tap(at.x,at.y)});
   $('phx').onclick=()=>{$('photo').style.display='none';gameEl.focus()};
@@ -206,12 +235,12 @@ function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));la
     if(vf.black>0){pctx.fillStyle=`rgba(0,0,0,${vf.black.toFixed(3)})`;pctx.fillRect(0,0,VW,VH);if(vf.black>.4)octx.clearRect(0,0,$('oc').width,$('oc').height)}
     if(veil)drawVeil(t);
     if(fno%4===0){const m=$('mm'),z=game.miniSize(200);if(m.width!==z.w||m.height!==z.h){m.width=z.w;m.height=z.h}game.mini(mctx,z.w,z.h)}
-    if(fno%10===0){$('online').textContent='店里 '+game.S.cats.filter(c=>!c.gone).length+' 只猫'+(Net.on?' · 在线 '+(1+game.A.live.count()):'');drawMe();drawPanel()}
+    if(fno%10===0){$('online').textContent=game.S.cats.filter(c=>!c.gone).length+' 只猫'+(Net.on?' · 在线 '+(1+game.A.live.count()):'');drawMe();drawPanel();hudR=hudRects()}
     if(fno%30===0){tryPrize();tryLotto()}
     if(fno%1800===0&&!devTod){game.S.tod=clockTod();game.S.weather=weatherNow()}
     if(playing&&(saveT+=dt)>(dirty?3:20)){saveT=0;flush()}}
   jsT+=performance.now()-t0;
-  if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');if(zoneT>0&&(zoneT-=dt)<=0)$('zone').classList.remove('show');
+  if(toastNext&&performance.now()>=toastHold){const s=toastNext;toastNext=null;ui.toast(s)}if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');
   if(fno%30===0)drawNews();
   if(DEV){fpsT+=dt;fpsN++;if(fpsT>=1){const s=game.stats(),e=$('dvP');if(e)e.textContent=`${Math.round(fpsN/fpsT)} 帧/秒 · 引擎 ${(jsT/fpsN).toFixed(1)} ms · 同屏 ${s.drawn} 只`;fpsT=0;fpsN=0;jsT=0}}
   requestAnimationFrame(loop)}
@@ -226,7 +255,7 @@ async function boot(progress){const gameEl=$('game');pctx=$('pc').getContext('2d
   progress('点灯……');await tick0();
   game=makeWorld($('pc'),{play:true,ui,hi:true});window.__game=game;game.S.tod=clockTod();game.S.weather=weatherNow();game.bots(CFG.bots??40,true);
   dlg=makeDialog($('dlg'),{pick:i=>{game.A.dlg.pick(i);sfx('page')},act:id=>game.A.dlg.act(id),link:k=>openLink(k),visited:k=>k==='inner'?game.S.stamps.inner:game.S.stamps.site});
-  layout();addEventListener('resize',layout);bindInput();drawStamps();if(DEV)devBar();requestAnimationFrame(loop);
+  game.A.hudAvoid=()=>hudR;layout();addEventListener('resize',layout);bindInput();drawStamps();if(DEV)devBar();requestAnimationFrame(loop);
   progress('看看你是不是来过……');const resumed=await Account.resume();await progress(null);
   let intro=true;
   if(resumed&&resumed.state&&resumed.state.arrived){const v=await Entry.welcome(resumed,$('bootbox'));hideBoot();if(v==='enter')return enter({cat:resumed,how:'wake'});await Account.logout();intro=false}
@@ -238,12 +267,14 @@ function enter({cat:c,how}){cat=c;const me=game.me,st=c.state||{};SAVE={g:st.g||
   me.name=me.label=c.name;me.pal=EA.palOf(c.look);me.myFace=me.ex=c.look.face;
   // 补位的猫是在认出你之前生成的：要是有一只刚好和你同名，给它改个名
   const U=game.A.usedNames;if(U){for(const b of game.S.cats)if(b!==me&&b.kind==='bot'&&b.name===c.name){U.delete(b.name);let n;do n=c.name+(2+Math.floor(Math.random()*98));while(U.has(n));b.name=n;U.add(n)}U.add(c.name)}
-  game.A.guide.load(SAVE.g);Object.assign(game.S.stamps,st.stamps||{});drawStamps();meKey='';panelKey='';(c.prizes||[]).forEach(queuePrize);
-  if(how==='drop'){game.A.guide.mark('move');game.A.firstRoom('cafe')}
+  game.A.guide.load(SAVE.g);Object.assign(game.S.stamps,st.stamps||{});stPrev=null;drawStamps();meKey='';panelKey='';(c.prizes||[]).forEach(queuePrize);
+  if(how==='drop')game.A.firstRoom('cafe');
   Entry.leave();veil={how,t0:performance.now()};playing=true;dirty=true;claim();startNet();$('game').classList.add('on');
   game.A.arrive(how,{...(st.pos||{}),onLand:()=>{},onDone:()=>{flush();$('game').focus()}});
-  if(how==='drop')bigTitle('1024 猫咖营业中','欢迎，'+c.name,'你落在了一楼咖啡厅的毛线巨树下 · 前台猫在门厅，有事可以问它',1900,4600);
-  else bigTitle('欢迎回来',c.name,(c.prev?'上次来是 '+Entry.ago(c.prev):'又见面了')+(st.g&&st.g.balls?` · 解开过 ${st.g.balls} 颗毛线球`:''),1400,3800);
+  // 第一次来：大字里就写抽奖的条件，大字散去以后集章卡亮一圈；再来：写交付过几件、集了几个章
+  const sn=STAMPS.filter(([k])=>game.S.stamps[k]).length,hung=game.A.guide.hung();
+  if(how==='drop'){title('1024 猫咖营业中','欢迎，'+c.name,'集齐左上角三个章，就能登记抽奖 · 前台猫在门厅，有事问它',{delay:1900,hold:4600,big:1});setTimeout(()=>{const e=$('stamps');e.classList.add('hl');setTimeout(()=>e.classList.remove('hl'),3800)},6700)}
+  else title('欢迎回来',c.name,[c.prev?'上次来是 '+Entry.ago(c.prev):'又见面了',hung?`交付过 ${hung} 件`:'',sn<3?`集章 ${sn} / 3，集齐就能登记抽奖`:''].filter(Boolean).join(' · '),{delay:1400,hold:3800,big:1});
   $('game').focus();
   addEventListener('pagehide',()=>flush(true));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush(true)})}
 return{boot,get game(){return game},sleep}})();

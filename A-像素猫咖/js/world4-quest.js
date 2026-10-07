@@ -9,7 +9,7 @@ const now=()=>A.t,near=(a,b,d)=>Math.hypot(a.x-b.x,a.y-b.y)<d,isBot=c=>c.kind===
 const def=id=>QUEST_BANK.find(q=>q.id===id),npc=pal=>S.cats.find(c=>c.kind==='npc'&&c.pal===pal),tipOf=k=>TIPS[k]?{...TIPS[k],key:k}:null;
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const chPick=()=>{const s=CHANNELS.reduce((a,[,w])=>a+w,0);let r=Math.random()*s;for(const [n,w] of CHANNELS)if((r-=w)<=0)return n;return CHANNELS[0][0]};
-const Q=A.Q={seen:{},types:{},solved:0,cur:null};let qno=0;
+const Q=A.Q={seen:{},types:{},solved:0,cur:null,last:null};let qno=0;
 
 /* ---------- 给新叼起的球挑一道题：第一颗是答疑，第二颗是派单（挑离你最近的那只店猫），之后按"没见过的类型 + 离得近"加权 ---------- */
 function pickQuest(){if(Q.force){const d=def(Q.force);Q.force=null;if(d)return d}   // Q.force：测试用，指定下一道题
@@ -64,7 +64,7 @@ function spec(q){const d=q.d,b=[],acts=[];let tip=tipOf(d.tip);const kn=A.kindOn
     else if(q.reply)b.push({k:'right',t:q.reply});
     const nm=KNIT_NAMES[q.y.kind][0],made={k:'made',kind:q.y.kind,ci:q.y.ci};
     if(q.proxy){b.push({...made,t:`${q.npc.name}替你把${nm}挂进了橱窗`});acts.push({id:'ok',t:'好的',key:'E'})}
-    else{b.push({...made,t:(d.type==='route'&&q.npc?`${q.npc.name}织好了${kn}，递还给你`:`织好了${kn}！`),next:'叼去橱窗长廊，挂到窗前的夹子上'});
+    else{b.push({...made,t:(d.type==='route'&&q.npc?`${q.npc.name}织好了${kn}，递还给你`:`织好了${kn}！`),next:'叼去一楼的橱窗长廊挂上，挂上才算交付'});
       if(me.hold===q.y)acts.push({id:'hang',t:'去橱窗挂上',key:'E'});acts.push({id:'ok',t:'收起',key:'Esc'})}}
   else if(q.st==='fused'){b.push({k:'text',t:`这颗球在你和${q.fuseWith}之间来回太多次了。猫猫咖啡馆正在给猫定这条规矩：遇到这种情况就自动叫停，把球升级给人来拍板——免得踢皮球。`},{k:'text',t:'球还在你嘴里。换一只猫，或者自己把它解开吧。'});tip=tipOf('pingpong');acts.push({id:'ok',t:'知道了',key:'E'})}
   return{kind:'quest',head:{icon:'yarn',ci:q.y.ci,title:'毛线球 #'+q.no,chips:['来自 '+q.ch,QTYPE[d.type]]},note:d.q,noteKey:'q'+q.no,blocks:b,tip,acts,st:q.st}}
@@ -194,10 +194,17 @@ tick(dt=>{const y=me.hold;
   if(Q.cur&&Q.cur.abandoned)Q.cur=null;
   if((rf-=dt)<=0){rf=.2;const q=Q.cur;if(q&&showing(q)&&(q.st==='coop'||q.st==='solving'||q.st==='npc'))A.dlg.update(spec(q))}});
 
+/* ---------- 织好了却半天没去挂：附近醒着的店猫提醒一句，一件东西只说一次（附近没有店猫，一分钟后自己冒一句）---------- */
+let knitT=0;
+tick(dt=>{const q=Q.cur,y=me.hold;if(!q||q.st!=='done'||q.proxy||y!==q.y||!y.knit||q.nudged){knitT=0;return}if(me.place||A.dlg.open||A.vista&&A.vista.on||A.busy())return;
+  const W=P.wins;if(A.floorOf(me.y)===A.floorOf(P.hangY)&&me.y<P.hangY+90&&me.x>W[0].x-60&&me.x<W[1].x+W[1].w+60){knitT=0;return}   // 已经在橱窗跟前了
+  if((knitT+=dt)<30)return;const o=S.cats.filter(c=>c.kind==='npc'&&!c.hidden&&!c.working&&!c.hold&&A.idle(c)&&c.k!=='sleep'&&near(c,me,180)).sort((a,b)=>dist(a,me)-dist(b,me))[0];
+  if(o){q.nudged=1;if(o.z==null)A.faceTo(o,me);emote(o,'q',1.2);speak(o,'织好的要挂进橱窗，才算交付哦',4.5)}else if(knitT>60){q.nudged=1;say(`嘴里的${KNIT_NAMES[y.kind][0]}还没交付：挂进一楼的橱窗才算`)}});
+
 /* ---------- 挂进橱窗、人类取走 ---------- */
-A.onHang=(c,item)=>{const q=item.y&&item.y.qs;if(!q||q.abandoned)return;if(!c.me&&!q.proxy)return;q.st='hung';q.chain.push('橱窗');S.stamps.ball=1;A.ui.stamps&&A.ui.stamps(S.stamps);A.emit('hang',q);if(Q.cur===q)Q.cur=null;
-  if(c.me)say('挂进橱窗了。等人类来取，会收到回信')};
-A.onTaken=it=>{const q=it.y&&it.y.qs;if(!q||q.abandoned||q.st!=='hung')return false;q.chain.push('人类');
+A.onHang=(c,item)=>{const q=item.y&&item.y.qs;if(!q||q.abandoned)return;if(!c.me&&!q.proxy)return;q.st='hung';q.hungT=now();q.chain.push('橱窗');S.stamps.ball=1;A.ui.stamps&&A.ui.stamps(S.stamps);A.emit('hang',q);if(Q.cur===q)Q.cur=null;Q.last=q;
+  if(c.me)say('挂进橱窗了，交付！等人类来取，会收到回信')};
+A.onTaken=it=>{const q=it.y&&it.y.qs;if(!q||q.abandoned||q.st!=='hung')return false;q.chain.push('人类');if(Q.last===q)Q.last=null;
   A.ui.reply&&A.ui.reply({no:q.no,q:q.d.q,thx:q.d.thx,chain:q.chain,item:A.kindOne(it),tip:tipOf('ball')});return true};
 
 /* ---------- 织好的那一刻：成品在"你"头顶放大亮一下，再落回嘴里 ---------- */
@@ -208,15 +215,18 @@ A.overs.push(()=>{if(!made)return;const k=now()-made.t0;if(k>2||me.hidden){made=
     for(let i=0;i<4;i++){const a=now()*3+i*Math.PI/2;P1(Math.round(x+Math.cos(a)*15),Math.round(y-h+Math.sin(a)*10),'#ffd84a')}})});
 
 /* ---------- 给页面：任务条、要去的地方 ---------- */
-Q.tracker=()=>{const q=Q.cur;if(!q)return null;const d=q.d,C=q.coop;let line='',steps=null;
-  switch(q.st){case 'pick':line=d.type==='memory'?'去图书馆找答案':d.type==='flow'?'按流程走一遍':d.type==='coop'?'喊帮手来一起解':d.type==='route'?'挑一只店猫，@ 它':d.type==='chat'?'打开便签，回一句':'打开便签，选一个';break;
+// stage：一颗球的一生走到哪一段（0 解开 · 1 挂进橱窗 · 2 回信）；line：这一段做什么；steps：走流程时的四小步；open：嘴里叼着没解的球（E 打开便签）
+// 嘴里没有任务时，刚挂上的那颗还留在任务条上（第三段），回信来了、或者一分半还没人来取，再收起来
+Q.tracker=()=>{if(Q.last&&(Q.cur||now()-Q.last.hungT>90))Q.last=null;const q=Q.cur||Q.last;if(!q)return null;const d=q.d,C=q.coop,nm=KNIT_NAMES[q.y.kind][0];let line='',steps=null,stage=0,ok=false;
+  switch(q.st){case 'pick':line=d.type==='memory'?'去二楼图书馆找答案':d.type==='flow'?'按流程走一遍：先去二楼工坊':d.type==='coop'?'喊帮手来一起解':d.type==='route'?'挑一只店猫，@ 它':d.type==='chat'?'打开便签，回一句':'打开便签，选一个';break;
     case 'npc':line=q.npcState==='coming'?`${q.npc.name}正在赶过来`:`${q.npc.name}正在处理`;break;
     case 'go':line=q.hint?`去「${SHELF_NAMES[d.shelf]}」那一架`:'去图书馆：先查检索柜，或者直接翻书';break;
     case 'coop':line=`帮手 ${C.helpers.filter(h=>h.arrived).length}/${d.roles.length-1} · ${Math.round(C.p*100)}%`;break;
     case 'flow':steps=flowSteps(q).map(([t,,done],i)=>({t,done:!!done,cur:flowAt()===['test','ci','review','merge'][i]}));break;
     case 'solving':line='正在解开……';break;case 'fused':line='乒乓球熔断了，换一只猫或者自己解';break;
-    case 'done':line=q.proxy?`${q.npc.name}替你去挂了`:`叼着${KNIT_NAMES[q.y.kind][0]}，去橱窗长廊挂上`;break}
-  return{no:q.no,q:d.q,type:QTYPE[d.type],line,steps}};
+    case 'done':stage=1;line=q.proxy?`${q.npc.name}替你去挂了`:`叼着${nm}去一楼橱窗长廊挂上，挂上才算交付`;break;
+    case 'hung':stage=2;ok=true;line='交付了，盖上「交付」章 · 人类取走时会回信';break}
+  return{no:q.no,q:d.q,type:QTYPE[d.type],ci:q.y.ci,stage,line,ok,steps,open:me.hold===q.y&&!q.y.knit}};
 Q.target=()=>{const q=Q.cur;if(!q)return null;const d=q.d;
   if(q.st==='npc'&&q.npc&&q.npcState==='coming')return{x:q.npc.x,y:q.npc.y,label:q.npc.name,cat:1};
   if(d.type==='memory'&&(q.st==='go'||q.st==='pick'))return q.hint?{x:P.shelves[d.shelf].x+23,y:P.shelves[0].y+76,label:SHELF_NAMES[d.shelf]}:{x:P.catalogAt.x,y:P.catalogAt.y,label:'检索柜'};

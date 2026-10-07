@@ -4,8 +4,10 @@
      想知道玩什么，问前台猫，或者等店猫搭话（world4-desk.js）
    - 图鉴 GUIDE：每样东西在哪、会发生什么、对应猫猫咖啡馆的哪项能力（how 只写前提）；第一次玩到弹"新发现"，记下时间。
      页面上的图鉴像成就列表：解锁的排在前面（最近的最前），没解锁的只留名字和房间，点一下猫走过去
-   - 训练营：五步走完一整颗毛线球；有任务时画箭头指路（在画面外就贴在边上）
-   发现过什么、训练营走到哪：成品里跟着账号存（页面提供 window.CAT_SAVE）；没有就存在浏览器本地（localStorage，读不到就当第一次来）。 */
+   - 指路：有任务时画箭头指向下一步（在画面外就贴在边上，躲开页面左上、右上的两块界面；在别的楼层先指楼梯）；
+     点了集章卡上没盖的"交付"章，箭头指向最近的毛线篮
+   发现过什么、交付了几件：成品里跟着账号存（页面提供 window.CAT_SAVE）；没有就存在浏览器本地（localStorage，读不到就当第一次来）。
+   原来的"新猫训练营"去掉了（2026-10-07）：它的活分给了任务条（每颗球都摆出"解开 → 挂进橱窗 → 回信"）、集章卡和斑斑送来的第一颗球。 */
 const GUIDE={
   // 一楼 · 门厅
   basket:{n:'毛线篮',room:'hall',how:'空着嘴才能叼',what:'叼起一颗毛线球，便签会自动展开：人类想请猫帮什么忙',tie:'猫猫咖啡馆里，任务就叫"毛线球"，按 doing / blocked / todo / done 排得清清楚楚',tip:'ball'},
@@ -74,38 +76,26 @@ const GID=id=>id.startsWith('q_')||id.startsWith('st:')?null:id==='treeslide2'?'
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,rnd,run,emote,say,sfx,after,TH,dist}=A;
 const now=()=>A.t,near=(a,b,d)=>Math.hypot(a.x-b.x,a.y-b.y)<d,val=(v,...a)=>typeof v==='function'?v(...a):v,tick=f=>A.tickers.push(f);
-let store={disc:{},camp:{},rooms:{}};try{const s=window.CAT_SAVE?CAT_SAVE.load('g'):JSON.parse(localStorage.getItem('cat1024-v4')||'null');if(s&&s.disc)store=Object.assign(store,s)}catch(e){}
+let store={disc:{},rooms:{}};try{const s=window.CAT_SAVE?CAT_SAVE.load('g'):JSON.parse(localStorage.getItem('cat1024-v4')||'null');if(s&&s.disc)store=Object.assign(store,s)}catch(e){}
 const save=()=>{try{if(window.CAT_SAVE)CAT_SAVE.save('g',store);else localStorage.setItem('cat1024-v4',JSON.stringify(store))}catch(e){}};
-// disc[k] 记的是第一次玩到的时间（毫秒）；旧记录是 1。balls：一共解开了几颗毛线球
-const G=A.guide={GUIDE,disc:store.disc,total:Object.keys(GUIDE).length,count:()=>Object.keys(store.disc).filter(k=>GUIDE[k]).length,balls:()=>store.balls||0,
+// disc[k] 记的是第一次玩到的时间（毫秒）；旧记录是 1。balls：一共解开了几颗毛线球；hung：挂进橱窗几件（交付，状态块上显示的是这个）
+const G=A.guide={GUIDE,disc:store.disc,total:Object.keys(GUIDE).length,count:()=>Object.keys(store.disc).filter(k=>GUIDE[k]).length,balls:()=>store.balls||0,hung:()=>store.hung||0,
   info:id=>{const g=GID(id);return g&&GUIDE[g]?{...GUIDE[g],id:g,found:!!store.disc[g]}:null},
   roomInfo:id=>{const L=Object.entries(GUIDE).filter(([,g])=>g.room===id);return{n:L.length,found:L.filter(([k])=>store.disc[k]).length}},
-  reset:()=>{store={disc:{},camp:{},rooms:{}};G.disc=store.disc;camp.done=store.camp;camp.on=true;save();A.ui.camp&&A.ui.camp()},
-  // 成品：认出是哪只猫以后，换成它自己的记录
-  load:s=>{store=Object.assign({disc:{},camp:{},rooms:{}},s||{});G.disc=store.disc;camp.done=store.camp;camp.on=!store.camp.finished;A.ui.camp&&A.ui.camp()},mark:id=>campMark(id),
+  reset:()=>{store={disc:{},rooms:{}};G.disc=store.disc;save()},
+  // 成品：认出是哪只猫以后，换成它自己的记录（旧存档里的 camp 是原来训练营的进度，丢掉）
+  load:s=>{store=Object.assign({disc:{},rooms:{}},s||{});delete store.camp;G.disc=store.disc},
   fishLog:()=>store.fish=store.fish||{},save:()=>save()};
-A.on('solve',()=>{store.balls=(store.balls||0)+1;save()});
+A.on('solve',()=>{store.balls=(store.balls||0)+1;save()});A.on('hang',()=>{store.hung=(store.hung||0)+1;save()});
 
 /* ---------- 第一次玩到某样东西：新发现 ---------- */
 A.onUse=th=>{const g=GID(th.id);if(!g||!GUIDE[g])return;A.emit('use',g);if(store.disc[g])return;store.disc[g]=Date.now();save();
   A.ui.discover&&A.ui.discover({...GUIDE[g],id:g,count:G.count(),total:G.total,tipObj:GUIDE[g].tip?{...TIPS[GUIDE[g].tip],key:GUIDE[g].tip}:null})};
-A.on('visit',()=>campMark('visit'));A.on('take',()=>campMark('take'));A.on('solve',()=>campMark('solve'));A.on('hang',()=>campMark('hang'));
-A.on('use',g=>{if(['stand','signpost','lectern','pond','mailbox'].includes(g))campMark('visit')});
-
-/* ---------- 训练营：五步 ---------- */
-const CAMP=[{id:'move',t:'走两步',sub:'WASD / 方向键，或者点一下地面'},{id:'take',t:'叼一颗毛线球',sub:'门厅的毛线篮里就有'},{id:'solve',t:'按便签把它解开',sub:'对话框里会告诉你要做什么'},
-  {id:'hang',t:'挂进橱窗',sub:'叼去橱窗长廊，挂到窗前的夹子上'},{id:'visit',t:'认识猫猫咖啡馆',sub:'看看门厅的迎宾立牌、二楼图书馆的说明书，或者河对岸的路标'}];
-const camp=A.camp={steps:CAMP,done:store.camp,on:!store.camp.finished,
-  start(reset){if(reset){store.camp={};this.done=store.camp}this.on=true;store.camp.finished=0;save();A.ui.camp&&A.ui.camp()},cur(){return CAMP.find(s=>!store.camp[s.id])||null}};
-function campMark(id){if(store.camp[id])return;store.camp[id]=1;save();A.ui.camp&&A.ui.camp();
-  if(CAMP.every(s=>store.camp[s.id])&&!store.camp.finished){store.camp.finished=1;save();sfx('fanfare');
-    after(1.2,()=>{if(A.dlg.open)return;A.infoDialog('camp','训练营结业','cat',[{k:'steps',items:CAMP.map(s=>({t:s.t,sub:s.sub,done:true}))},
-      {k:'text',t:'一颗毛线球从门缝进来，被你解开、织好、挂进橱窗、被人类取走——这就是猫猫咖啡馆里一个任务的一生。'},{k:'text',t:'接下来随便逛：图鉴（B）里还有很多没玩过的东西。'}],'camp',['site','inner'])})}}
-let walked=0,lx=me.x,ly=me.y;
-tick(()=>{walked+=Math.hypot(me.x-lx,me.y-ly);lx=me.x;ly=me.y;if(walked>60)campMark('move')});
-A.campTarget=()=>{const s=camp.cur();if(!camp.on||!s)return null;
-  if(s.id==='take'&&!me.hold){const i=[0,1,2].filter(i=>S.baskets[i].length).sort((a,b)=>dist(P.baskets[a],me)-dist(P.baskets[b],me))[0];if(i!=null)return{x:P.baskets[i].x+20,y:P.baskets[i].y+30,label:'毛线篮'}}
-  if(s.id==='visit'&&!me.hold)return{x:P.stand.x+16,y:P.stand.y+42,label:'迎宾立牌'};return null};
+/* ---------- 点了集章卡上没盖的"交付"章：箭头指向最近的毛线篮；叼起一颗、或者一分钟以后收起 ---------- */
+let seek=-1;
+A.seekBasket=()=>{seek=now()+60};
+A.guideTarget=()=>{if(now()>seek)return null;if(me.hold){seek=-1;return null}
+  const i=[0,1,2].filter(i=>S.baskets[i].length).sort((a,b)=>dist(P.baskets[a],me)-dist(P.baskets[b],me))[0];return i==null?null:{x:P.baskets[i].x+20,y:P.baskets[i].y+30,label:'毛线篮'}};
 
 /* ---------- 找到我 ---------- */
 let findT=-9;A.findMe=()=>{findT=now();if(!me.place&&!me.hidden&&!A.busy())run(me,[{k:'alert',dur:.8,soft:1}])};
@@ -118,18 +108,23 @@ A.anchorOf=anchor;
 A.overs.push(()=>{if(!A.play||me.hidden||me.place||A.busy())return;const th=A.thingNear(me);
   if(!th||th.ok&&!th.ok(me)||me.hold&&!me.hold.knit&&th.id.startsWith('basket'))return;const a=anchor(th);if(a)eKey(a.x-4,a.y-13+(Math.floor(now()*3)%2),'#ffd84a')});
 
-/* ---------- 指路：任务要去的地方 / 训练营下一步；画在高清层上 ---------- */
+/* ---------- 指路：任务要去的地方 / 点了"交付"章时的毛线篮；画在高清层上 ---------- */
 // 要去的地方不在这一层：先指向楼梯口，写"上楼 · 图书馆"
 function viaStairs(tg){const fa=A.floorOf(me.y),fb=A.floorOf(tg.y);if(fa===fb)return tg;const p=A.nextPortal(fa,fb);if(!p)return tg;const up=A.FL.indexOf(A.FLID[p.to])>A.FL.indexOf(fa);
   return{x:p.at.x,y:p.at.y,label:(up?'上楼':'下楼')+' · '+tg.label}}
 A.viaStairs=viaStairs;
-A.huds.push((hx,scale,dpr,v)=>{if(!A.play||A.dlg.open)return;const tg0=(A.Q&&A.Q.target&&A.Q.target())||A.campTarget();if(!tg0)return;const tg=viaStairs(tg0),t=now();
-  const sx=(tg.x-v.x)*scale,sy=(tg.y-v.y)*scale,W=hx.canvas.width,H=hx.canvas.height,m=34*dpr,in_=sx>m&&sx<W-m&&sy>m&&sy<H-m;hx.save();
+// 页面的界面（左上状态块、右上地图）盖着的地方：A.hudAvoid() 给出覆盖层画布上的几个矩形。目标在底下就当它在画面外；箭头和字落在里面就沿着画面边挪出来
+const inR=(x,y,r)=>x>r[0]&&x<r[0]+r[2]&&y>r[1]&&y<r[1]+r[3];
+function dodge(x,y,av,W,H,m,pw=0,ph=0){for(let n=0;n<2;n++){const r=av.find(r=>inR(x,y,[r[0]-pw,r[1]-ph,r[2]+pw*2,r[3]+ph*2]));if(!r)break;
+    const c=[[r[0]+r[2]+pw+1,y],[r[0]-pw-1,y],[x,r[1]+r[3]+ph+1],[x,r[1]-ph-1]].filter(([a,b])=>a>=m&&a<=W-m&&b>=m&&b<=H-m&&!av.some(q=>q!==r&&inR(a,b,q)));
+    if(!c.length)break;c.sort((p,q)=>Math.hypot(p[0]-x,p[1]-y)-Math.hypot(q[0]-x,q[1]-y));[x,y]=c[0]}return[x,y]}
+A.huds.push((hx,scale,dpr,v)=>{if(!A.play||A.dlg.open)return;const tg0=(A.Q&&A.Q.target&&A.Q.target())||A.guideTarget();if(!tg0)return;const tg=viaStairs(tg0),t=now(),av=(A.hudAvoid&&A.hudAvoid())||[];
+  const sx=(tg.x-v.x)*scale,sy=(tg.y-v.y)*scale,W=hx.canvas.width,H=hx.canvas.height,m=34*dpr,in_=sx>m&&sx<W-m&&sy>m&&sy<H-m&&!av.some(r=>inR(sx,sy-20*dpr,r));hx.save();
   hx.font=`600 ${Math.round(12*dpr)}px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif`;hx.textAlign='center';hx.textBaseline='middle';
-  const pill=(x,y,s)=>{const w=hx.measureText(s).width+12*dpr,h=18*dpr;hx.fillStyle='#241a2ee6';hx.fillRect(x-w/2,y-h/2,w,h);hx.strokeStyle='#ffd84a';hx.lineWidth=dpr;hx.strokeRect(x-w/2+.5,y-h/2+.5,w-1,h-1);hx.fillStyle='#ffd84a';hx.fillText(s,x,y+.5)};
+  const pill=(x,y,s)=>{const w=hx.measureText(s).width+12*dpr,h=18*dpr;[x,y]=dodge(x,y,av,W,H,w/2,w/2,h/2);hx.fillStyle='#241a2ee6';hx.fillRect(x-w/2,y-h/2,w,h);hx.strokeStyle='#ffd84a';hx.lineWidth=dpr;hx.strokeRect(x-w/2+.5,y-h/2+.5,w-1,h-1);hx.fillStyle='#ffd84a';hx.fillText(s,x,y+.5)};
   if(in_){const b=Math.sin(t*5)*4*dpr,top=sy-(tg.cat?32:10)*scale-b;hx.fillStyle='#ffd84a';hx.strokeStyle='#241a2e';hx.lineWidth=3*dpr;
     hx.beginPath();hx.moveTo(sx-10*dpr,top-14*dpr);hx.lineTo(sx+10*dpr,top-14*dpr);hx.lineTo(sx,top);hx.closePath();hx.stroke();hx.fill();pill(sx,top-28*dpr,tg.label)}
-  else{const cx=W/2,cy=H/2,dx=sx-cx,dy=sy-cy,k=Math.min((W/2-m)/Math.abs(dx||1),(H/2-m)/Math.abs(dy||1)),ex=cx+dx*k,ey=cy+dy*k,a=Math.atan2(dy,dx);
+  else{const cx=W/2,cy=H/2,dx=sx-cx,dy=sy-cy,k=Math.min((W/2-m)/Math.abs(dx||1),(H/2-m)/Math.abs(dy||1)),a=Math.atan2(dy,dx);let ex=cx+dx*k,ey=cy+dy*k;[ex,ey]=dodge(ex,ey,av,W,H,m,16*dpr,16*dpr);
     hx.translate(ex,ey);hx.rotate(a);hx.fillStyle='#ffd84a';hx.strokeStyle='#241a2e';hx.lineWidth=3*dpr;hx.beginPath();hx.moveTo(14*dpr,0);hx.lineTo(-8*dpr,-11*dpr);hx.lineTo(-3*dpr,0);hx.lineTo(-8*dpr,11*dpr);hx.closePath();hx.stroke();hx.fill();
     hx.setTransform(1,0,0,1,0,0);const d=Math.round(Math.hypot(tg.x-me.x,tg.y-me.y)/10);pill(Math.max(60*dpr,Math.min(W-60*dpr,ex-Math.cos(a)*40*dpr)),Math.max(20*dpr,Math.min(H-20*dpr,ey-Math.sin(a)*28*dpr)),`${tg.label} · ${d} 步`)}
   hx.restore()});

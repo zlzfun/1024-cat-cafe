@@ -258,7 +258,7 @@ function promptText(){if(me.place)return me.place.prompt?me.place.prompt(me):'WA
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me)),ball=me.hold&&!me.hold.knit;if(ok)return 'E · '+lab(th,me);
   if(ball){const o=nearCatOf(me,120);return 'E · '+(A.ballPrompt?A.ballPrompt(me):'就地解开')+(o?' · Q 传给'+o.name:'')}
   if(th)return 'E · '+lab(th,me)+'（'+(th.no?th.no(me):'现在不行')+'）';
-  if(me.hold)return '叼着'+KNIT_NAMES[me.hold.kind][0]+' · 去橱窗长廊挂上';
+  if(me.hold)return '叼着'+KNIT_NAMES[me.hold.kind][0]+' · 挂进一楼的橱窗才算交付';
   const c=nearCatOf(me,24);if(c)return 'E · 蹭蹭'+c.name;return ''}
 function tap(mx,my){if(!play)return;poke();if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving){leavePlace(me);if(me.place)return}if(me.hidden&&!leaving)return;
   const go=steps=>run(me,steps,leaving);me.follow=null;

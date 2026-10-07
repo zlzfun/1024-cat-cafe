@@ -3,7 +3,7 @@
      旁边的猫吓一跳回头看，你的猫开心地蹦一下。
    - wake（来过）：画面从黑里一圈圈亮开，你的猫在上次离开的地方蜷着睡觉，醒来、伸个懒腰。
    - 第一颗毛线球送到面前：第一次来、落地以后，一只闲着的店猫（先找斑斑）叼着一颗毛线球从画面外跑过来，传给你——
-     训练营第二步不用先去门厅找毛线篮，也是第一次看到"传球"。
+     不用先去门厅找毛线篮，也是第一次看到"传球"。
    A.arrive(how, {x,y, onLand, onDone})；到结束之前 A.arriving() 为真，页面这时不接玩家的操作。 */
 WORLD_MODS.push(A=>{
 const {S,P,me,rr,run,emote,speak,sfx,after,idle}=A;
@@ -28,7 +28,7 @@ tick(()=>{if(!ar)return;const k=now()-ar.t0;
       const c=S.cats.filter(c=>c.kind==='npc'&&!c.hidden&&Math.hypot(c.x-me.x,c.y-me.y)<120)[0];if(c)after(.8,()=>emote(c,'heart',1.6))}
     if(k>1.2+DUR.stretch+.9)end()}});
 function end(){const o=ar.o,how=ar.how;ar=null;me.hidden=false;A.poke();o.onDone&&o.onDone();if(how==='drop')after(2.4,greet)}
-function greet(){const s=A.camp&&A.camp.cur();if(!s||s.id!=='take'||me.hold||me.hidden||me.place)return;
+function greet(){if(A.guide.balls()||A.Q.cur||me.hold||me.hidden||me.place)return;   // 还没解过球、嘴里空着才送
   const c=[5,4,3].map(p=>S.cats.find(o=>o.kind==='npc'&&o.pal===p)).find(o=>o&&!o.working&&!o.hold&&!o.ctoy&&!o.place&&!o.riding&&!o.hidden&&o.z==null);if(!c)return;
   // 从画面外跑进来：离得远就先挪到画面边上外头一点（能站的地方），省得跑半个店
   const v=A.view(),out=p=>p.x<v.x-8||p.x>v.x+v.w+8||p.y<v.y-8||p.y>v.y+v.h+30;

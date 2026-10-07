@@ -84,19 +84,66 @@
   .game canvas{position:absolute;left:0;top:0}
   .game #oc{pointer-events:none}
   .hud{position:absolute;font-size:13px;pointer-events:none}
-  .tl{left:10px;top:8px;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
-  .tl>*{pointer-events:auto}
-  .room{display:flex;align-items:center;gap:8px;background:#241a2ee6;border:1px solid #ffd84a66;border-radius:3px;padding:2px 10px 2px 3px;pointer-events:none!important}
-  .room i{font-style:normal;font-size:12px;font-weight:600;color:#241a2e;background:#9ccc98;border-radius:2px;padding:0 6px;line-height:20px}
-  .room i[data-f="f2"]{background:#a8d0f0}.room i[data-f="roof"]{background:#c8b8ff}
-  .room b{color:var(--acc);font-weight:600;font-size:15px}
-  .room span{color:var(--sub);font-size:12px}
-  .tr{right:10px;top:8px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-  .tr>*{pointer-events:auto}
-  .floors{display:flex;gap:3px;pointer-events:none!important}
-  .floors span{font-size:12px;line-height:18px;padding:0 8px;border-radius:2px;background:#241a2ecc;color:var(--dim);border:1px solid #4a3a5c}
-  .floors span.on{color:#241a2e;background:var(--acc);border-color:var(--acc);font-weight:600}
-  .game .mini{position:static;border:1px solid #ffd84a88;border-radius:3px;cursor:pointer;image-rendering:auto;opacity:.95;width:200px}
+  /* 左上状态块：一整块，和对话框同一套像素窗框（奶白描边 + 外面一圈深色）；几格之间虚线分开，字号三档，左边对齐 */
+  .tl{left:14px;top:14px}.tl>*{pointer-events:auto}
+  .sb{width:276px;background:#241a2ef2;box-shadow:0 0 0 2px #fff4dc,0 0 0 4px #140e1a;font-size:12px;line-height:1.5;color:#d8cce4}
+  .sb>div{padding:7px 10px}.sb>div+div{border-top:1px dashed #4a3a5c}.sb>div:empty{display:none}
+  .sb p{margin:0}.sb canvas{position:static}.sb h4{margin:0;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--acc);line-height:20px;white-space:nowrap}
+  .sb h4 i{font-style:normal;font-weight:400;font-size:12px;color:var(--sub)}.sb h4 .r{margin-left:auto;font-weight:400;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .sb-loc{display:flex;align-items:center;gap:8px;pointer-events:none}
+  .sb-loc i{flex:none;font-style:normal;font-size:12px;font-weight:600;color:#241a2e;background:#9ccc98;padding:0 6px;line-height:20px}
+  .sb-loc i[data-f="f2"]{background:#a8d0f0}.sb-loc i[data-f="roof"]{background:#c8b8ff}
+  .sb-loc b{font-size:17px;font-weight:600;color:var(--acc);line-height:22px;white-space:nowrap}
+  .sb-loc span{margin-left:auto;color:var(--dim);white-space:nowrap}
+  .sb-me{display:flex;gap:10px;align-items:center;cursor:pointer}
+  .sb-me canvas{flex:none;width:44px;height:40px;background:#3a2c4c}
+  .sb-me>div{min-width:0}.sb-me .mn{display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .sb-me .mn b{color:#241a2e;background:var(--acc);padding:0 6px;font-size:13px;font-weight:600;line-height:20px}
+  .sb-me .mn span{color:var(--sub);overflow:hidden;text-overflow:ellipsis}
+  .sb-me .st{display:flex;gap:16px;margin-top:3px}
+  .sb-me .st em{font-style:normal;display:inline-flex;align-items:center;gap:4px;color:var(--sub)}
+  .sb-me .st em b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .sb-me .st canvas,.sb h4 canvas{flex:none;width:14px;height:14px;background:none;image-rendering:pixelated}
+  .sb-me .st em.bk{cursor:pointer}.sb-me .st em.bk:hover b{color:var(--acc)}
+  /* 毛线球：便签那句话 + 一颗球的一生（解开 → 挂进橱窗 → 回信）+ 这一段做什么 */
+  .sb-task{cursor:pointer}
+  .sb-task .op{margin-left:auto;font-weight:400;font-size:12px;color:var(--sub);display:inline-flex;align-items:center;gap:5px}
+  .sb-task .op kbd{font-size:11px;padding:0 4px;line-height:15px}
+  .sb-task .q{margin:2px 0 6px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-task .lc{display:flex;align-items:center;gap:3px}
+  .sb-task .lc span{flex:1;text-align:center;line-height:20px;border:1px solid #4a3a5c;color:var(--dim);white-space:nowrap}
+  .sb-task .lc span.done{color:var(--ok);border-color:#5b8c5a}
+  .sb-task .lc span.cur{color:#241a2e;background:var(--acc);border-color:var(--acc);font-weight:600}
+  .sb-task .lc i{flex:none;font-style:normal;font-size:10px;color:#6a5a7a}
+  .sb-task .ln{margin-top:5px;color:var(--acc)}.sb-task .ln.ok{color:var(--ok)}
+  .sb-task .ln s{text-decoration:none;color:var(--dim)}.sb-task .ln u{text-decoration:none;color:var(--ok)}
+  /* 集章抽奖：三个章 + 抽奖的条件；有任务时收成一行 */
+  .sb-st{cursor:pointer}
+  .sb-st .row{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:4px;text-align:center}
+  .sb-st .row>div{color:var(--dim);line-height:1.35}.sb-st .row>div.on{color:#d8cce4}
+  .sb-st .s{width:34px;height:34px;margin:0 auto 3px;border:2px dashed #4a3a5c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#6a5a7a;transform:rotate(-8deg)}
+  .sb-st .row>div:not(.on):hover .s{border-color:var(--sub);color:var(--sub)}
+  .sb-st .on .s,.sb-st .dots .on{border:2px solid #e0533d;color:#e0533d;background:#e0533d1f;font-weight:700;box-shadow:inset 0 0 0 1px #e0533d66}
+  .sb-st .new{animation:stampin .45s cubic-bezier(.3,1.5,.5,1)}
+  @keyframes stampin{0%{transform:scale(2.4) rotate(-26deg);opacity:0}55%{opacity:1}100%{transform:scale(1) rotate(-8deg)}}
+  .sb-st .lt{margin-top:5px;text-align:center;color:var(--sub)}
+  .sb-st .lt.go{color:var(--acc);font-weight:600;animation:ltpulse 1.6s ease-in-out infinite}.sb-st .lt.done{color:var(--ok)}
+  @keyframes ltpulse{50%{opacity:.55}}
+  .sb-st.fold{display:flex;align-items:center;gap:8px}
+  .sb-st .dots{display:flex;gap:4px}
+  .sb-st .dots span{width:20px;height:20px;border:2px dashed #4a3a5c;border-radius:50%;font-size:11px;line-height:16px;text-align:center;color:#6a5a7a;transform:rotate(-8deg)}
+  .sb-st.fold>i{margin-left:auto;font-style:normal;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sb-st.hl{animation:sthl 1.2s ease-in-out 3}
+  @keyframes sthl{50%{background:#ffd84a26;box-shadow:inset 0 0 0 2px #ffd84a}}
+  /* 右上：同样窗框的地图——楼层签 + 小地图 */
+  .tr{right:14px;top:14px}.tr>*{pointer-events:auto}
+  .mapbox{width:200px;background:#241a2ef2;box-shadow:0 0 0 2px #fff4dc,0 0 0 4px #140e1a}
+  .floors{display:flex;pointer-events:none}
+  .floors span{flex:1;text-align:center;font-size:12px;line-height:22px;color:var(--dim);border-bottom:1px dashed #4a3a5c}
+  .floors span+span{border-left:1px dashed #4a3a5c}
+  .floors span.on{color:#241a2e;font-weight:600;background:#9ccc98;border-bottom-style:solid;border-bottom-color:#9ccc98}
+  .floors span.on[data-f="f2"]{background:#a8d0f0;border-bottom-color:#a8d0f0}.floors span.on[data-f="roof"]{background:#c8b8ff;border-bottom-color:#c8b8ff}
+  .game .mini{position:static;display:block;width:200px;cursor:pointer;image-rendering:auto}
   .prompt{left:50%;bottom:14px;transform:translateX(-50%);background:#241a2ee6;border:1px solid var(--acc);color:var(--acc);border-radius:3px;padding:1px 12px;white-space:nowrap;display:none}
   .cstack{top:10px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:min(560px,50%)}
   .toast{background:var(--acc);color:var(--bg);border-radius:3px;padding:1px 12px;opacity:0;transition:opacity .3s;text-align:center}
@@ -110,40 +157,6 @@
   .reply q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}
   .news{left:10px;bottom:12px;font-size:12px;line-height:1.6;max-width:32%}
   .news div{background:#241a2ecc;border-radius:3px;padding:0 8px;margin-top:3px;width:fit-content;transition:opacity .6s}
-  .mecard{display:flex;gap:8px;align-items:center;background:#241a2ee6;border:1px solid var(--acc);border-radius:3px;padding:3px 10px 3px 3px;cursor:pointer}
-  .mecard canvas{position:static;width:44px;height:40px;background:#3a2c4c}
-  .mecard b{color:var(--bg);background:var(--acc);padding:0 6px;border-radius:2px;font-size:12px;font-weight:600}
-  .mecard span{display:block;font-size:12px;color:var(--sub);line-height:1.45}
-  .mecard kbd{font-size:11px;padding:0 3px}
-  .mecard .st{display:flex;gap:10px;align-items:center;margin-top:1px}
-  .mecard .st em{font-style:normal;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}
-  .mecard .st em b{background:none;color:var(--ink);padding:0;font-weight:600;font-size:12px;font-variant-numeric:tabular-nums}
-  .mecard .st canvas{width:14px;height:14px;background:none;image-rendering:pixelated}
-  .mecard .st em.bk{cursor:pointer}.mecard .st em.bk:hover b{color:var(--acc)}
-  .panel{width:260px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:6px 10px 7px;font-size:12px;line-height:1.6;cursor:pointer}
-  .panel:empty{display:none}
-  .panel h4{margin:0;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
-  .panel h4 i{font-style:normal;color:var(--sub);font-weight:400}
-  .panel .q{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .panel .ln{color:var(--acc)}
-  .panel ul{list-style:none;margin:2px 0 0;padding:0}
-  .panel li{display:flex;gap:6px;align-items:baseline;color:#d8cce4}
-  .panel li:before{content:"";flex:none;width:8px;height:8px;border:2px solid #b9a8c9;transform:translateY(1px)}
-  .panel li.done{color:var(--ok)}.panel li.done:before{background:#7ee08a;border-color:#7ee08a}
-  .panel li.cur{color:var(--acc)}.panel li.cur:before{border-color:var(--acc)}
-  .panel small{color:#8a7a9a}
-  .stamps{position:static;width:258px;background:#241a2ee6;border:1px solid var(--line);border-radius:3px;padding:4px 10px 5px;font-size:12px;line-height:1.4;pointer-events:auto;cursor:pointer}
-  .stamps h4{margin:0 0 3px;font-size:12px;color:var(--acc);font-weight:600;display:flex;justify-content:space-between}
-  .stamps h4 i{font-style:normal;color:var(--sub);font-weight:400}
-  .stamps .row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;color:var(--sub)}
-  .stamps .lt{margin:4px 0 1px;text-align:center;color:var(--acc)}.stamps .lt.done{color:var(--ok)}
-  .stamps .s{border:2px dashed #4a3a5c;border-radius:50%;width:30px;height:30px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6a5a7a;transform:rotate(-8deg)}
-  .stamps .s.on{border:2px solid #e0533d;color:#e0533d;background:#e0533d18;font-weight:700}
-  .zone{text-align:center;opacity:0;transition:opacity .5s,transform .5s;transform:translateY(-4px)}
-  .zone.show{opacity:1;transform:none}
-  .zone b{display:inline-block;font-size:16px;font-weight:600;letter-spacing:4px;color:#fff4dc;padding:1px 14px 1px 18px;background:linear-gradient(90deg,transparent,#241a2ee6 18%,#241a2ee6 82%,transparent);text-shadow:0 1px 4px #000}
-  .zone b:before,.zone b:after{content:"";display:inline-block;width:14px;height:1px;background:#ffd84a99;vertical-align:middle;margin:0 10px 0 0}.zone b:after{margin:0 0 0 6px}
-  .zone p{margin:4px auto 0;max-width:520px;font-size:12px;line-height:1.6;color:#d8cce4;background:#241a2ecc;border-radius:3px;padding:2px 10px}
   .tipbox{position:absolute;pointer-events:none;background:#241a2ef0;border:1px solid var(--line);border-radius:3px;padding:3px 9px;font-size:12px;line-height:1.6;display:none;max-width:300px;z-index:4}
   .tipbox b{color:var(--ink);font-weight:600}.tipbox .how{color:var(--acc)}.tipbox .what{color:#d8cce4}.tipbox .tie{color:var(--ok)}.tipbox .st{float:right;color:var(--sub);margin-left:10px}
   .menu{position:absolute;display:none;background:#2f2340;border:1px solid var(--acc);border-radius:4px;padding:4px;min-width:170px;max-width:280px;z-index:7}
@@ -182,15 +195,18 @@
   .bookov .e.off .ic{color:#6a5a7a}
   .bookov .e.off small{color:#6a5a7a}
   .bookov .e.off:hover{border-color:var(--sub);color:var(--sub)}
-  .game.vista .tl,.game.vista .tr,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle,.game.vista .zone{display:none!important}
+  .game.vista .tl,.game.vista .tr,.game.vista .news,.game.vista .prompt,.game.vista .tipbox,.game.vista .vtitle{display:none!important}
   .vcap{left:50%;bottom:12px;transform:translateX(-50%);display:none;align-items:baseline;gap:12px;background:#241a2ecc;border-radius:3px;padding:3px 14px;font-size:12px;color:var(--sub);white-space:nowrap}
   .game.vista .vcap{display:flex}
   .vcap b{color:var(--acc);font-weight:600;font-size:13px}.vcap .sc{color:var(--ink)}.vcap .sc:empty{display:none}
-  .vtitle{left:0;right:0;top:24%;text-align:center;opacity:0;transition:opacity 1.2s;padding:14px 0 16px;background:linear-gradient(90deg,transparent,#1c1424c8 22%,#1c1424c8 78%,transparent)}
+  /* 画面上方三分之一处的大字：换房间、换楼层是小一号的房间名；进店欢迎、第一次见到巨树和星空是大号。同一时间只出一个 */
+  .vtitle{left:50%;transform:translateX(-50%);width:min(820px,72%);top:20%;text-align:center;opacity:0;transition:opacity .45s;padding:12px 0 14px;background:linear-gradient(90deg,transparent,#1c1424bb 24%,#1c1424bb 76%,transparent)}
+  .vtitle.big{transition-duration:1.2s;padding:14px 0 16px}
   .vtitle.show{opacity:1}
-  .vtitle small{display:block;font-size:12px;letter-spacing:6px;color:var(--acc);text-shadow:0 1px 6px #000}
-  .vtitle b{display:inline-block;font-size:34px;line-height:1.3;font-weight:600;letter-spacing:12px;color:#fff4dc;padding:6px 0 6px 12px;margin:8px 0;border-top:1px solid #ffd84a99;border-bottom:1px solid #ffd84a99;text-shadow:0 2px 10px #000}
-  .vtitle span{display:block;font-size:13px;color:#fff4dc;letter-spacing:2px;text-shadow:0 1px 6px #000}
+  .vtitle small{display:block;font-size:12px;letter-spacing:8px;padding-left:8px;color:var(--acc);text-shadow:0 1px 6px #000}
+  .vtitle b{display:inline-block;font-size:28px;line-height:1.3;font-weight:600;letter-spacing:10px;color:#fff4dc;padding:4px 0 4px 10px;margin:7px 0 6px;border-top:1px solid #ffd84a99;border-bottom:1px solid #ffd84a99;text-shadow:0 2px 10px #000}
+  .vtitle.big b{font-size:34px;letter-spacing:12px;padding:6px 0 6px 12px;margin:8px 0}
+  .vtitle span{display:block;margin:0 auto;max-width:620px;font-size:13px;color:#fff4dc;letter-spacing:2px;text-shadow:0 1px 6px #000}
   .replydemo{background:#241a2ef0;border:1px solid #f4a6b8;border-radius:3px;padding:6px 12px;font-size:13px;line-height:1.6;max-width:520px}
   .replydemo h5{margin:0;font-size:13px;color:#f4a6b8;font-weight:600}.replydemo q{display:block;background:#fff8e8;color:#3a2630;padding:2px 10px;margin:3px 0;quotes:none;font-size:14px}.replydemo .chain{color:var(--ok);font-size:12px}
   .game{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0}
@@ -225,14 +241,15 @@
 <!-- 店里（加载时就在后台建好，进店以后才露出来） -->
 <div class="game" id="game" tabindex="0">
   <canvas id="pc"></canvas><canvas id="oc"></canvas>
-  <div class="hud tl"><div class="room" id="room"><i id="rfl" data-f="f1">一楼</i><b id="rnm">门厅</b><span id="online"></span></div>
-    <div class="mecard" id="mecard" title="点一下，找到你自己（C）"><canvas id="mec" width="22" height="20"></canvas><div><b id="mename">你</b><span id="mest">空着嘴</span><span class="st"><em title="一共解开了几颗毛线球"><canvas id="icYarn" width="7" height="7"></canvas>毛线球 <b id="stBall">0</b></em><em class="bk" id="stBook" title="点一下打开图鉴（B）"><canvas id="icPaw" width="7" height="7"></canvas>装置 <b id="stDisc">0</b></em></span></div></div>
-    <div class="panel" id="panel"></div></div>
-  <div class="hud tr"><div class="floors" id="floors"></div><canvas class="mini" id="mm" width="200" height="188" title="小地图（你所在的这一层）：点一下，猫就走过去"></canvas>
-    <div class="stamps" id="stamps" title="集章卡：点一下看入口"></div></div>
+  <div class="hud tl"><div class="sb" id="sb">
+    <div class="sb-loc" id="room"><i id="rfl" data-f="f1">一楼</i><b id="rnm">门厅</b><span id="online"></span></div>
+    <div class="sb-me" id="mecard" title="点一下，找到你自己（C）"><canvas id="mec" width="22" height="20"></canvas><div><p class="mn"><b id="mename">你</b><span id="mest">空着嘴</span></p><p class="st"><em title="挂进橱窗的才算交付"><canvas id="icYarn" width="7" height="7"></canvas>交付 <b id="stBall">0</b></em><em class="bk" id="stBook" title="点一下打开图鉴（B）"><canvas id="icPaw" width="7" height="7"></canvas>装置 <b id="stDisc">0</b></em></p></div></div>
+    <div class="sb-task" id="panel" title="点一下，再看一眼便签"></div>
+    <div class="sb-st" id="stamps"></div></div></div>
+  <div class="hud tr"><div class="mapbox" id="mapbox"><div class="floors" id="floors"></div><canvas class="mini" id="mm" width="200" height="188" title="小地图（你所在的这一层）：点一下，猫就走过去"></canvas></div></div>
   <div class="hud news" id="news"></div>
   <div class="hud prompt" id="prompt"></div>
-  <div class="hud cstack"><div class="zone" id="zone"></div><div class="toast" id="toast"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
+  <div class="hud cstack"><div class="toast" id="toast"></div><div class="disc" id="disc"></div><div class="reply" id="reply"></div></div>
   <div class="hud vtitle" id="vtitle"></div><div class="hud vcap" id="vcap"></div>
   <div class="tipbox" id="tip"></div>
   <div class="menu" id="menu"></div>
