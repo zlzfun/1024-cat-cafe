@@ -85,24 +85,21 @@ lan_ip(){ local ip=""
   printf '%s' "${ip}"; }
 
 # ---------- config.js：给了 --inner / --bots，或者还没有这个文件，就写一份 ----------
+# 只改这两样，文件里别的设置（ws、改过的链接……）原样留着；内源主页里有引号、反斜杠也不会写坏（按 JSON 写）
 write_config(){
   local f="${APP_DIR}/config.js"
   if [ -f "${f}" ] && [ -z "${INNER}" ] && [ -z "${BOTS}" ]; then ok "config.js 已经有了，不动它"; return; fi
-  local inner="${INNER}" bots="${BOTS:-40}"
-  if [ -f "${f}" ] && [ -z "${INNER}" ]; then inner="$("${NODE}" -e "global.window={};require('${f}');process.stdout.write(((window.CAT1024_CONFIG||{}).links||{}).inner||'')" 2>/dev/null || true)"; fi
-  if [ -f "${f}" ] && [ -z "${BOTS}" ]; then bots="$("${NODE}" -e "global.window={};require('${f}');process.stdout.write(String((window.CAT1024_CONFIG||{}).bots??40))" 2>/dev/null || echo 40)"; fi
-  inner="${inner//\\/\\\\}"; inner="${inner//\'/\\\'}"
-  cat > "${f}" <<EOF
-/* 1024 猫咖 · 部署配置（deploy.sh 写的；不进仓库）。字段见 config.example.js。 */
-window.CAT1024_CONFIG = {
-  api: 'api',
-  links: {
-    inner: '${inner}',
-  },
-  bots: ${bots},
-};
-EOF
-  ok "写好了 config.js（内源主页：${inner:-还没配}，机器人：${bots}）"
+  local out
+  out="$(CFG_FILE="${f}" CFG_INNER="${INNER}" CFG_BOTS="${BOTS}" "${NODE}" -e '
+    const fs=require("fs"),f=process.env.CFG_FILE;global.window={};let c={api:"api",links:{inner:""},bots:40};
+    if(fs.existsSync(f)){try{require(f);c=Object.assign({},window.CAT1024_CONFIG||{})}catch(e){process.stderr.write("config.js 读不出来："+e.message+"\n");process.exit(2)}}
+    c.links=Object.assign({},c.links||{});if(process.env.CFG_INNER)c.links.inner=process.env.CFG_INNER;if(!("inner" in c.links))c.links.inner="";
+    if(process.env.CFG_BOTS)c.bots=+process.env.CFG_BOTS;if(c.bots==null)c.bots=40;if(c.api==null)c.api="api";
+    fs.writeFileSync(f,"/* 1024 猫咖 · 部署配置（deploy.sh 写的；不进仓库）。字段见 config.example.js 和 docs/部署.md 的\"配置项一览\"。 */\nwindow.CAT1024_CONFIG = "+JSON.stringify(c,null,2)+";\n");
+    process.stdout.write((c.links.inner||"")+"\t"+c.bots)')" || die "config.js 写不了（先看看它是不是改坏了：node -e \"global.window={};require('./config.js')\"）"
+  ok "写好了 config.js（内源主页：${out%%$'\t'*}，机器人：${out##*$'\t'}）"
+  [ -z "${out%%$'\t'*}" ] && ok "（内源主页还没配：${c_dim}./deploy.sh restart --inner 'https://…'${c_0}）"
+  return 0
 }
 
 # ---------- 跑着没有 ----------
@@ -126,7 +123,8 @@ wait_up(){ for _ in $(seq 1 40); do if health >/dev/null; then return 0; fi; sle
 do_start(){
   check_node
   [ -f "${APP_DIR}/server/server.js" ] && [ -f "${APP_DIR}/index.html" ] || die "这里不是 1024 猫咖的目录（找不到 server/server.js、index.html）"
-  if running; then ok "已经在跑了"; health >/dev/null && ok "接口正常" || warn "进程在，但接口没应答，看看日志：./deploy.sh logs"; show_urls; return; fi
+  # 已经在跑：给了 --inner / --bots 也照样写进 config.js（页面不缓存，大家刷新就生效，不用重启）
+  if running; then [ -n "${INNER}${BOTS}" ] && { find_node; write_config; say "${c_dim}config.js 改了：刷新页面就生效${c_0}"; }; ok "已经在跑了"; health >/dev/null && ok "接口正常" || warn "进程在，但接口没应答，看看日志：./deploy.sh logs"; show_urls; return; fi
   mkdir -p "${DATA_DIR}" "${RUN_DIR}"; chmod 700 "${DATA_DIR}" 2>/dev/null || true
   write_config
   port_free || die "端口 ${PORT} 被占了。换一个：./deploy.sh start --port 8080"
