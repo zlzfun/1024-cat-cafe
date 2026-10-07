@@ -24,25 +24,36 @@ const GUIDE={
   sunA:{n:'橱窗下的月光',room:'gallery',what:'月光从橱窗照进来，躺在里面'},
   giant:{n:'大毛线团',room:'gallery',how:'要三只猫一起',what:'围着一起扒拉才解得开，解开后织成一条横幅',tip:'multi'},
   stage:{n:'1024 舞台',room:'stage',what:'站上舞台，等有猫按快门'},camera:{n:'相机',room:'stage',what:'倒数 3、2、1，拍一张合照，可以保存',tie:'对猫猫咖啡馆的猫说"给我看看"，它会直接截图给你',tip:'rich'},
+  claw:{n:'抓娃娃机',room:'stage',hint:'挪爪子，按下去抓',what:'切到机器跟前：左右挪爪子，按下去抓。十种玩偶：六只店猫、小鱼、毛线球、小老鼠，还有一条难抓的金色小鱼干',tip:'game'},
+  mic:{n:'话筒',room:'stage',what:'对着话筒喵一声，声音放大好几倍，全店都听见；台下的猫回头看',tie:'猫猫咖啡馆里，每只猫有自己的声线',tip:'voice'},
+  spot:{n:'聚光灯',room:'stage',what:'拨一下，一圈灯光跟着你走十五秒'},
   // 一楼 · 吧台
   coffee:{n:'大咖啡机',room:'bar',what:'伸爪按一下，咕嘟咕嘟做出一杯拉花，杯面上是一张猫脸'},cake:{n:'蛋糕柜',room:'bar',what:'隔着玻璃看蛋糕。猫只能看看'},
   stool:{n:'高脚凳',room:'bar',what:'跳上去，坐在吧台前'},
   feed:{n:'自动喂食器',room:'bar',what:'吃饭；碗空了伸爪按一下',tie:'在猫猫咖啡馆，"猫粮"指的是模型额度（猫粮看板正在做）'},fountain:{n:'流水饮水机',room:'bar',what:'趴着喝几口'},
   grass:{n:'猫草',room:'bar',what:'啃两口'},tank:{n:'鱼缸',room:'bar',what:'凑近了看鱼：画面切到鱼缸跟前，伸爪子碰碰玻璃，看能碰到几次'},
+  maneki:{n:'招财猫摆件',room:'bar',what:'拍一下，它的爪子招得飞快；金哥在吧台上的话，也跟着招手。偶尔真能招来一颗毛线球'},
+  grinder:{n:'磨豆机',room:'bar',what:'转一转，咖啡豆的香味一缕缕飘起来，附近的猫凑过来闻'},
   // 一楼 · 咖啡厅
   yarntree:{n:'毛线巨树',room:'cafe',hint:'一路能爬到屋顶',what:'顺着树干爬上去，穿过二楼，一直爬到屋顶的瞭望台'},
   treebench:{n:'树下的环形长凳',room:'cafe',what:'围着树根一圈，能坐六只'},treeplaque:{n:'巨树的铭牌',room:'cafe',what:'全店每挂出一件成品，树上就多挂一件；挂满了，满树金光',tip:'multi'},
-  table:{n:'咖啡桌',room:'cafe',what:'跳上桌，把桌上的东西推下去'},chair:{n:'椅子',room:'cafe',what:'坐在咖啡桌旁，像在等咖啡'},
+  table:{n:'咖啡桌',room:'cafe',what:'跳上桌，把桌上的东西推下去；落地弹一下，正好砸到路过的猫，它会吓一跳'},chair:{n:'椅子',room:'cafe',what:'坐在咖啡桌旁，像在等咖啡'},
+  juke:{n:'点唱机',room:'cafe',what:'换一首（一共三首），或者关掉；开着的时候灯管里的气泡往上冒。开了声音，离它越近听得越清楚'},
   toyback:{n:'掉在地上的东西',room:'cafe',how:'有东西被推下来的时候',what:'叼起来，跳上桌摆回原处。下一只猫还能再推一次'},
   // 一楼 · 楼梯间
   plate:{n:'零食机的爪垫',room:'stairs',how:'要三只猫一起踩',what:'三块爪垫同时有猫踩着，才出零食',tip:'multi'},treat:{n:'零食机',room:'stairs',what:'看看它怎么用'},treatBit:{n:'零食',room:'stairs',what:'吃掉'},
+  ubin:{n:'大伞桶',room:'stairs',what:'钻进去，只露出一个脑袋'},directory:{n:'楼层指示牌',room:'stairs',what:'三层楼各有什么、怎么上去'},
   // 一楼 · 后院、河边
-  pile:{n:'落叶堆',room:'yard',how:'叶子攒够了才能跳',what:'一跃跳进去，叶子炸开一地'},fly:{n:'飞蛾',room:'yard',what:'绕着路灯飞，扑……差一点'},
+  pile:{n:'落叶堆',room:'yard',how:'叶子攒够了才能跳',what:'一跃跳进去，叶子炸开一地；从秋千上飞过来，正好落进去也算'},fly:{n:'飞蛾',room:'yard',what:'绕着路灯飞，扑……差一点'},
+  swing:{n:'秋千',room:'yard',hint:'荡高了松手，落进落叶堆',what:'顺着摆的方向使劲，越荡越高；松手飞出去，正好落进右边的落叶堆，叶子炸开一地。太慢够不着，太快飞过头',tip:'game'},
+  frog:{n:'青蛙',room:'yard',what:'蹲在许愿池边呱呱叫；扑过去，它扑通一声跳进池子，过一会儿又爬上来'},
   bath:{n:'鸟浴盆',room:'yard',how:'有鸟来的时候',what:'悄悄靠近，扑！'},
   pond:{n:'许愿池',room:'yard',what:'投一颗星星，许个愿',tie:'在 GitHub 上给猫猫咖啡馆点一颗 Star，就等于往池子里投了一颗',tip:'open'},
   chess:{n:'石桌象棋',room:'yard',how:'要两只猫坐下',what:'两个石凳都坐了猫，就开一盘',tip:'game'},bench:{n:'长椅',room:'yard',what:'躺着看许愿池'},
-  fish:{n:'钓鱼',room:'river',hint:'浮漂一沉就收竿',what:'甩竿，等浮漂往下一沉再收竿；钓上来看一眼，放回河里',tie:'猫会照顾你：连续忙了 90 分钟，会撒娇提醒你歇一会儿——比如来河边摸会儿鱼',tip:'care'},
-  boat:{n:'小船',room:'river',hint:'坐满两只就开',what:'坐上去，顺着河漂到下游，再划回来'},
+  fish:{n:'钓鱼',room:'river',hint:'浮漂一沉就收竿 · 大鱼要遛',what:'三个钓点的鱼不一样。甩竿，等浮漂往下一沉再收竿；上钩的是大鱼，要等点跑进绿的那段再收线，收三下才拉得上来。钓上来看一眼，放回河里',tie:'猫会照顾你：连续忙了 90 分钟，会撒娇提醒你歇一会儿——比如来河边摸会儿鱼',tip:'care'},
+  boat:{n:'小船',room:'river',hint:'自己划，捞漂着的毛线球',what:'解开缆绳自己划：捞漂下来的毛线球，躲开漂木，偶尔捞到漂流瓶。一趟一分钟，捞上来的毛线球送进门厅的篮子；两只猫一起划，快一半'},
+  bucket:{n:'鱼桶 · 鱼谱',room:'river',what:'鱼谱：九种鱼，每种钓到过几条、最大的一条多长；没钓到过的，写着它爱在哪个钓点咬钩',tip:'care'},
+  ducks:{n:'鸭子一家',room:'river',what:'鸭妈妈带着三只小鸭在河上游；扑过去，嘎嘎叫着游开'},
   signpost:{n:'路标',room:'river',hint:'集章抽奖的入口',what:'三块木牌：官网、GitHub、内源主页',tip:'open'},mailbox:{n:'邮筒',room:'river',what:'给猫咖写封信（反馈、需求、bug）',tip:'feedback'},
   gate:{n:'小门',room:'river',what:'推不开：门外是人类的世界'},
   // 二楼
@@ -51,26 +62,34 @@ const GUIDE={
   paper:{n:'纸团',room:'lab',what:'扑过去，往废纸篓那边踢，进了算进球'},
   rack:{n:'服务器机柜',room:'lab',how:'砚砚不在的时候才能上去',what:'顶上最暖，是砚砚的地盘',tie:'砚砚是缅因猫（Codex），专管 Review 和找 bug',tip:'review'},
   tools:{n:'工具墙',room:'lab',what:'看看猫都有哪些工具',tie:'实际上，它们是猫猫咖啡馆的 MCP 工具和按需加载的 Skills',tip:'skills'},
+  wboard:{n:'白板',room:'lab',what:'跳起来画一笔：一条鱼、一个毛线球、一张猫脸、LGTM、一张流程图……画满了就擦掉重来'},
   merge:{n:'合并门禁',room:'lab',hint:'三盏灯全亮才放行',what:'测试、CI、Review 三盏灯全亮，横杆才抬起来',tie:'猫猫咖啡馆的家规：main 永远是绿的',tip:'sop'},
   branch:{n:'巨树的横枝',room:'well',what:'跳上一根横枝窝着，往下看得见一楼的咖啡厅'},
   treeslide:{n:'抱着树干滑下去',room:'well',hint:'一路滑回一楼',what:'从二楼或者屋顶，顺着树干一路滑回一楼'},
+  rail:{n:'天井栏杆',room:'well',what:'趴在栏杆上往下看：一楼的咖啡厅，巨树底下的猫在干什么'},
   shelf:{n:'书架',room:'library',what:'翻一翻：五架书是决策日志、教训沉淀、证据库、人物关系、事件记忆，翻到的都是这间猫咖自己的记忆',tie:'猫猫咖啡馆的长期记忆就叫"图书馆"',tip:'memory'},
   catalog:{n:'检索柜',room:'library',what:'查一查某件事记在哪一架',tip:'memory'},readtable:{n:'阅读桌',room:'library',what:'跳上桌，趴在摊开的书上'},
   armchair:{n:'扶手椅',room:'library',what:'窝进去'},winseat:{n:'窗边软座',room:'library',what:'趴在窗边看天：夜里等一颗流星许个愿。在这儿睡着的猫会做梦',tip:'dream'},
   lectern:{n:'说明书讲台',room:'library',hint:'猫咖说明书 · 官网入口',what:'翻开猫咖说明书：官网、文档、使用小 Tips',tip:'identity'},
+  ladder:{n:'滚梯',room:'library',what:'站上去蹬一下，嗖地滑过整面书墙'},globe:{n:'地球仪',room:'library',what:'拍一下，转起来；停下来的时候，爪子按着一个地方'},
   kotatsu:{n:'暖桌',room:'lounge',what:'钻进去只露尾巴，最多 6 条'},fire:{n:'壁炉',room:'lounge',what:'趴在前面烤火'},
   sofa:{n:'沙发',room:'lounge',what:'跳上去睡一觉',tie:'最左边的位置是宪宪的：布偶猫（Claude），管架构、写代码',tip:'profile'},
-  tree:{n:'高猫爬架',room:'lounge',what:'一层层跳上去，跳到最顶上'},piano:{n:'地板钢琴',room:'lounge',what:'走上去就响，踩到哪个键亮哪个（右边可以开声音）',tie:'猫猫咖啡馆里，每只猫有自己的声线',tip:'voice'},
-  bubbler:{n:'泡泡机',room:'lounge',what:'冒十秒泡泡'},pop:{n:'泡泡',room:'lounge',what:'扑上去，啵！'},
-  laser:{n:'激光逗猫器',room:'lounge',what:'红点满客厅乱窜'},dot:{n:'激光点',room:'lounge',what:'扑上去……永远差一点'},
+  tree:{n:'高猫爬架',room:'lounge',what:'一层层跳上去，跳到最顶上'},piano:{n:'地板钢琴',room:'lounge',hint:'照着曲谱架弹',what:'跳上钢琴，一个键一个键跳上去，照着曲谱架弹完一首，全屋的猫都跑过来听；走过去踩着也会响',tie:'猫猫咖啡馆里，每只猫有自己的声线',tip:'voice'},
+  sheet:{n:'曲谱架',room:'lounge',hint:'地板钢琴的谱',what:'摆着一首曲子的简谱，翻一页换一首：《小星星》《两只老虎》《欢乐颂》《送别》'},
+  wand:{n:'弹簧逗猫棒',room:'lounge',what:'拍一下，顶上的羽毛来回弹，越拍越起劲'},
+  bubbler:{n:'泡泡机',room:'lounge',what:'冒十秒泡泡'},pop:{n:'泡泡',room:'lounge',what:'扑上去，啵！泡泡机开着的十秒里戳破几个，记最好的一次'},
+  laser:{n:'激光逗猫器',room:'lounge',what:'红点满客厅乱窜'},dot:{n:'激光点',room:'lounge',what:'红点停下来的那一下扑上去，才算按住；激光开着的十五秒里按住几次，记最好的一次'},
   tunnel:{n:'猫隧道',room:'lounge',what:'从任意一头钻进去，另一头钻出来'},catnip:{n:'猫薄荷鱼',room:'lounge',what:'闻一闻，晕乎乎'},
   bed:{n:'猫窝',room:'nap',what:'蜷起来睡一觉'},bigbox:{n:'大纸箱',room:'nap',what:'能挤三只，只露脑袋'},bean:{n:'懒人沙发',room:'nap',what:'陷进去'},
+  moonlamp:{n:'月亮小夜灯',room:'nap',what:'跳起来拍一下，墙上地上转起一屋子星星；附近的猫慢慢睡着'},
   // 屋顶
   ridge:{n:'屋脊',room:'roof',what:'跳上屋脊，和别的猫坐成一排，背后是星空'},
   stargaze:{n:'观星毯',room:'roof',what:'躺下看满天星：多看一会儿，星星会连成星座；看到流星可以许个愿',tip:'dream'},
   scope:{n:'望远镜',room:'roof',what:'凑过去看月亮'},firefly:{n:'萤火虫',room:'roof',what:'扑……差一点'},
-  hammock:{n:'吊床',room:'roof',what:'躺进去，在星星底下晃呀晃',tip:'dream'},wheel:{n:'猫跑轮',room:'roof',what:'跑起来发电，屋顶那一串大灯泡一颗颗亮起来'},
-  treetop:{n:'树顶瞭望台',room:'roof',what:'爬到树顶，看夜里的整条街，还能放烟花'}};
+  hammock:{n:'吊床',room:'roof',what:'躺进去，在星星底下晃呀晃',tip:'dream'},wheel:{n:'猫跑轮',room:'roof',hint:'跑得越快，灯亮得越快',what:'跑起来发电，那一串大灯泡一颗颗亮；跑得越快亮得越快，十六颗全亮，屋顶放一场烟花',tip:'game'},
+  treetop:{n:'树顶瞭望台',room:'roof',what:'爬到树顶，看夜里的整条街，还能放烟花'},
+  lantern:{n:'孔明灯',room:'roof',what:'放一盏，它慢慢飘进夜空，越飘越小',tip:'dream'},owl:{n:'猫头鹰',room:'roof',what:'停在楼梯小屋的天线上。盯着它看，它把头转半圈；扑过去，它飞到水塔或者烟囱上'},
+  wtank:{n:'水塔',room:'roof',what:'顺着支架爬到顶上：屋顶上除了巨树最高的地方'},chimney:{n:'烟囱',room:'roof',what:'爬上斜屋顶，挨着烟囱趴着，暖和；烟囱时不时冒一个烟圈'}};
 const GID=id=>id.startsWith('q_')||id.startsWith('st:')?null:id==='treeslide2'?'treeslide':id.replace(/^(basket|win|feed|plate|shelf|toyback|table|chair|stool|fish|bed|bean)\d$/,'$1');
 
 WORLD_MODS.push(A=>{
@@ -85,7 +104,9 @@ const G=A.guide={GUIDE,disc:store.disc,total:Object.keys(GUIDE).length,count:()=
   reset:()=>{store={disc:{},rooms:{}};G.disc=store.disc;save()},
   // 成品：认出是哪只猫以后，换成它自己的记录（旧存档里的 camp 是原来训练营的进度，丢掉）
   load:s=>{store=Object.assign({disc:{},rooms:{}},s||{});delete store.camp;G.disc=store.disc},
-  fishLog:()=>store.fish=store.fish||{},qseen:()=>store.qseen=store.qseen||{},save:()=>save()};
+  fishLog:()=>store.fish=store.fish||{},qseen:()=>store.qseen=store.qseen||{},save:()=>save(),
+  // 小游戏的成绩（world-games.js、world-river.js）、店猫和你熟不熟（world-social.js）
+  games:()=>store.games=store.games||{},friends:()=>store.friends=store.friends||{}};
 A.on('solve',()=>{store.balls=(store.balls||0)+1;save()});A.on('hang',()=>{store.hung=(store.hung||0)+1;save()});
 
 /* ---------- 第一次玩到某样东西：新发现 ---------- */

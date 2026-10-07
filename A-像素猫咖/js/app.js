@@ -103,6 +103,10 @@ const ROOM_ORDER=['hall','gallery','stage','bar','cafe','stairs','yard','river',
 function openGuide(){const G=game.A.guide,all=Object.entries(GUIDE),rn=id=>WORLD.rooms.find(x=>x.id===id).n,got=all.filter(([k])=>G.disc[k]).sort((a,b)=>G.disc[b[0]]-G.disc[a[0]]),lock=all.filter(([k])=>!G.disc[k]);
   const when=ts=>ts>1?' · '+new Date(ts).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
   let html=`<div class="top"><b>图鉴</b><span class="prog"><i style="width:${Math.round(got.length/all.length*100)}%"></i></span><span class="num">${got.length} / ${all.length}</span><button id="bookx">关掉（B）</button></div>`;
+  // 两行：六个小游戏的成绩（点一下猫走过去）、六只店猫和你熟不熟
+  const A2=game.A,games=A2.games?A2.games.summary():[],fr=[1,2,3,4,5,6].map(p=>({n:(CAT_CARDS[p]||{}).name||'',h:A2.friendHearts?A2.friendHearts(p):0}));
+  html+=`<div class="rows"><div class="lk"><span class="rn">小游戏</span>${games.map(g=>`<span class="chip${g.rec?'':' off'}" data-go="${g.th}">${esc(g.n)}<small>${esc(g.rec||'还没玩过')}</small></span>`).join('')}</div>`+
+    `<div class="lk"><span class="rn">店猫和你</span>${fr.map(f=>`<span class="chip${f.h?'':' off'}">${esc(f.n)}<span class="h">${'♥'.repeat(f.h)}${'♡'.repeat(3-f.h)}</span></span>`).join('')}</div></div>`;
   html+=`<div class="sec">已解锁<i>${got.length}</i></div>`+(got.length?'<div class="g">'+got.map(([k,g])=>`<div class="e on" data-go="${k}"><span class="ic">✓</span><div><b>${esc(g.n)}</b><small>${esc(rn(g.room))}${when(G.disc[k])}</small><p>${esc(g.what)}</p>${g.tie?`<p class="tie">${esc(g.tie)}</p>`:''}</div></div>`).join('')+'</div>':'<p class="none">还没有。四处逛逛，碰一碰店里的东西。</p>');
   if(lock.length){html+=`<div class="sec">未解锁<i>${lock.length}</i><em>点一下，猫会走过去</em></div>`;
     ROOM_ORDER.forEach(r=>{const L=lock.filter(([,g])=>g.room===r);if(L.length)html+=`<div class="lk"><span class="rn">${esc(rn(r))}</span>`+L.map(([k,g])=>`<span class="e off" data-go="${k}"><span class="ic">✗</span>${esc(g.n)}${g.how?`<small>${esc(g.how)}</small>`:''}</span>`).join('')+'</div>'})}
@@ -141,7 +145,7 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
     if((k==='h'||e.key==='?')&&!e.repeat){openKeys();e.preventDefault();return}
     if(e.key==='Escape')closeMenu();
     if(game.key(e,true))e.preventDefault()});
-  gameEl.addEventListener('keyup',e=>{if(game.key(e,false))e.preventDefault()});
+  gameEl.addEventListener('keyup',e=>{if(game.A.vista.on&&game.A.vista.keyup)game.A.vista.keyup(e);if(game.key(e,false))e.preventDefault()});
   gameEl.addEventListener('blur',()=>game.blurKeys());
   pc.addEventListener('pointerdown',e=>{if(e.button!==0)return;gameEl.focus();closeMenu();if(!live())return;if(game.A.vista.on){const p=toC(e);game.A.vista.click(p.x,p.y);return}if(dlg.open){const s=dlg.spec;game.A.dlg.act((s.acts||[]).some(a=>a.id==='later')?'later':'close');return}const w=toW(e);game.tap(w.x,w.y)});
   pc.addEventListener('pointermove',e=>{if(!live()){tip.style.display='none';return}if(game.A.vista.on){const p=toC(e);game.A.vista.pointer(p.x,p.y);pc.style.cursor='default';tip.style.display='none';return}const w=toW(e),h=game.hover(w.x,w.y),gr=gameEl.getBoundingClientRect();pc.style.cursor=h?PAW:'default';
@@ -155,7 +159,7 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
   pc.addEventListener('contextmenu',e=>{e.preventDefault();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const w=toW(e),c=game.catAt(w.x,w.y);if(!c){closeMenu();return}menuMode='cat';menuCat=c;const me=game.me,ball=me.hold&&!me.hold.knit,k=c.kind==='npc'?CAT_CARDS[c.pal]:null;
     const head=k?`<b>${esc(k.name)}</b> · 店猫 · ${esc(k.breed)}<br>${esc(k.cli)} · ${esc(k.at)}<br>擅长：${esc(k.good)}<br>${esc(k.say)}`:`<b>${esc(c.name)}</b>${c.doing?' · '+esc(c.doing):''}`;
     if(c.desk){openMenu(e.clientX,e.clientY,`<div class="t"><b>前台猫</b> · 有事问它<br>这附近有什么好玩的、我是哪只猫、毛线球怎么解……</div><button data-a="rub">问问它</button><button data-a="follow">跟着它走</button>`);return}
-    openMenu(e.clientX,e.clientY,`<div class="t">${head}</div><button data-a="rub">蹭蹭它</button><button data-a="follow">跟着它走</button><button data-a="pass" ${ball?'':'disabled'}>把毛线球传给它${ball?'':'（嘴里没有）'}</button>`)});
+    openMenu(e.clientX,e.clientY,`<div class="t">${head}</div><button data-a="rub">蹭蹭它</button><button data-a="groom">舔舔毛</button><button data-a="boop">碰碰鼻子</button><button data-a="play">一起玩</button><button data-a="nap">挨着它睡</button><button data-a="follow">跟着它走</button><button data-a="pass" ${ball?'':'disabled'}>把毛线球传给它${ball?'':'（嘴里没有）'}</button>`)});
   menu.addEventListener('pointerdown',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b||b.disabled)return;
     if(b.dataset.ph!=null)game.cmd.say(phrasesList[+b.dataset.ph]);else if(menuCat){const a=b.dataset.a;if(a==='follow')game.cmd.follow(menuCat);game.cmd.social(menuCat,a==='follow'?'follow':a)}closeMenu();gameEl.focus()});
   $('mm').addEventListener('pointerdown',e=>{e.stopPropagation();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const m=$('mm'),r=m.getBoundingClientRect(),w=game.miniTo((e.clientX-r.left)/r.width*m.width,(e.clientY-r.top)/r.height*m.height);if(w)game.tap(w.x,w.y)});
@@ -218,7 +222,7 @@ function sleep(on){asleep=on;$('elsewhere').style.display=on?'flex':'none';if(on
 /* ---------- 开发用 ---------- */
 function devBar(){const b=$('devbar');b.style.display='flex';const n=CFG.bots??40;
   b.innerHTML=`<span>机器人</span><input type="range" min="0" max="150" value="${n}" id="dvB"><b id="dvBv">${n}</b><span>时段</span>${['day','dusk','night'].map(t=>`<button data-tod="${t}">${{day:'白天',dusk:'黄昏',night:'夜晚'}[t]}</button>`).join('')}<span>天气</span>${['sun','rain','snow'].map(w=>`<button data-wx="${w}">${{sun:'晴',rain:'雨',snow:'雪'}[w]}</button>`).join('')}
-    <span>事件</span>${[['arrive','塞几颗球'],['giant','大毛线团'],['ci','CI 红了'],['laser','激光点'],['bubbles','泡泡'],['bird','小鸟']].map(([k,n])=>`<button data-ev="${k}">${n}</button>`).join('')}<span id="dvP"></span>`;
+    <span>事件</span>${[['arrive','塞几颗球'],['giant','大毛线团'],['ci','CI 红了'],['laser','激光点'],['bubbles','泡泡'],['bird','小鸟'],['fireworks','烟花'],['lantern','孔明灯'],['owl','猫头鹰飞'],['stars','满屋星星']].map(([k,n])=>`<button data-ev="${k}">${n}</button>`).join('')}<span id="dvP"></span>`;
   $('dvB').oninput=e=>{$('dvBv').textContent=e.target.value;game.bots(+e.target.value)};
   b.onclick=e=>{const t=e.target;if(t.dataset.tod)game.S.tod=t.dataset.tod;if(t.dataset.wx)game.S.weather=t.dataset.wx;if(t.dataset.ev){const r=game.cmd.event(t.dataset.ev);if(r)ui.toast(r)}$('game').focus()}}
 

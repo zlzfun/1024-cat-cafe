@@ -38,11 +38,17 @@ P.tables.forEach((tb,t)=>{
     go(c){const o=rnd(S.ctoys.filter(o=>o.t===t&&o.on));if(!o)return;
       run(c,[{go:FLOOR(t)},{fn:c=>{c.onTable=t;c.onLeave=c=>{c.onTable=null}}},{jump:{x:o.tx-6,y:TOPY(t),z:TOPZ(t)}},{fn:c=>{c.face='R'}},{k:'sit',dur:.8,ex:'smug'},{k:'maneki',dur:.7},
         {fn:c=>{if(!o.on)return;o.on=false;const x1=o.tx+rr(10,20),y1=tb.y+28+rr(0,8);S.flying.push({x0:o.tx,y0:TOPY(t),x1,y1,t0:now(),dur:.45,arc:8,draw:f=>ctoy(o.kind,Math.round(f.x),Math.round(f.y),1),
-          done:()=>{S.floorToys.push({o,x:x1,y:y1,t0:now()});if(atMe(o))sfx('clack')}});if(c.me)say(`啪嗒。${CTOY_NAMES[o.kind]}掉下去了`)}},{k:'sit',dur:1,ex:'smug',soft:1},{jump:{...FLOOR(t)}},{fn:unclaim}])}});
+          done:()=>{if(atMe(o))sfx('clack');bonk(c,o,x1,y1);   // 落地弹一下；正好砸到路过的猫，那只猫吓一跳
+            // 弹一下：落地的回调里不能直接往 S.flying 里加（引擎这一帧正在重建它），下一帧再加
+            const x2=x1+rr(3,7),y2=y1+rr(-1,2);after(0,()=>S.flying.push({x0:x1,y0:y1,x1:x2,y1:y2,t0:now(),dur:.25,arc:4,draw:f=>ctoy(o.kind,Math.round(f.x),Math.round(f.y),1),done:()=>S.floorToys.push({o,x:x2,y:y2,t0:now()})}))}});
+          if(c.me)say(`啪嗒。${CTOY_NAMES[o.kind]}掉下去了`)}},{k:'sit',dur:1,ex:'smug',soft:1},{jump:{...FLOOR(t)}},{fn:unclaim}])}});
   // 两把椅子：左边那把椅背在左（猫面朝右坐），右边那把反过来
   const seat=j=>({x:tb.x+(j?38:-10),y:tb.y+11,z:tb.y+20.6,face:j?'L':'R'}),foot=j=>({x:tb.x+(j?40:-12),y:tb.y+26});
   A.seatThing({id:'chair'+t,n:'椅子',hit:[tb.x-16,tb.y+2,60,18],at:foot(0),near:[tb.x-22,tb.y+18,72,18],label:'坐到椅子上',spots:[seat(0),seat(1)],up:j=>[seat(j)],down:j=>[foot(j)],floor:j=>foot(j),
     k:()=>rnd(['sit','sit','lie']),ex:'content',doing:'坐在咖啡桌旁',ai:{mood:'rest',w:1}})});
+function bonk(by,o,x,y){const v=S.cats.find(q=>q!==by&&!q.hidden&&q.z==null&&!q.riding&&Math.hypot(q.x-x,q.y-y)<10);if(!v)return;emote(v,'bang',1.3);S.puffs.push({x:Math.round(x),y:Math.round(y-6),t0:now()});
+  if(!v.me&&!v.puppet&&!v.place&&!v.working&&idle(v))run(v,[{k:'alert',dur:.7},{k:'sit',dur:.6,ex:'angry',soft:1}]);if(atMe(v))sfx('bonk');
+  if(by.me)say(`${CTOY_NAMES[o.kind]}砸到了路过的${v.name}！它吓了一跳`);else if(v.me)say(`${by.name}推下来的${CTOY_NAMES[o.kind]}砸到了你`)}
 // 放着不管 40 秒：附近闲着的猫过来收拾；90 秒还没有猫，就有谁悄悄摆回去了
 tick(()=>{for(const f of S.floorToys){if(f.by||!f.o)continue;const age=now()-f.t0;
   if(age>40&&!f.asked){f.asked=1;const c=S.cats.filter(c=>!c.me&&!c.desk&&idle(c)&&!c.place&&!c.hidden&&!c.working&&!c.hold&&!c.ctoy&&c.z==null&&near(c,f,420)).sort((a,b)=>dist(a,f)-dist(b,f))[0];if(c){tidy(c,f);if(atMe(f))speak(c,'我来收拾',2)}}

@@ -29,7 +29,7 @@ A.visit=k=>{if(k==='inner')S.stamps.inner=1;else S.stamps.site=1;A.emit('visit',
 /* ================= 图书馆 ================= */
 S.ladder={x:P.ladder.x0,tx:P.ladder.x0,by:null};const LY=P.shelves[0].y-6;   // 图书馆那一排书架的顶（二楼的北墙）
 S.gaps=[];S.catOpen=0;S.freeze=0;S.mailFlag=0;S.ripples=[];S.signHl=-1;
-tick(dt=>{const L=S.ladder,d=L.tx-L.x;L.x+=Math.sign(d)*Math.min(Math.abs(d),70*dt);if(L.by&&L.by.gone)L.by=null;
+tick(dt=>{const L=S.ladder,d=L.tx-L.x;L.x+=Math.sign(d)*Math.min(Math.abs(d),(L.fast?150:70)*dt);if(L.by&&L.by.gone)L.by=null;   // fast：有猫站在上面滑（world-more.js）
   S.gaps=S.gaps.filter(g=>now()<g.until);['catOpen','freeze','mailFlag'].forEach(k=>S[k]=Math.max(0,S[k]-dt));
   S.ripples=S.ripples.filter(r=>(r.k=(now()-r.t0)/1.2)<1);S.signHl=S.signT>now()?Math.floor(now()*1.2)%3:-1});
 function pullBook(c,i,low){const s=P.shelves[i],gx=Math.round(s.x+6+rr(0,32)),tier=low?3:Math.floor(rr(0,3)),gy=s.y+10+tier*13+3;
@@ -111,8 +111,8 @@ T({id:'gate',n:'小门',hit:[P.gate.x-3,P.gate.y-4,P.gate.w+6,22],at:GT,near:[P.
 // 跑轮在转（S.wheelA 在变）：发电机的闪电亮、电流沿着电线往灯上跑；灯泡一颗颗亮，照亮平台
 S.wheelOn=0;let wheelA0=0,fullSaid=false;
 const festPts=()=>{const n=P.festN;return Array.from({length:n},(_,i)=>festoonAt(P.festA,P.festB,P.festSag,(i+.6)/(n+.2)))};
+// 加多少电在 world-acts.js 的跑轮里算（你连按越快越多，见 world-games.js）；这里只管灯和电流
 tick(dt=>{const on=S.wheelA!==wheelA0;wheelA0=S.wheelA;S.wheelOn=on?1:Math.max(0,S.wheelOn-dt*2);
-  if(on)S.power=Math.min(1,S.power+.07*dt);
   const lit=Math.ceil(S.power*P.festN-.001);if(lit>=P.festN&&!fullSaid&&near(me,P.wheel,200)){fullSaid=true;say('串灯全亮了！')}if(lit<P.festN)fullSaid=false;
   festPts().forEach((q,i)=>{if(i<lit)A.lights.push({x:q.x,y:q.y+12,r:20,col:FEST_COL[i%FEST_COL.length],a:.9},{x:q.x,y:q.y+4,r:6,col:'#fff8d0',a:1})})});
 const WIRE=[{x:P.dyn.x+10,y:P.dyn.y+10},{x:P.pole.x+1,y:P.pole.y+P.pole.h-2},{x:P.festA.x,y:P.festA.y}],FBOX=[P.festB.x-12,P.festB.y-12,P.festA.x-P.festB.x+40,P.dyn.y+24-P.festB.y];

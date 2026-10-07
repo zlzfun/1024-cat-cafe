@@ -163,9 +163,9 @@ function borrow(c,k,dur,ex){if(!idle(c)||c.riding||c.hidden||c.place)return fals
 function emote(c,kind,sec=1.6){c.emote=kind;c.emoteUntil=now+sec}
 function speak(c,text,sec=3){c.say=text;c.sayUntil=now+sec}
 // 待在某个地方：玩家待到按方向键；别的猫待 dur 秒再走
-function settle(c,{k='sit',ex,leave,face,act,prompt}={}){c.place={leave,act,prompt};if(face)c.face=face;setK(c,k,ex)}
+function settle(c,{k='sit',ex,leave,face,act,prompt,steer,tap}={}){c.place={leave,act,prompt,steer,tap};if(face)c.face=face;setK(c,k,ex)}
 function leavePlace(c){const p=c.place;if(p&&p.stay&&p.stay(c))return;c.place=null;run(c,p&&p.leave?p.leave(c):[])}
-function stay(c,{k='sit',ex,face,dur=rr(6,12),leave,act,prompt}){if(c.me){settle(c,{k,ex,leave,face,act,prompt});return}run(c,[{k,dur,ex,face},...(leave?leave(c):[]),{fn:unclaim}],true)}
+function stay(c,{k='sit',ex,face,dur=rr(6,12),leave,act,prompt,steer,tap}){if(c.me){settle(c,{k,ex,leave,face,act,prompt,steer,tap});return}run(c,[{k,dur,ex,face},...(leave?leave(c):[]),{fn:unclaim}],true)}
 
 /* ---------- 东西：每个可交互的东西在 world-acts.js 里用 T({...}) 注册 ---------- */
 const TH=[];
@@ -254,15 +254,15 @@ function pressE(){if(!play||busy())return;if(me.place){if(me.place.act&&me.place
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me));if(ok)return act(me,th);
   if(me.hold&&!me.hold.knit)return A.solveHere(me);
   if(th)return act(me,th);
-  const c=nearCatOf(me,24);if(c)return A.social(me,c,'rub');
+  const c=nearCatOf(me,24);if(c)return A.social(me,c,'auto');   // 按它在干什么：蹭蹭 / 一起玩 / 挨着睡（world-social.js）
   if(me.hold)say('叼着织好的东西，去橱窗挂上吧')}
 function promptText(){if(me.place)return me.place.prompt?me.place.prompt(me):'WASD / 方向键 · 离开';if(busy()||me.hidden)return '';if(me.follow)return '跟着'+me.follow.name+' · Esc 不跟了';
   const th=thingNear(me),ok=th&&(!th.ok||th.ok(me)),ball=me.hold&&!me.hold.knit;if(ok)return 'E · '+lab(th,me);
   if(ball){const o=nearCatOf(me,120);return 'E · '+(A.ballPrompt?A.ballPrompt(me):'就地解开')+(o?' · Q 传给'+o.name:'')}
   if(th)return 'E · '+lab(th,me)+'（'+(th.no?th.no(me):'现在不行')+'）';
   if(me.hold)return '叼着'+KNIT_NAMES[me.hold.kind][0]+' · 挂进一楼的橱窗才算交付';
-  const c=nearCatOf(me,24);if(c)return 'E · 蹭蹭'+c.name;return ''}
-function tap(mx,my){if(!play)return;poke();if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving){leavePlace(me);if(me.place)return}if(me.hidden&&!leaving)return;
+  const c=nearCatOf(me,24);if(c)return 'E · '+(A.socialLabel?A.socialLabel(me,c):'蹭蹭'+c.name);return ''}
+function tap(mx,my){if(!play)return;poke();if(me.place&&me.place.tap&&me.place.tap(mx,my))return;if(busy()&&!me.place){pendingTap=[mx,my];return}pendingTap=null;const leaving=!!me.place;if(leaving){leavePlace(me);if(me.place)return}if(me.hidden&&!leaving)return;
   const go=steps=>run(me,steps,leaving);me.follow=null;
   const o=catAt(mx,my);if(o){go([{chase:()=>({x:o.x+(me.x<o.x?-16:16),y:o.z!=null?o.z+6:o.y+2}),near:22},{fn:()=>A.social(me,o,'auto')}]);return}
   if(!leaving&&A.vacAt){const v=A.vacAt(mx,my);if(v&&!me.hold){A.ride(me,v);return}}
@@ -275,8 +275,9 @@ let afkT=0,afkDid=false;const poke=()=>{afkT=0;afkDid=false};
 function afk(dt,moving){if(moving){poke();return}if(me.place||me.hidden||!idle(me)||me.follow)return;afkT+=dt;
   if(afkT>12&&!afkDid&&!me.hold){afkDid=true;const k=rnd(['lick','meow']);run(me,[{k,dur:k==='lick'?DUR.lick:1.6,soft:1}])}
   if(afkT>35&&!me.hold){settle(me,{k:'sleep'});poke()}}
-function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(!dx&&!dy){keyMove.held=0;me.portalLock=0;return false}
-  if(busy())return true;if(me.place){if(!keyMove.held)leavePlace(me);keyMove.held=1;return true}keyMove.held=0;if(me.hidden)return true;me.follow=null;if(me.q.length||me.cur)run(me,[]);
+// 待在某个地方时，place.steer(dx,dy,dt) 可以接管方向键（划船、弹琴挪爪子、跑轮、荡秋千、开扫地机器人）：返回 true 就不离开；松开时也调一次（0,0）
+function keyMove(dt){const dx=(keys.r?1:0)-(keys.l?1:0),dy=(keys.d?1:0)-(keys.u?1:0);if(!dx&&!dy){keyMove.held=0;me.portalLock=0;if(me.place&&me.place.steer)me.place.steer(0,0,dt);return false}
+  if(busy())return true;if(me.place){if(me.place.steer&&me.place.steer(dx,dy,dt)){keyMove.held=1;return true}if(!keyMove.held)leavePlace(me);keyMove.held=1;return true}keyMove.held=0;if(me.hidden)return true;me.follow=null;if(me.q.length||me.cur)run(me,[]);
   const l=Math.hypot(dx,dy),sp=me.sp*(keys.shift?1.6:1),nx=me.x+dx/l*sp*dt,ny=me.y+dy/l*sp*dt;if(free(nx,me.y))me.x=nx;if(free(me.x,ny))me.y=ny;if(dx)me.face=dx>0?'R':'L';
   const wk=me.face==='L'?'walkL':'walkR';if(me.k!==wk)setK(me,wk);
   // 换层以后要先松开方向键：一直按着走，不会刚上来又走回楼梯口

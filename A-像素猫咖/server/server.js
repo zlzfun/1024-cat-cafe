@@ -6,7 +6,8 @@
    - 账号接口（docs/登录与进店.md）：名字从池子里发、全店唯一；不设密码，这个浏览器记着的令牌就是身份（库里只存散列）；集齐三个章的猫可以登记抽奖。
    - 联机（docs/联机.md）：/ws 上的 WebSocket，见 live.js。
    - 组织者后台（docs/组织者后台.md）：/admin.html 页面 + /api/admin/* 接口，见 admin.js。口令在 server/data/admin.key，启动时打印出来。
-   - 页面要的 config.js：目录里有就发那份；没有就现给一份 {api:'/api'}。 */
+   - 页面要的 config.js：目录里有就发那份；没有就现给一份 {api:'api'}。
+   - 部署：deploy.sh 一键启动、装成服务、备份、打离线包，见 docs/部署.md；GET /api/health 给它看活着没有。 */
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
 const S=require('./store'),live=require('./live'),admin=require('./admin')(S,live);
 const PORT=+process.env.PORT||1024,HOST=process.env.HOST||'127.0.0.1',BODY_MAX=64*1024,STATE_MAX=48*1024;
@@ -33,13 +34,16 @@ const API={
     me.c.entry={real:e.real,emp:e.emp,contact:e.contact,t:(me.c.entry&&me.c.entry.t)||now,u:now};S.save();return[200,{entry:S.pubEntry(me.c)}]},
   // 看过"你被抽中了"，下次不再弹
   'POST /me/prize-seen':({me,body})=>{if(!me)return[401,{err:'auth'}];for(const p of me.c.prizes||[])if(p.no===body.no)p.seen=true;S.save();return[200,{ok:true}]},
-  'POST /logout':({me})=>{if(me){delete db.tokens[me.h];live.dropToken(me.h);S.save()}return[200,{ok:true}]}};
+  'POST /logout':({me})=>{if(me){delete db.tokens[me.h];live.dropToken(me.h);S.save()}return[200,{ok:true}]},
+  // 健康检查（deploy.sh、监控用）：只给数，不给名字
+  'GET /health':()=>[200,{ok:true,cats:Object.keys(db.cats).length,online:live.stats().online,up:Math.round(process.uptime())}]};
 
 /* ---------- 静态文件 ---------- */
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown; charset=utf-8','.ico':'image/x-icon'};
 function serveFile(req,res,p){if(p==='/')p='/index.html';let f;try{f=path.join(S.ROOT,decodeURIComponent(p))}catch(e){res.writeHead(400);return res.end()}
   if(!f.startsWith(S.ROOT+path.sep)||f.startsWith(__dirname)||f===S.DATA||f.startsWith(S.DATA+path.sep)){res.writeHead(404);return res.end()}
-  if(p==='/config.js'&&!fs.existsSync(f)){res.writeHead(200,{'Content-Type':MIME['.js'],'Cache-Control':'no-cache'});return res.end("window.CAT1024_CONFIG={api:'/api'};")}
+  // 没有 config.js 就现给一份；接口地址写相对的 api，放在反向代理的子路径下（/cat/）也能用
+  if(p==='/config.js'&&!fs.existsSync(f)){res.writeHead(200,{'Content-Type':MIME['.js'],'Cache-Control':'no-cache'});return res.end("window.CAT1024_CONFIG={api:'api'};")}
   fs.stat(f,(e,st)=>{if(e||!st.isFile()){res.writeHead(404);return res.end('not found')}res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'});fs.createReadStream(f).pipe(res)})}
 
 function reply(res,out){if(out&&out.csv!=null){res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(out.name),'Cache-Control':'no-store'});return res.end(out.csv)}

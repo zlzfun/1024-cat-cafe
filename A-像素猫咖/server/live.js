@@ -75,7 +75,8 @@ const ON={
   v(c,m){const v=m.v;if(!Array.isArray(v)||!num(v[0],100,WW)||!num(v[1],80,WH))return;c.vw=v[0];c.vh=v[1]},
   emo(c,m){if(!c.s||!idx(m.i,8))return;for(const o of nearOf(c))send(o,{t:'emo',id:c.cat.id,i:m.i})},
   ph(c,m){if(!c.s||!idx(m.i,8))return;for(const o of nearOf(c))send(o,{t:'ph',id:c.cat.id,i:m.i})},
-  rub(c,m){const o=typeof m.to==='string'&&byCat.get(m.to);if(!c.s||!o||!o.s||dist(c,o)>60)return;for(const r of nearOf(c))send(r,{t:'rub',id:c.cat.id,to:o.cat.id})},
+  // 蹭蹭；k 是别的几种猫和猫的互动（舔舔毛、碰碰鼻子、一起玩、挨着睡），只认这几个词
+  rub(c,m){const o=typeof m.to==='string'&&byCat.get(m.to);if(!c.s||!o||!o.s||dist(c,o)>60)return;const k=['groom','boop','play','nap'].includes(m.k)?m.k:null;for(const r of nearOf(c))send(r,{t:'rub',id:c.cat.id,to:o.cat.id,...(k?{k}:{})})},
   // 传球：对方不在，球马上滚回来；附近看热闹的只收到一道弧线
   pass(c,m){if(!c.s||!okBall(m.ball)||!okP(m.p))return;const ball=cleanBall(m.ball),o=typeof m.to==='string'&&byCat.get(m.to),k=txKey(c.cat.id,m.p);
     if(passes.has(k))return;

@@ -94,6 +94,7 @@ function drawIcon(cv,kind,ci=0,t=0){const c=cv.getContext('2d');cv.width=16;cv.h
   else if(kind==='tool'){grid(4,3,TOOLS_PX.wrench,{o:OL,'.':'#b4bcc8'})}
   else if(kind==='bell'){grid(2,3,[".....o.....","....ooo....","...owwwo...","..owwwwso..",".owwwwwwso.",".owwwwwwso.","ooooooooooo"],{o:OL,w:'#f4f8fc',s:'#b8c4d0','.':null});R(1,10,13,2,'#c98a5a');R(1,11,13,1,'#8a5a3a')}
   else if(kind==='gate'){R(2,3,3,11,OL);R(11,6,3,8,OL);R(4,8,8,2,'#e0533d');R(3,4,1,2,'#7ee08a')}
+  else if(kind==='fish'){grid(1,4,["....ooooo..oo","..oobbbbbo.obo",".obbeobbbbobbo","obbbbbbbbbbbo.",".obbbbbbbbobbo","..ooooooooo.oo"],{o:OL,b:'#5B9BD5',e:'#241a2e','.':null})}
   else if(kind==='tree'){disc(8,6,7,5,OL);disc(8,6,6,4,'#e3a92c');disc(6,5,3,2,'#f7c940');R(6,10,4,5,OL);R(7,10,2,5,'#8a5a3a');R(7,11,2,1,'#e0533d');R(7,13,2,1,'#5B9BD5');R(3,15,10,1,OL)}
   else{const P=POSE.sit(t,0,0,'content');C.save();C.scale(.8,.8);drawF(C,P.G,PAL[0],10,20,{cx:P.cx});C.restore()}use(o)}
 

@@ -59,8 +59,10 @@ function batch(m){let n=0;(m.l||[]).forEach(k=>{const c=L.byN.get(k);if(c){dropC
   (m.u||[]).forEach(u=>{const c=Array.isArray(u)&&L.byN.get(u[0]);if(c&&Array.isArray(u[1])&&u[1].length===9)push(c,u[1])});
   // 画面外的猫只有位置：别的照旧
   (m.p||[]).forEach(u=>{const c=Array.isArray(u)&&L.byN.get(u[0]),b=c&&c.buf[c.buf.length-1];if(b&&typeof u[1]==='number'&&typeof u[2]==='number')push(c,[u[1],u[2],...b.s.slice(2)])});if(n)rebot()}
+// 蹭蹭和别的几种（舔舔毛、碰碰鼻子、一起玩、挨着睡）走同一种消息，k 说是哪一种
+const KIND={groom:['groom','给你舔了舔毛'],boop:['boop','碰了碰你的鼻子'],play:['scuffle','扑过来找你玩'],nap:['purr','挨着你睡下了']};
 function rubbed(m){const a=L.cats.get(m.id),b=m.to===L.myId?me:L.cats.get(m.to);if(!a||!b)return;S.hearts.push({x:Math.round((a.x+b.x)/2),y:Math.round(Math.min(a.y,b.y)-14),t0:now()});
-  if(b===me){emote(me,'heart',1.4);sfx('purr');say(`${a.name}蹭了蹭你`)}}
+  const k=has(KIND,m.k)?KIND[m.k]:null;if(b===me){emote(me,'heart',1.4);sfx(k?k[0]:'purr');say(`${a.name}${k?k[1]:'蹭了蹭你'}`)}}
 function hung(m){if(!has(KNIT_NAMES,m.kind)||!Number.isInteger(m.ci))return;const it={kind:m.kind,ci:m.ci%5},c=m.id===L.myId?me:L.cats.get(m.id);
   if(c&&!c.me&&roomAt(c.x,c.y).id==='gallery')A.hangShow(c,it);A.tree.add(it);if(m.gold)A.tree.bloom();
   // 小黑板：同一天里只往上涨，涨了才庆祝；换了一天（过了午夜）直接换成新的数
@@ -115,5 +117,6 @@ tick(()=>{for(const [p,e] of pend)if(now()-e.t>PASS_WAIT){pend.delete(p);if(e.rv
 const emo0=A.onEmote;A.onEmote=(c,i)=>{emo0(c,i);if(c.me&&L.on)L.send({t:'emo',i})};
 const say0=A.onSay;A.onSay=(c,s)=>{if(say0)say0(c,s);if(c.me&&L.on){const i=PHRASES.indexOf(s);if(i>=0)L.send({t:'ph',i})}};
 A.onRub=(c,o)=>{if(c.me&&o.puppet&&L.on)L.send({t:'rub',to:o.rid})};
+const soc0=A.onSocial;A.onSocial=(c,o,k)=>{if(soc0)soc0(c,o,k);if(c.me&&o.puppet&&L.on&&has(KIND,k))L.send({t:'rub',to:o.rid,k})};
 const hang0=A.onHang;A.onHang=(c,item)=>{if(hang0)hang0(c,item);if(c.me&&L.on){const y=item.y;L.send({t:'hang',kind:item.kind,ci:item.ci,...(y&&y.from?{from:y.from.rid}:{})})}};
 });

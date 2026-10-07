@@ -3,14 +3,17 @@
    左边一片斜屋顶，屋脊上能坐一排猫，一根烟囱；右边是木头平台：观星毯、望远镜、吊床、猫跑轮和一串大灯泡；最右边是楼梯小屋。
    为什么永远是夜里：星空是屋顶的主角，来店里的人大多是白天来的。全店都是晴天的夜里（2026-10-07 起），一楼、二楼的窗外和屋顶是同一片天。 */
 (()=>{const M=WORLD,P=WP,Y=Y3;
-M.rooms.push({id:'roof',f:'roof',n:'星空露台',x:0,y:Y,w:960,h:540,in:[250,Y+344,500,170],d:'永远是晴天的夜里：屋脊上坐一排猫，观星毯上躺着看满天星，巨树的树冠在头顶；跑起跑轮，串灯一颗颗亮'});
+M.rooms.push({id:'roof',f:'roof',n:'星空露台',x:0,y:Y,w:960,h:540,in:[250,Y+344,500,170],d:'永远是晴天的夜里：屋脊上坐一排猫，观星毯上躺着看满天星，巨树的树冠在头顶；跑起跑轮，串灯一颗颗亮；放一盏孔明灯'});
 addP({ridge:[30,62,94,168,198,226].map((x,i)=>({x,y:Y+247,z:Y+251.5,face:i<3?'L':'R'})),ridgeUp:[{x:236,y:Y+384,z:Y+412.5},{x:230,y:Y+316,z:Y+412.5}],ridgeAt:{x:244,y:Y+430},chimney:{x:122,y:Y+206},
   blanket:{x:540,y:Y+470},blanketAt:{x:534,y:Y+500},scope:{x:604,y:Y+428},scopeAt:{x:596,y:Y+466},hammock:{x:676,y:Y+452},wheel:{x:768,y:Y+438},dyn:{x:820,y:Y+476},
   pole:{x:838,y:Y+352,h:134},festA:{x:839,y:Y+354},festB:{x:170,y:Y+282},festSag:34,festN:16,hut:{x:790,y:Y+372},waterTank:{x:880,y:Y+330},
-  moon:{x:836,y:Y+64},sky:[0,Y,960,316],ffArea:[260,Y+250,520,260]});
+  moon:{x:836,y:Y+64},sky:[0,Y,960,316],ffArea:[260,Y+250,520,260],
+  // 孔明灯的篮子；猫头鹰停的地方（天线、水塔顶、烟囱顶）；水塔顶上、烟囱边上能坐的位置
+  lanterns:{x:372,y:Y+462},lanternAt:{x:366,y:Y+484},owlPerch:[{x:847,y:Y+351},{x:906,y:Y+325},{x:132,y:Y+204}],
+  tankTop:[{x:892,y:Y+331,z:Y+388.6,face:'L'},{x:910,y:Y+331,z:Y+388.6,face:'R'}],tankAt:{x:900,y:Y+398},chimSeat:[{x:110,y:Y+249,z:Y+251.6,face:'R'},{x:154,y:Y+249,z:Y+251.6,face:'L'}]});
 M.WALK.push([250,Y+322,702,212],[8,Y+418,250,116],[814,Y+430,22,24]);
 M.BLOCK.push([792,Y+400,22,54],[836,Y+400,22,54],[814,Y+400,22,30],[884,Y+380,32,8],[450,Y+402,60,22],[602,Y+452,20,6],[676,Y+482,4,8],[736,Y+482,4,8],[772,Y+484,40,6],[820,Y+484,10,6],[836,Y+482,7,6],
-  [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[688,Y+488,40,10]);
+  [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[688,Y+488,40,10],[372,Y+468,16,6]);
 M.portals.push({id:'s32',from:'roof',to:'f2',n:'楼梯（下二楼）',k:'walk',auto:1,walk:1,zone:[814,Y+434,22,12],at:{x:825,y:Y+442},dir:{x:0,y:-1},out:{x:784,y:Y2+412,face:'R'},outDir:{x:0,y:1}});
 M.lights.push({x:836,y:Y+64,r:90,col:'#c8d0ff',a:.5},{x:58,y:Y+322,r:24,col:'#ffcf70'},{x:310,y:Y+328,r:16,col:'#ffcf70'},{x:690,y:Y+328,r:16,col:'#ffcf70'},{x:132,y:Y+214,r:26,col:'#ffa060',a:.4},{x:810,y:Y+400,r:22,col:'#ffe08a'},{x:850,y:Y+400,r:22,col:'#ffe08a'},{x:838,y:Y+420,r:16,col:'#ffcf70'},{x:575,y:Y+470,r:30,col:'#ffcf70',a:.6},{x:40,y:Y+500,r:20,col:'#ffcf70'});
 const bg0=M.bg,wall0=M.wall,floor0=M.floor,over0=M.over;
@@ -50,4 +53,5 @@ add(P.dyn.x,P.dyn.y,10,12,P.dyn.y+12,(t,S)=>dynamo(P.dyn.x,P.dyn.y,t,S.wheelOn||
 add(P.pole.x-2,P.pole.y,7,P.pole.h,P.pole.y+P.pole.h,()=>lightPole(P.pole.x,P.pole.y,P.pole.h));
 add(P.hut.x-4,P.hut.y-2,78,82,P.hut.y+80,t=>{stairHut(P.hut.x,P.hut.y,t);antenna(P.hut.x+56,P.hut.y-20,22)});
 add(P.waterTank.x,P.waterTank.y-4,40,62,P.waterTank.y+58,()=>waterTank(P.waterTank.x,P.waterTank.y));
+add(P.lanterns.x,P.lanterns.y,16,12,P.lanterns.y+12,()=>lanternBasket(P.lanterns.x,P.lanterns.y));
 })();

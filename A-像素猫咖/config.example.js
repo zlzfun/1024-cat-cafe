@@ -1,7 +1,8 @@
 /* 1024 猫咖 · 部署配置样例。复制成 config.js 再改（config.js 不进仓库：内网地址只写在那里）。
-   没有 config.js 也能开：那就是本机模式，名册存在这台浏览器里。用 server/server.js 发网页时，没有 config.js 它会现给一份 {api:'/api'}。 */
+   没有 config.js 也能开：直接打开 index.html 是本机模式，名册存在这台浏览器里；用 server/server.js 发网页时，没有 config.js 它会现给一份 {api:'api'}。
+   deploy.sh 带 --inner、--bots 启动时会替你写好这个文件（见 docs/部署.md）。 */
 window.CAT1024_CONFIG = {
-  api: '/api',             // 服务端地址；空着 = 本机模式
+  api: 'api',              // 服务端地址（相对地址：放在反向代理的子路径下也能用）；空着 = 本机模式
   links: {
     inner: '',             // 内源主页（内网地址）
   },

@@ -32,11 +32,28 @@ function bridgeDeck(x,y,w,h){R(x-2,y,w+4,h,OL);for(let j=y+1;j<y+h-1;j+=4){R(x,j
 function bridgeRail(x,y,h){R(x,y,3,h,OL);R(x+1,y,1,h,'#c49460');for(let j=y;j<=y+h-4;j+=10){R(x-1,j,5,5,OL);R(x,j+1,3,3,'#a8784a')}}
 // 栈桥：从岸边伸进河里的木板，底下几根桩子
 function pier(x,y,w,h){for(let i=x+2;i<x+w-2;i+=Math.max(6,w-6))R(i,y+h-2,3,8,OL);R(x-1,y,w+2,h,OL);for(let j=y+1;j<y+h-1;j+=4){R(x,j,w,3,'#a8784a');R(x,j,w,1,'#c49460');R(x,j+3,w,1,'#6e4a30')}R(x+w-4,y+h-6,3,9,OL);R(x+1,y+h-6,3,9,OL)}
-// 小船：木头船身，两条坐板，一支桨；rock 摇晃（像素偏移），boat 朝东。60×20，(x,y) 左上，base=y+20，坐板落脚 y+9
-function boat(x,y,t,rock=0){const dy=Math.round(Math.sin(t*1.6)*rock);y+=dy;
-  R(x+4,y+6,52,3,OL);R(x+2,y+8,56,8,OL);R(x+6,y+16,48,3,OL);R(x+5,y+7,50,1,'#e0b07a');R(x+3,y+9,54,6,'#a8703f');R(x+3,y+9,54,1,'#c98d5c');R(x+7,y+15,46,2,'#7a4c32');
-  R(x+8,y+8,44,5,'#6e4a30');R(x+18,y+7,4,7,OL);R(x+19,y+8,2,5,'#d8b080');R(x+38,y+7,4,7,OL);R(x+39,y+8,2,5,'#d8b080');P1(x,y+9,OL);P1(x+1,y+8,OL);P1(x+58,y+10,OL);
-  line(x+28,y+6,x+46,y-2,OL);line(x+29,y+6,x+47,y-2,'#c49460');R(x+45,y-4,5,3,OL);R(x+46,y-3,3,1,'#c49460');txt('1024',x+12,y+11,'#fff4dc')}
+// 小船：弯弯的木船身，看得见船舱、两条坐板；船舷上一左一右两支桨，船头挑一盏小灯笼，船尾刻着 1024。朝东（船头在右）。
+// 60×20，(x,y) 左上，base=y+20，坐板落脚 y+9（x+20、x+40）。rock 摇晃（像素偏移）；oar 0～1 划桨的相位（null 就是桨收着）
+function boat(x,y,t,rock=0,oar=null){const dy=Math.round(Math.sin(t*1.6)*rock);y+=dy;
+  const top=i=>i>=50?6-Math.round((i-50)/3):6,near=i=>i>=50?12-Math.round((i-50)*.6):i<3?11:12,bot=i=>i>46?18-Math.round((i-46)*.55):i<5?17:18;
+  alpha(.3,()=>disc(x+28,y+20,27,2,'#10243c'));
+  // 远处那一侧的桨（在船后面）
+  const sw=oar==null?0:Math.round(Math.sin(oar*Math.PI*2)*5),lift=oar==null?0:Math.max(0,Math.round(Math.cos(oar*Math.PI*2)*2));
+  if(oar!=null){line(x+30,y+7,x+19+sw,y+1-lift,OL);line(x+31,y+7,x+20+sw,y+1-lift,'#c49460');R(x+16+sw,y-1-lift,5,2,OL)}
+  for(let i=0;i<60;i++){const a=top(i),n=near(i),b=bot(i),X=x+i;
+    P1(X,y+a,OL);P1(X,y+a+1,'#e0b07a');if(n-a>2){R(X,y+a+2,1,n-a-2,(i%9===0)?'#5e3e28':'#6e4a30');if((i+1)%9===0)P1(X,y+a+2,'#8a5a3a')}
+    P1(X,y+n-1,'#8a5a3a');P1(X,y+n,'#e8c08a');if(b-n>1){R(X,y+n+1,1,b-n-1,'#a8703f');if(b-n>3)P1(X,y+n+3,'#8a5a3a');if(b-n>5)P1(X,y+n+5,'#93603a')}P1(X,y+b,OL)}
+  R(x,y+6,1,12,OL);R(x+1,y+6,1,12,'#8a5a3a');R(x+59,y+3,1,9,OL);
+  // 两条坐板
+  [20,40].forEach(c=>{R(x+c-4,y+8,9,3,OL);R(x+c-3,y+8,7,2,'#d8a878');R(x+c-3,y+8,7,1,'#f0c890')});
+  // 船尾刻的字、船头的绳圈
+  txt('1024',x+5,y+13,'#fff4dc');disc(x+52,y+12,1,1,'#d9d2c4');P1(x+52,y+12,'#a8703f');
+  // 船头的灯笼
+  line(x+56,y+5,x+58,y-5,OL);R(x+57,y-5,4,1,OL);R(x+59,y-4,1,1,OL);R(x+58,y-3,3,4,OL);R(x+59,y-2,1,2,Math.floor(t*5)%7?'#ffd88a':'#fff4c0');
+  // 近处这一侧的桨（压在船前面，桨叶在水里）
+  if(oar!=null){line(x+30,y+12,x+17-sw,y+22+lift,OL);line(x+31,y+12,x+18-sw,y+22+lift,'#c49460');R(x+14-sw,y+21+lift,6,2,OL);R(x+15-sw,y+21+lift,4,1,'#a8784a');
+    if(!lift)alpha(.6,()=>{P1(x+13-sw,y+23,'#cfe8f8');P1(x+20-sw,y+23,'#cfe8f8')})}
+  else{line(x+24,y+11,x+44,y+10,OL);R(x+42,y+9,5,2,OL)}}
 function boatWake(x,y,t){for(let i=0;i<3;i++){const k=(t*1.2+i/3)%1;alpha(1-k,()=>{R(Math.round(x-6-k*14),y+2+i*3,4,1,'#cfe8f8')})}}
 // 钓竿：插在栈桥边；line 线垂到 (bx,by)；bob 浮漂状态 0 漂着 / 1 往下一沉
 function rodStand(x,y){R(x,y,2,6,OL);line(x+1,y,x+14,y-20,OL);line(x+2,y,x+15,y-20,'#c49460');P1(x+14,y-21,OL)}

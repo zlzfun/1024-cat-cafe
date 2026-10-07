@@ -3,25 +3,28 @@
    只往 WORLD 里追加。 */
 (()=>{const M=WORLD,P=WP,Y=Y2;
 M.rooms.push(
-  {id:'lab',f:'f2',n:'1024 工坊',x:0,y:Y,w:326,h:250,in:[16,Y+104,292,140],d:'踩键盘、CI 灯、调试鸭、打印机和纸团、砚砚的机柜；房间正中是合并门禁，测试、CI、Review 三盏灯全亮才放行'},
-  {id:'well',f:'f2',n:'巨树回廊',x:326,y:Y,w:308,h:540,in:[340,Y+64,280,300],d:'地板正中开着天井，往下看得见一楼的咖啡厅；巨树从天井里长上来，横枝上挂着小灯笼，猫能跳上去窝着'},
-  {id:'library',f:'f2',n:'猫猫图书馆',x:634,y:Y,w:326,h:250,in:[650,Y+90,290,150],d:'长期记忆：五架书（决策日志、教训沉淀、证据库、人物关系、事件记忆）、检索柜、阅读桌、说明书讲台、窗边软座'},
-  {id:'lounge',f:'f2',n:'大客厅',x:0,y:Y+250,w:326,h:290,in:[16,Y+320,292,200],d:'壁炉前一张暖桌、对面的沙发、高猫爬架、地板钢琴、大泡泡机、猫隧道、激光点'},
-  {id:'nap',f:'f2',n:'午睡角',x:634,y:Y+250,w:326,h:290,in:[650,Y+330,120,170],d:'三只大懒人沙发、一排猫窝、大纸箱，墙上一盏月亮小夜灯；下一楼、上屋顶的楼梯都在这儿'});
+  {id:'lab',f:'f2',n:'1024 工坊',x:0,y:Y,w:326,h:250,in:[16,Y+104,292,140],d:'踩键盘、CI 灯、调试鸭、打印机和纸团、白板、砚砚的机柜；房间正中是合并门禁，测试、CI、Review 三盏灯全亮才放行'},
+  {id:'well',f:'f2',n:'巨树回廊',x:326,y:Y,w:308,h:540,in:[340,Y+64,280,300],d:'地板正中开着天井，趴在栏杆上看得见一楼的咖啡厅；巨树从天井里长上来，横枝上挂着小灯笼，猫能跳上去窝着'},
+  {id:'library',f:'f2',n:'猫猫图书馆',x:634,y:Y,w:326,h:250,in:[650,Y+90,290,150],d:'长期记忆：五架书（决策日志、教训沉淀、证据库、人物关系、事件记忆）、能滑的滚梯、检索柜、阅读桌、说明书讲台、窗边软座、地球仪'},
+  {id:'lounge',f:'f2',n:'大客厅',x:0,y:Y+250,w:326,h:290,in:[16,Y+320,292,200],d:'壁炉前一张暖桌、对面的沙发、高猫爬架、地板钢琴和曲谱架、大泡泡机、猫隧道、激光点、弹簧逗猫棒'},
+  {id:'nap',f:'f2',n:'午睡角',x:634,y:Y+250,w:326,h:290,in:[650,Y+330,120,170],d:'三只大懒人沙发、一排猫窝、西墙边的大纸箱；墙上一盏月亮小夜灯，拍一下满屋转星星；下一楼、上屋顶的楼梯都在这儿'});
 addP({
   // 工坊
   desk:{x:16,y:Y+62,w:120},mons:[{x:22,y:Y+43},{x:58,y:Y+43},{x:94,y:Y+43}],kbds:[{x:25,y:Y+68},{x:61,y:Y+68},{x:97,y:Y+68}],kbdFloor:[{x:36,y:Y+100},{x:72,y:Y+100},{x:108,y:Y+100}],
   duck:{x:122,y:Y+64},duckAt:{x:126,y:Y+100},printer:{x:146,y:Y+56},paperOut:{x:160,y:Y+98},trash:{x:276,y:Y+196},hoop:{x:283,y:Y+202},
   rack:{x:288,y:Y+24},rackTop:{x:303,y:Y+28,z:Y+88.5},rackFloor:{x:298,y:Y+100},ci:{x:120,y:Y+8},tools:{x:160,y:Y+6,w:46,h:36},merge:{x:146,y:Y+108},mergeAt:{x:174,y:Y+196},lane:{x:152,y:Y+100,w:42,h:150},
+  wb:{x:222,y:Y+6,w:60,h:34},wbAt:{x:252,y:Y+68},
   // 图书馆
   shelves:[642,692,742,792,842].map(x=>({x,y:Y+6,w:46,h:64})),ladder:{y0:Y+14,y1:Y+70,x0:717},catalog:{x:648,y:Y+112},catalogAt:{x:662,y:Y+156},readTable:{x:742,y:Y+142,w:88},
   armchair:{x:900,y:Y+152},lamp2:{x:936,y:Y+134},lectern:{x:650,y:Y+190},lecternAt:{x:660,y:Y+228},win3:{x:900,y:Y+8,w:44,h:38},winSeat:{x:896,y:Y+60,w:52},libPlant:{x:930,y:Y+204},
+  globe:{x:872,y:Y+202},globeAt:{x:866,y:Y+236},
   // 大客厅
   kotatsu:{x:126,y:Y+364},fire:{x:132,y:Y+258},fireSpots:[{x:146,y:Y+320},{x:162,y:Y+322},{x:178,y:Y+320}],sofa:{x:128,y:Y+472},sofaSeats:[{x:144,y:Y+491},{x:162,y:Y+491},{x:180,y:Y+491}],
   piano:{x:214,y:Y+506},tree:{x:10,y:Y+300},bubbler:{x:268,y:Y+312},tunnel:{x:232,y:Y+440},tunnelL:{x:226,y:Y+452},tunnelR:{x:302,y:Y+452},
+  musicStand:{x:314,y:Y+484},standAt:{x:319,y:Y+518},wand:{x:62,y:Y+430},wandAt:{x:76,y:Y+464},
   laser:{x:86,y:Y+266},laserAt:{x:97,y:Y+318},catnip:{x:58,y:Y+502},sniff:{x:74,y:Y+512},lamp:{x:100,y:Y+422},dockA:{x:14,y:Y+520},vacHomeA:{x:20,y:Y+536},
-  // 午睡角：一排三个猫窝靠南墙；两段楼梯中间塞着大纸箱；大圆地毯上三只大懒人沙发；墙上的月亮小夜灯
-  beds:[{x:640,y:Y+508},{x:678,y:Y+508},{x:716,y:Y+508}],bigBox:{x:822,y:Y+372},bigBoxAt:{x:842,y:Y+404},napMoon:{x:733,y:Y+262},
+  // 午睡角：一排三个猫窝靠南墙；大纸箱靠西墙（原来塞在两段楼梯中间，挡着从一楼上来的路）；大圆地毯上三只大懒人沙发；墙上的月亮小夜灯
+  beds:[{x:640,y:Y+508},{x:678,y:Y+508},{x:716,y:Y+508}],bigBox:{x:642,y:Y+332},bigBoxAt:{x:662,y:Y+364},napMoon:{x:733,y:Y+262},moonAt:{x:740,y:Y+312},
   beans:[{x:752,y:Y+462,col:['#9B7EBD','#654a86','#d0bce4']},{x:812,y:Y+484,col:['#e8b83a','#a87a1e','#ffe08a']},{x:872,y:Y+460,col:['#5bb8a8','#2e7a6e','#a8e0d4']}],
   stairs2:{x:760,y:Y+300,w:48,h:100},hole1:{x:884,y:Y+300,w:52,h:120}});
 M.WALK.push([8,Y+58,318,190],[8,Y+306,318,232],[334,Y+58,292,480],[634,Y+58,318,190],[634,Y+306,318,232],
@@ -29,7 +32,7 @@ M.WALK.push([8,Y+58,318,190],[8,Y+306,318,232],[334,Y+58,292,480],[634,Y+58,318,
 M.BLOCK.push([16,Y+62,120,32],[146,Y+80,28,10],[288,Y+80,30,8],[142,Y+164,14,8],[198,Y+164,14,8],[276,Y+206,14,6],
   [642,Y+58,246,12],[896,Y+58,52,14],[648,Y+128,28,16],[742,Y+150,88,18],[900,Y+164,30,14],[938,Y+168,10,6],[652,Y+210,16,8],[930,Y+212,14,8],
   [18,Y+300,36,6],[130,Y+298,64,8],[126,Y+366,72,26],[128,Y+482,70,20],[10,Y+414,48,10],[270,Y+330,32,12],[232,Y+444,54,14],[56,Y+502,10,6],[100,Y+452,10,8],[14,Y+522,14,9],
-  [640,Y+512,34,8],[678,Y+512,34,8],[716,Y+512,34,8],[822,Y+376,40,12],[755,Y+484,40,8],[815,Y+506,40,8],[875,Y+482,40,8],[756,Y+300,4,100],[808,Y+300,4,100],[894,Y+300,46,124],[874,Y+326,6,100],[874,Y+420,66,6],
+  [640,Y+512,34,8],[678,Y+512,34,8],[716,Y+512,34,8],[642,Y+336,40,12],[314,Y+502,10,6],[61,Y+458,7,4],[872,Y+220,16,6],[755,Y+484,40,8],[815,Y+506,40,8],[875,Y+482,40,8],[756,Y+300,4,100],[808,Y+300,4,100],[894,Y+300,46,124],[874,Y+326,6,100],[874,Y+420,66,6],
   [440,Y+512,80,6],[340,Y+506,14,8],[606,Y+506,14,8]);
 M.portals.push({id:'s23',from:'f2',to:'roof',n:'楼梯（上屋顶）',k:'walk',auto:1,walk:1,zone:[764,Y+298,40,16],at:{x:784,y:Y+306},dir:{x:0,y:-1},out:{x:825,y:Y3+464,face:'R'},outDir:{x:0,y:1}});
 M.vac.push({home:P.vacHomeA,dock:P.dockA,area:[[16,Y+312,300,220]]});
@@ -61,7 +64,9 @@ M.bg=function(){bg0.call(this);
   // 回廊：天井南边一张长凳旁的两盆花（家具在 props）；门洞上的招牌
   signOver(300,Y+104,'LAB','gear');signOver(660,Y+104,'BOOKS','book');signOver(300,Y+384,'LOUNGE','heart');signOver(660,Y+384,'NAP','moon');signOver(784,Y+262,'ROOF','up','#a8d0f0');signOver(910,Y+284,'1F','down')},
 M.wall=function(t,S,vis){wall0.call(this,t,S,vis);const tod=S.tod||'day',wx=S.weather||'sun';
-  if(vis(0,Y,326,60)){neon(8,Y+8,'1024','#7ee08a',t,2);ciLight(P.ci.x,P.ci.y,t,(S.ci||{}).state||'pass');if(Math.floor(t*2)%2)P1(P.tools.x+31,P.tools.y+8,'#7ee08a')}
+  if(vis(0,Y,326,60)){neon(8,Y+8,'1024','#7ee08a',t,2);ciLight(P.ci.x,P.ci.y,t,(S.ci||{}).state||'pass');if(Math.floor(t*2)%2)P1(P.tools.x+31,P.tools.y+8,'#7ee08a');
+    // 白板上有猫画的东西：先擦白（原来印着的那张图看不见了），再画；擦干净以后又是原来那张图
+    if((S.doodles||[]).length){R(P.wb.x+1,P.wb.y+1,P.wb.w-2,P.wb.h-5,'#f4f6f8');S.doodles.forEach(d=>wbDoodle(P.wb.x+d.x,P.wb.y+d.y,d.k,d.ink))}}
   if(vis(634,Y,326,60)){const W=P.win3;windowW(W.x,W.y,W.w,W.h,t,tod,{weather:wx,cross:1});curtains(W.x,W.y,W.w,W.h,'#6a8ac8','#4a6aa8');(S.gaps||[]).forEach(g=>bookGap(g.x,g.y))}
   if(vis(0,Y+250,326,60)){fireplace(P.fire.x,P.fire.y,t);laserToy(P.laser.x,P.laser.y,t,S.laser&&S.laser.on>0)}};
 M.floor=function(t,S,vis){floor0.call(this,t,S,vis);
@@ -84,6 +89,7 @@ add(P.lamp2.x,P.lamp2.y,10,38,P.lamp2.y+38,(t,S)=>lamp(P.lamp2.x,P.lamp2.y,S.tod
 add(P.lectern.x,P.lectern.y-2,20,30,P.lectern.y+27,()=>lectern(P.lectern.x,P.lectern.y));
 add(P.winSeat.x,P.winSeat.y-6,P.winSeat.w,16,P.winSeat.y+10,()=>windowSeat(P.winSeat.x,P.winSeat.y,P.winSeat.w));
 add(P.libPlant.x,P.libPlant.y,16,26,P.libPlant.y+24,t=>plant(P.libPlant.x,P.libPlant.y,t),{live:1});
+add(P.globe.x-1,P.globe.y-2,18,26,P.globe.y+24,(t,S)=>globeToy(P.globe.x,P.globe.y,t,S.globeA||0),{live:1});
 // 大客厅
 add(P.kotatsu.x,P.kotatsu.y-6,72,48,P.kotatsu.y+34,(t,S)=>kotatsu(P.kotatsu.x,P.kotatsu.y,t,(S.kotatsu||{}).tails||[],(S.kotatsu||{}).jig||0),{live:1});
 add(P.tree.x,P.tree.y,48,124,P.tree.y+124,t=>catTreeTall(P.tree.x,P.tree.y,t),{live:1});
@@ -91,6 +97,8 @@ add(P.sofa.x,P.sofa.y,70,30,P.sofa.y+30,()=>sofa(P.sofa.x,P.sofa.y,70));
 add(P.lamp.x,P.lamp.y,10,38,P.lamp.y+38,(t,S)=>lamp(P.lamp.x,P.lamp.y,S.tod!=='day'),{ver:S=>S.tod});
 add(P.bubbler.x,P.bubbler.y,36,32,P.bubbler.y+32,(t,S)=>bubbleMachineBig(P.bubbler.x,P.bubbler.y,t,S.bubbleOn>0),{live:1});
 add(P.tunnel.x,P.tunnel.y-2,62,20,P.tunnel.y+18,(t,S)=>tunnel(P.tunnel.x,P.tunnel.y,t,S.tunnelBulge??-1),{live:1});
+add(P.musicStand.x-1,P.musicStand.y,12,25,P.musicStand.y+24,(t,S)=>musicStand(P.musicStand.x,P.musicStand.y,(S.piano2||{}).song||0),{ver:S=>(S.piano2||{}).song||0});
+add(P.wand.x,P.wand.y-2,20,34,P.wand.y+32,(t,S)=>wandToy(P.wand.x,P.wand.y,t,S.wandWob||0),{live:1});
 add(P.catnip.x,P.catnip.y-12,11,17,P.catnip.y+5,(t,S)=>catnip(P.catnip.x,P.catnip.y,t,S.catnipUsed>0),{live:1});
 add(P.dockA.x-1,P.dockA.y,14,11,P.dockA.y+11,(t,S)=>dock(P.dockA.x,P.dockA.y,t,((S.vacs||[])[1]||{}).charging),{live:1});
 // 午睡角
