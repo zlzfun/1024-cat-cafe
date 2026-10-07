@@ -125,7 +125,7 @@ A.onSay=(c,s)=>{if(/帮忙|来人|一起/.test(s))nearest(c,220).forEach((o,i)=>
   if(/合照|拍照/.test(s))nearest(c,260).forEach(o=>useThing(o,TID('stage')));
   if(/谢谢/.test(s))S.cats.forEach(o=>{if(isBot(o)&&near(o,c,80)&&Math.random()<.5)emote(o,'heart',1.4)})};
 
-/* ================= 地方：沙发、爬架、懒人沙发、吊床、猫窝、大纸箱、机柜顶、壁炉前、阳光 ================= */
+/* ================= 地方：沙发、爬架、懒人沙发、吊床、猫窝、大纸箱、机柜顶、壁炉前、月光 ================= */
 // spots 是落脚点；up(i) 是从地面跳上去要经过的点，down(i) 是跳下来的点（不跳的地方两个都不给）
 // prefer(c) 给出想坐的位置顺序（v4 的巨树：你先上树顶）；坐好以后通知 A.onSeat(id, c, i)
 function seatThing(o){const occ=o.spots.map(()=>null);
@@ -139,37 +139,39 @@ function seatThing(o){const occ=o.spots.map(()=>null);
         run(c,[...(!up.length&&dist(c,s)>2?[{go:s}]:[]),...up.map(p=>({jump:{...p}})),{fn:c=>{const k=val(o.k,c);if(o.inn)o.inn(c,i);stay(c,{k,ex:val(o.ex,c),face:s.face,dur:val(o.dur,c)||rr(8,18),
           leave:c=>[...down.map(p=>({jump:{...p}})),{fn:c=>{c.z=undefined}},...(k==='sleep'?[{k:'stretch',dur:DUR.stretch}]:[])]});if(A.onSeat)A.onSeat(o.id,c,i)}}],true)}}])}});
   th.occ=occ;return th}
-const napK=()=>S.tod==='night'||Math.random()<.5?'sleep':'lie';
+const napK=()=>Math.random()<.5?'sleep':'lie';   // 店里永远是夜里：不因为是夜里就一直睡
 const SOFA=P.sofaSeats,TREE=TREE_TALL.map(([a,b],i)=>({x:P.tree.x+a,y:P.tree.y+b,z:P.tree.y+124.5,face:i%2?'R':'L'}));
 const SZ=P.sofa.y+30.5,SF=P.sofa.y+42;
 seatThing({id:'sofa',n:'沙发',hit:[P.sofa.x,P.sofa.y,70,30],at:{x:P.sofa.x+46,y:SF-2},near:[P.sofa.x+4,P.sofa.y+28,70,20],label:'跳上沙发睡一觉',spots:SOFA.slice(1).map(s=>({...s,z:SZ,face:'L'})),
   up:i=>[{...SOFA[i+1],z:SZ}],down:i=>[{x:SOFA[i+1].x,y:SF}],floor:i=>({x:SOFA[i+1].x,y:SF}),k:napK,ex:'content',doing:'在沙发上睡觉',ai:{mood:'rest',w:2}});
-seatThing({id:'tree',n:'高猫爬架',hit:[P.tree.x,P.tree.y,44,124],at:{x:P.tree.x+24,y:P.tree.y+132},near:[P.tree.x-4,P.tree.y+116,52,24],label:'爬上猫爬架',spots:TREE,
+// 高猫爬架：先占最顶上那层，一层层跳上去（顶上有猫了，就停在下面一层）
+seatThing({id:'tree',n:'高猫爬架',hit:[P.tree.x,P.tree.y,44,124],at:{x:P.tree.x+24,y:P.tree.y+132},near:[P.tree.x-4,P.tree.y+116,52,24],label:'爬上猫爬架',spots:TREE,prefer:()=>TREE.map((s,i)=>i),
   up:i=>TREE.slice(i).reverse(),down:()=>[{x:P.tree.x+24,y:P.tree.y+134}],floor:()=>({x:P.tree.x+24,y:P.tree.y+132}),k:'lie',doing:'在爬架上',ai:{mood:'rest',w:2}});
-seatThing({id:'bean',n:'懒人沙发',hit:[P.beanbag.x,P.beanbag.y,30,18],at:{x:P.beanbag.x+15,y:P.beanbag.y+26},near:[P.beanbag.x-4,P.beanbag.y+10,38,24],label:'陷进懒人沙发',
-  spots:[{...P.beanSeat,face:'R'},{x:P.beanSeat.x+10,y:P.beanSeat.y+1,z:P.beanSeat.z,face:'L'}],up:i=>[i?{x:P.beanSeat.x+10,y:P.beanSeat.y+1,z:P.beanSeat.z}:P.beanSeat],down:()=>[{x:P.beanbag.x+15,y:P.beanbag.y+26}],floor:()=>({x:P.beanbag.x+15,y:P.beanbag.y+26}),k:'lie',ex:'content',doing:'陷在懒人沙发里',ai:{mood:'rest',w:1.5}});
+// 午睡角的三只大懒人沙发：一只坐两只猫（图鉴里算一样：bean0～2 → bean）
+P.beans.forEach((b,j)=>{const F={x:b.x+23,y:b.y+36},sp=[{x:b.x+15,y:b.y+14,z:b.y+30.5,face:'R'},{x:b.x+31,y:b.y+15,z:b.y+30.5,face:'L'}];
+  seatThing({id:'bean'+j,n:'懒人沙发',hit:[b.x,b.y,46,30],at:F,near:[b.x-2,b.y+24,50,18],label:'陷进懒人沙发',spots:sp,up:i=>[{...sp[i]}],down:()=>[F],floor:()=>F,k:'lie',ex:'content',doing:'陷在懒人沙发里',ai:{mood:'rest',w:1.2}})});
 const HAM={x:P.hammock.x+32,y:P.hammock.y+16,z:P.hammock.y+20};
 const HF=P.hammock.y+40;
 seatThing({id:'hammock',n:'吊床',hit:[P.hammock.x,P.hammock.y,64,34],at:{x:HAM.x,y:HF},near:[P.hammock.x+8,P.hammock.y+30,48,18],label:'躺进吊床',spots:[{...HAM,face:'R'}],up:()=>[HAM],down:()=>[{x:HAM.x,y:HF}],floor:()=>({x:HAM.x,y:HF}),
   k:'sleep',doing:'在吊床里睡觉',ai:{mood:'rest',w:1.5},inn:c=>{S.hamBy=c},out:()=>{S.hamBy=null}});
-seatThing({id:'bed',n:'猫窝',hit:[P.bed.x,P.bed.y,34,12],at:P.bedAt,label:'钻进猫窝',spots:[{x:P.bed.x+13,y:P.bed.y+8,z:P.bed.y+7,face:'R'}],up:()=>[{x:P.bed.x+13,y:P.bed.y+8,z:P.bed.y+7}],down:()=>[P.bedAt],floor:()=>P.bedAt,k:'sleep',doing:'在猫窝里睡觉',ai:{mood:'rest',w:1}});
+// 午睡角靠南墙的一排三个猫窝：从上面（北边）跳进去
+P.beds.forEach((b,j)=>{const F={x:b.x+17,y:b.y-4},sp={x:b.x+13,y:b.y+8,z:b.y+7,face:j%2?'L':'R'};
+  seatThing({id:'bed'+j,n:'猫窝',hit:[b.x,b.y,34,12],at:F,near:[b.x-2,b.y-12,38,16],label:'钻进猫窝',spots:[sp],up:()=>[{...sp}],down:()=>[F],floor:()=>F,k:'sleep',doing:'在猫窝里睡觉',ai:{mood:'rest',w:.8}})});
 seatThing({id:'bigbox',n:'大纸箱',hit:[P.bigBox.x,P.bigBox.y,40,18],at:P.bigBoxAt,label:'挤进大纸箱',spots:[0,1,2].map(i=>({x:P.bigBox.x+9+i*11,y:P.bigBox.y+15,z:P.bigBox.y+10,face:i?'L':'R'})),
   up:i=>[{x:P.bigBox.x+9+i*11,y:P.bigBox.y+15,z:P.bigBox.y+10}],down:()=>[P.bigBoxAt],floor:()=>P.bigBoxAt,k:'sit',doing:'在纸箱里',ai:{mood:'rest',w:1.5}});
 const yan=()=>A.byName('砚砚');
 seatThing({id:'rack',n:'服务器机柜',hit:[P.rack.x,P.rack.y,30,64],at:P.rackFloor,label:'跳上机柜顶（暖和）',spots:[{...P.rackTop,face:'L'}],up:()=>[P.rackTop],down:()=>[P.rackFloor],floor:()=>P.rackFloor,
   ok2:()=>!(yan()&&yan().atHome),no2:()=>'那是砚砚的地盘',k:napK,doing:'在机柜顶上取暖',ai:{mood:'rest',w:.6}});
-seatThing({id:'fire',n:'壁炉',hit:[P.fire.x-3,P.fire.y,64,44],at:{x:P.fire.x+29,y:P.fire.y+68},near:[P.fire.x-2,P.fire.y+48,64,26],label:'在壁炉前趴一会儿',spots:P.fireSpots.map(s=>({...s,face:'R'})),k:()=>S.tod==='night'?'sleep':'lie',ex:'content',doing:'在壁炉前烤火',ai:{mood:'rest',w:2}});
-// 阳光是地上的一块光斑：点不到（点地面永远是走路），走路经过也不算；站进最亮的那一块、停下来，才能按 E 趴下
-const sunny=()=>S.tod!=='night'&&S.weather==='sun';
-seatThing({id:'sunA',n:'橱窗下的阳光',at:P.sunA,near:[P.sunA.x-16,P.sunA.y-8,104,22],quiet:1,label:'晒太阳',hide:()=>!sunny(),spots:[-34,-17,0,17,34].map((d,i)=>({x:P.sunA.x+18+d,y:P.sunA.y+(i%2)*6,face:i%2?'L':'R'})),
-  ok2:sunny,no2:()=>'现在没有太阳',k:'lie',ex:'content',doing:'在晒太阳',ai:{mood:'rest',w:c=>sunny()?2:0}});
-seatThing({id:'sunB',n:'客厅的阳光',at:P.sunB,near:[P.sunB.x-22,P.sunB.y-8,44,24],quiet:1,label:'晒太阳',hide:()=>!sunny(),spots:[[-10,0],[10,6],[-4,16]].map(([a,b],i)=>({x:P.sunB.x+a,y:P.sunB.y+b,face:i%2?'L':'R'})),
-  ok2:sunny,no2:()=>'现在没有太阳',k:'lie',ex:'content',doing:'在晒太阳',ai:{mood:'rest',w:c=>sunny()?1.5:0}});
+seatThing({id:'fire',n:'壁炉',hit:[P.fire.x-3,P.fire.y,64,44],at:{x:P.fire.x+29,y:P.fire.y+68},near:[P.fire.x-2,P.fire.y+48,64,26],label:'在壁炉前趴一会儿',spots:P.fireSpots.map(s=>({...s,face:'R'})),k:napK,ex:'content',doing:'在壁炉前烤火',ai:{mood:'rest',w:2}});
+// 橱窗下地上的一块光斑：夜里是月光（店里永远是晴天的夜里），开发工具条切到白天是阳光。点不到（点地面永远是走路），走路经过也不算；站进最亮的那一块、停下来，才能按 E 趴下
+const glow=()=>S.weather==='sun';
+seatThing({id:'sunA',n:'橱窗下的月光',at:P.sunA,near:[P.sunA.x-16,P.sunA.y-8,104,22],quiet:1,label:()=>S.tod==='night'?'躺在月光里':'晒太阳',hide:()=>!glow(),spots:[-34,-17,0,17,34].map((d,i)=>({x:P.sunA.x+18+d,y:P.sunA.y+(i%2)*6,face:i%2?'L':'R'})),
+  ok2:glow,no2:()=>'现在没有光',k:'lie',ex:'content',doing:'躺在月光里',ai:{mood:'rest',w:c=>glow()?2:0}});
 
 /* ================= 暖桌：钻进去只露尾巴 ================= */
 const KOT=[];S.kotatsu={tails:[],jig:0};
 T({id:'kotatsu',n:'暖桌',hit:[P.kotatsu.x,P.kotatsu.y-4,72,40],at:{x:P.kotatsu.x+36,y:P.kotatsu.y+44},near:[P.kotatsu.x-6,P.kotatsu.y+30,84,22],label:'钻进暖桌',
-  ok:c=>!c.hold&&KOT.length<6,no:c=>c.hold?'叼着东西钻不进去':'暖桌里已经挤满了（6 只）',ai:{mood:'rest',w:c=>S.tod==='night'?4:2.5},
+  ok:c=>!c.hold&&KOT.length<6,no:c=>c.hold?'叼着东西钻不进去':'暖桌里已经挤满了（6 只）',ai:{mood:'rest',w:2.5},
   go(c){run(c,[{go:{x:P.kotatsu.x+36+rr(-20,20),y:P.kotatsu.y+42}},{fn:c=>{if(KOT.length>=6){c.q=[];return}KOT.push(c);c.hidden=true;c.doing='在暖桌里';S.kotatsu.jig=.35;
     c.onLeave=c=>{const i=KOT.indexOf(c);if(i>=0)KOT.splice(i,1);c.hidden=false;c.doing=null;c.x=P.kotatsu.x+10+Math.random()*52;c.y=P.kotatsu.y+42;S.kotatsu.jig=.3};
     stay(c,{k:'sleep',dur:rr(12,30),leave:()=>[{fn:unclaim},{k:'stretch',dur:DUR.stretch}]})}}])}});
@@ -296,9 +298,12 @@ A.overs.push(vis=>{if(S.flash>0&&vis(P.shot.x,P.shot.y,P.shot.w,P.shot.h))alpha(
 
 /* ================= 大客厅：泡泡机、激光点、地板钢琴、猫薄荷 ================= */
 S.bubbles=[];S.bubbleOn=0;let nextBubbles=rr(40,70),bubbleT=0;const LOUNGE=M.rooms.find(r=>r.id==='lounge').in;
-T({id:'bubbler',n:'泡泡机',hit:[P.bubbler.x,P.bubbler.y,18,14],at:{x:P.bubbler.x+9,y:P.bubbler.y+22},label:()=>S.bubbleOn>0?'泡泡机开着':'打开泡泡机',ok:()=>!(S.bubbleOn>0),no:()=>'已经开着了',ai:{mood:'play',w:.4},
+T({id:'bubbler',n:'泡泡机',hit:[P.bubbler.x,P.bubbler.y,36,32],at:{x:P.bubbler.x+18,y:P.bubbler.y+40},near:[P.bubbler.x-2,P.bubbler.y+32,40,18],label:()=>S.bubbleOn>0?'泡泡机开着':'打开泡泡机',ok:()=>!(S.bubbleOn>0),no:()=>'已经开着了',ai:{mood:'play',w:.4},
   go(c){run(c,[{k:'maneki',dur:.6,soft:1,fn:()=>{S.bubbleOn=10;if(c.me)say('泡泡！扑上去戳破它')}}])}});
-tick(dt=>{if((nextBubbles-=dt)<=0){S.bubbleOn=10;nextBubbles=rr(60,110)}if(S.bubbleOn>0){S.bubbleOn-=dt;if((bubbleT-=dt)<=0){bubbleT=.28;S.bubbles.push({x:P.bubbler.x+11,y:P.bubbler.y+12,h:10,r:Math.round(rr(2,4.4)),vx:rr(-12,16),vy:rr(-4,14),vh:rr(4,9),t0:now(),life:rr(4,7)})}}
+// 开着：十秒里一串串往外冒；关着：转轮上也隔一会儿冒一个小泡泡，路过就看得出这是泡泡机
+let idleBubT=1;const BX=P.bubbler.x+20,BY=P.bubbler.y+32;
+tick(dt=>{if((nextBubbles-=dt)<=0){S.bubbleOn=10;nextBubbles=rr(60,110)}if(S.bubbleOn>0){S.bubbleOn-=dt;if((bubbleT-=dt)<=0){bubbleT=.28;S.bubbles.push({x:BX,y:BY,h:22,r:Math.round(rr(2,4.4)),vx:rr(-16,12),vy:rr(-2,16),vh:rr(4,9),t0:now(),life:rr(4,7)})}}
+  else if((idleBubT-=dt)<=0){idleBubT=rr(1.6,2.8);S.bubbles.push({x:BX+rr(-3,3),y:BY,h:22,r:Math.round(rr(2,3.4)),vx:rr(-5,5),vy:rr(-1,3),vh:rr(5,8),t0:now(),life:rr(2,3.2)})}
   for(let i=S.bubbles.length-1;i>=0;i--){const b=S.bubbles[i];if(b.pop!=null){b.pop+=dt;if(b.pop>.25)S.bubbles.splice(i,1);continue}b.x+=b.vx*dt+Math.sin(now()*2+i)*6*dt;b.y+=b.vy*dt;b.h=Math.min(48,b.h+b.vh*dt);
     if(now()-b.t0>b.life||!inR(b.x,b.y,LOUNGE))b.pop=0}});
 A.overs.push(vis=>S.bubbles.forEach(b=>{if(vis(b.x-6,b.y-b.h-6,12,12))bubble(Math.round(b.x),Math.round(b.y-b.h),b.r,b.pop??0)}));
@@ -308,9 +313,9 @@ T({id:'pop',n:'泡泡',hidden:c=>!reachBubble(c),near:c=>{const b=reachBubble(c)
     {fn:c=>{if(b.pop==null&&near(c,b,14)&&b.h<34){b.pop=0;if(c.me||atMe(b,120))sfx('pop');c.pops=(c.pops||0)+1;if(c.me)say(`啵！扑破了 ${c.pops} 个泡泡`)}else if(c.me)say('差一点')}},{k:'sit',dur:.3,soft:1}])}});
 // 激光点：书架顶上的逗猫器，隔一阵自己开 15 秒，也可以去按
 S.laser={on:0,x:P.laserAt.x,y:P.laserAt.y,tx:P.laserAt.x,ty:P.laserAt.y,pause:0};let nextLaser=rr(70,120);
-T({id:'laser',n:'激光逗猫器',hit:[P.laser.x,P.laser.y,12,8],at:P.laserAt,near:[P.laserAt.x-16,P.laserAt.y-12,34,24],label:()=>S.laser.on>0?'激光点在地上跑':'打开激光逗猫器',ok:()=>!(S.laser.on>0),no:()=>'已经开着了，快去追',ai:{mood:'play',w:.3},
+T({id:'laser',n:'激光逗猫器',hit:[P.laser.x,P.laser.y,22,14],at:P.laserAt,near:[P.laserAt.x-16,P.laserAt.y-12,34,24],label:()=>S.laser.on>0?'激光点在地上跑':'打开激光逗猫器',ok:()=>!(S.laser.on>0),no:()=>'已经开着了，快去追',ai:{mood:'play',w:.3},
   go(c){run(c,[{k:'maneki',dur:.6,soft:1,fn:()=>{startLaser();if(c.me)say('红点！追上去扑')}}])}});
-function startLaser(){const L=S.laser;L.on=15;L.x=P.laser.x+6;L.y=P.laserAt.y;newLaserTarget();news('激光点出现在二楼大客厅')}
+function startLaser(){const L=S.laser;L.on=15;L.x=P.laser.x+11;L.y=P.laserAt.y;newLaserTarget();news('激光点出现在二楼大客厅')}
 function newLaserTarget(){const L=S.laser,p=randFree(LOUNGE);L.tx=p.x;L.ty=p.y;L.pause=Math.random()<.3?rr(.3,1.2):0}
 tick(dt=>{const L=S.laser;if((nextLaser-=dt)<=0){startLaser();nextLaser=rr(90,160)}if(!(L.on>0))return;L.on-=dt;if(L.pause>0){L.pause-=dt;return}
   const dx=L.tx-L.x,dy=L.ty-L.y,d=Math.hypot(dx,dy),st=Math.min(d,130*dt);if(d>.5){L.x+=dx/d*st;L.y+=dy/d*st}else newLaserTarget();
@@ -336,7 +341,7 @@ T({id:'post',n:'猫抓柱',hit:[P.post.x,P.post.y,16,42],at:P.postAt,label:'磨�
 T({id:'plant',n:'盆栽',hit:[P.plantA.x,P.plantA.y,16,26],at:{x:P.plantA.x+8,y:P.plantA.y+32},near:[P.plantA.x-4,P.plantA.y+22,26,18],label:'蹭蹭盆栽',go(c){S.plantShake=1;run(c,[{k:'lick',dur:1,soft:1}])}});
 // 咖啡机在吧台上，做拉花：world-cafe.js
 
-/* ================= 后院：落叶堆、蝴蝶、鸟浴盆；屋顶：跑轮和串灯 ================= */
+/* ================= 后院：落叶堆、飞蛾（白天是蝴蝶）、鸟浴盆；屋顶：跑轮和串灯 ================= */
 S.pile=1;let leafT=0;
 tick(dt=>{if((leafT-=dt)<=0){leafT=rr(.5,1.3);const x=P.maple.x+rr(-30,30),gy=P.maple.y+rr(-6,40);fx.push({kind:'leaf',x,y:gy,h:rr(40,70),fall:rr(10,16),ci:Math.floor(Math.random()*4),t0:now(),life:18});
   if(Math.hypot(x-P.pile.x,gy-P.pile.y)<24)S.pile=Math.min(1,S.pile+.02)}S.pile=Math.min(1,S.pile+dt*.004)});
@@ -345,14 +350,15 @@ T({id:'pile',n:'落叶堆',hit:[P.pile.x-20,P.pile.y-12,40,14],at:{x:P.pile.x-30
   go(c){run(c,[{go:{x:P.pile.x-30,y:P.pile.y+2}},{fn:c=>{c.face='R'}},{k:'pounce',dur:1.1},{jump:{x:P.pile.x,y:P.pile.y},h:14,dur:.45},{fn:c=>{c.hidden=true;S.pile=.15;sfx('rustle');
       for(let i=0;i<36;i++){const a=rr(0,Math.PI*2),s=rr(20,60);fx.push({kind:'leaf',x:P.pile.x+rr(-8,8),y:P.pile.y+rr(-3,3),h:rr(2,8),vx:Math.cos(a)*s,vy:Math.sin(a)*s*.3,vh:rr(40,90),ci:i%4,t0:now(),life:rr(6,12)})}
       c.onLeave=c=>{c.hidden=false};if(c.me)say('哗啦——')}},{k:'sit',dur:.9},{fn:unclaim},{k:'happy',dur:1,soft:1}])}});
-const FLY=P.flyArea;   // 蝴蝶飞的范围：后院的草地
+const FLY=P.flyArea;   // 后院的草地：白天是蝴蝶在花坛和草地上飞；夜里（店里永远是夜里）是飞蛾绕着后院的路灯飞
+const night=()=>S.tod==='night',LAMP=P.lampP[0],MOTH=['#ece4d4','#dcd0bc','#f6efe2'];
 S.flies=[0,1,2].map(i=>({x:rr(FLY[0]+20,FLY[0]+FLY[2]-40),y:rr(FLY[1]+10,FLY[1]+FLY[3]-30),h:rr(12,26),tx:0,ty:0,col:['#ffd84a','#f4a6b8','#fff4dc'][i],spook:0}));
-tick(dt=>S.flies.forEach(f=>{if(f.spook>0)f.spook-=dt;if(Math.hypot(f.tx-f.x,f.ty-f.y)<3||!f.tx){const p=Math.random()<.4?{x:P.flowers.x+rr(6,P.flowers.w-6),y:P.flowers.y+14}:randFree(FLY);f.tx=p.x;f.ty=p.y}
-  const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy),sp=f.spook>0?60:18;f.x+=dx/d*Math.min(d,sp*dt)+Math.sin(now()*7+f.col.length)*8*dt;f.y+=dy/d*Math.min(d,sp*dt);f.h=Math.max(6,Math.min(40,(f.spook>0?f.h+30*dt:f.h+Math.sin(now()*3+f.x)*10*dt)))}));
-A.overs.push(vis=>S.flies.forEach(f=>{if(vis(f.x-4,f.y-f.h-4,8,8))butterfly(Math.round(f.x),Math.round(f.y-f.h),A.t,f.col)}));
+tick(dt=>S.flies.forEach(f=>{if(f.spook>0)f.spook-=dt;if(Math.hypot(f.tx-f.x,f.ty-f.y)<3||!f.tx){const p=night()?{x:LAMP.x+3+rr(-24,24),y:LAMP.y+rr(26,46)}:Math.random()<.4?{x:P.flowers.x+rr(6,P.flowers.w-6),y:P.flowers.y+14}:randFree(FLY);f.tx=p.x;f.ty=p.y}
+  const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy),sp=f.spook>0?60:18;f.x+=dx/d*Math.min(d,sp*dt)+Math.sin(now()*7+f.col.length)*8*dt;f.y+=dy/d*Math.min(d,sp*dt);f.h=Math.max(6,Math.min(40,(f.spook>0?f.h+30*dt:night()?f.h+(30-f.h)*dt+Math.sin(now()*5+f.x)*14*dt:f.h+Math.sin(now()*3+f.x)*10*dt)))}));
+A.overs.push(vis=>S.flies.forEach((f,i)=>{if(vis(f.x-4,f.y-f.h-4,8,8))butterfly(Math.round(f.x),Math.round(f.y-f.h),A.t,night()?MOTH[i%3]:f.col)}));
 const nearFly=c=>S.flies.filter(f=>near(c,f,34)&&f.spook<=0).sort((a,b)=>dist(a,c)-dist(b,c))[0];
-T({id:'fly',n:'蝴蝶',hidden:c=>!nearFly(c),near:c=>{const f=nearFly(c);return f?[f.x-34,f.y-26,68,52]:null},hit:()=>null,at:c=>S.flies[0],label:'扑蝴蝶',ai:{mood:'play',w:c=>roomAt(c.x,c.y).id==='yard'?(c.pal===3?4:1.5):.2},
-  go(c){const f=nearFly(c)||rnd(S.flies);faceTo(c,f);run(c,[...(near(c,f,30)?[]:[{chase:()=>f,near:16}]),{k:'pounce',dur:.9},{jump:()=>land(f.x,f.y),h:12,dur:.34},{fn:c=>{f.spook=2;f.tx=0;if(c.me)say(rnd(['差一点！','蝴蝶飞高了','它就是故意的']))}},{k:'sit',dur:.6,ex:'meh',soft:1}])}});
+T({id:'fly',n:'飞蛾',hidden:c=>!nearFly(c),near:c=>{const f=nearFly(c);return f?[f.x-34,f.y-26,68,52]:null},hit:()=>null,at:c=>S.flies[0],label:()=>night()?'扑飞蛾':'扑蝴蝶',ai:{mood:'play',w:c=>roomAt(c.x,c.y).id==='yard'?(c.pal===3?4:1.5):.2},
+  go(c){const f=nearFly(c)||rnd(S.flies);faceTo(c,f);run(c,[...(near(c,f,30)?[]:[{chase:()=>f,near:16}]),{k:'pounce',dur:.9},{jump:()=>land(f.x,f.y),h:12,dur:.34},{fn:c=>{f.spook=2;f.tx=0;if(c.me)say(rnd(['差一点！',night()?'飞蛾飞高了':'蝴蝶飞高了','它就是故意的']))}},{k:'sit',dur:.6,ex:'meh',soft:1}])}});
 S.bathBirds=[];let nextBath=rr(8,20);
 tick(dt=>{if((nextBath-=dt)<=0&&S.bathBirds.length<2){nextBath=rr(20,40);const side=S.bathBirds.length?16:5;S.bathBirds.push({x:P.bath.x+side,y:P.bath.y+2,dir:side>8?-1:1,t0:now(),until:now()+rr(18,30),fly:0,fx:0,fy:0})}
   S.bathBirds.forEach(b=>{if(!b.fly&&(now()>b.until||S.cats.some(c=>!c.stalk&&c.k.startsWith('walk')&&near(c,b,26)))){b.fly=now()}if(b.fly){const k=now()-b.fly;b.fx=k*40*b.dir;b.fy=-k*50}});
@@ -403,7 +409,7 @@ const LIKES={3:{tank:4,win0:2,win1:2,piano:3,bath:3,fly:3,walk:3},4:{vac:4,bigbo
 [[1,'宪宪'],[2,'砚砚'],[6,'金哥'],[3,'烁烁'],[4,'小狸花'],[5,'斑斑']].forEach(([b,name])=>{const c=A.mkCat(b,name,{kind:'npc',def:PERSONA[b].face,sp:26});const h=HOMES[b];
   if(h)Object.assign(c,{x:h.spot.x,y:h.spot.y,z:h.spot.z,face:h.spot.face,atHome:true,k:h.pool[0]});else Object.assign(c,randIn(['cafe','library','gallery'][b-3]));S.cats.push(c)});
 function npcThink(c){const h=HOMES[c.pal];
-  if(h){if(!c.atHome){run(c,goHome(c));return}c.wait=rr(7,13);setK(c,pickW(Object.fromEntries(h.pool.map(k=>[k,(PERSONA[c.pal].idle[k]??1)*(k==='sleep'&&S.tod==='night'?4:1)]))));return}
+  if(h){if(!c.atHome){run(c,goHome(c));return}c.wait=rr(7,13);setK(c,pickW(Object.fromEntries(h.pool.map(k=>[k,(PERSONA[c.pal].idle[k]??1)]))));return}
   c.wait=rr(1,3);const L=LIKES[c.pal],w={walk:L.walk,idle:3};
   for(const k in L){if(k==='walk')continue;if(k==='work'){w.work=S.baskets.some(b=>b.length)&&!c.hold?L.work:0;continue}if(k==='vac'){w.vac=VACS.some(V=>V.mode==='clean'&&!V.rider)?L.vac:0;continue}
     const th=TID(k);if(th&&!(th.hidden&&th.hidden(c))&&(!th.ok||th.ok(c)))w[k]=L[k]*(th.ai?Math.min(3,val(th.ai.w,c)||0)+.3:1)}

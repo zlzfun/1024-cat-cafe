@@ -210,7 +210,9 @@ function render(cx,vx,vy,vw,vh,{marker=true}={}){vx=Math.round(vx);vy=Math.round
   S.puffs.forEach(p=>{if(p.k>=0)puff(p.x,p.y,p.k)});S.hearts.forEach(h=>heartUp(h.x,h.y,h.k));M.over(now,S,vis);A.overs.forEach(f=>f(vis));over.forEach(f=>f());
   cx.restore();
   const fv=floorOf(vy+vh/2),tod=fv.tod||S.tod;
-  applyTod(vw,vh,tod,[...M.lights,...A.lights].filter(l=>(!l.when||l.when===tod)&&vis(l.x-l.r,l.y-l.r,l.r*2,l.r*2)).map(l=>({...l,x:l.x-vx,y:l.y-vy})),fv.tint);
+  // 屋外（后院、河边）的夜色冷一点、暗一点：这一层的 out 矩形和画面相交的部分
+  const outR=(fv.out||[]).filter(r=>vis(...r)).map(r=>[r[0]-vx,r[1]-vy,r[2],r[3]]);
+  applyTod(vw,vh,tod,[...M.lights,...A.lights].filter(l=>(!l.when||l.when===tod)&&vis(l.x-l.r,l.y-l.r,l.r*2,l.r*2)).map(l=>({...l,x:l.x-vx,y:l.y-vy})),fv.tint,{rects:outR,tint:fv.tintOut});
   if(marker&&me.transit){const T=me.transit,k=(now-T.t0)/(T.ph?T_IN:T_OUT),a=T.ph?1-k:k;if(a>0){cx.fillStyle=`rgba(10,6,16,${Math.min(1,a).toFixed(3)})`;cx.fillRect(0,0,vw,vh)}}
   lastView={x:vx,y:vy,w:vw,h:vh};use(o)}
 // 高清层：名字、说的话（像素字只有英文，名字用系统字体画在另一张画布上）

@@ -3,7 +3,7 @@
    - 店里的记录（图鉴、解了几颗球、交付了几件、集章、上次站在哪）跟着账号存：Account.save，隔几秒存一次，关页面前再存一次。
    - 同一只猫在两个窗口里开着：后开的那个接着玩，先开的那个显示"它在另一个窗口醒着"。
    - 其他在线的猫：接了服务端就联机（net.js + world-online.js，见 docs/联机.md），人少时由机器人补位（数量在 config.js 里）。人类始终不出场。
-   - 时段跟着现实的钟，天气跟着日子变。
+   - 店里永远是晴天的夜里（三层楼统一）。
    - 地址后面加 ?dev 出一条开发用的工具条（机器人数量、时段、天气、触发事件）。 */
 const App=(()=>{
 const CFG=window.CAT1024_CONFIG||{},DEV=/[?&]dev\b/.test(location.search);
@@ -148,7 +148,8 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
     if(!h){tip.style.display='none';return}let html='';
     if(h.cat&&h.cat.desk||h.th&&h.th.id==='deskcat')html=`<b>前台猫</b> · 有事问它<br><span class="what">这附近有什么好玩的、我是哪只猫、毛线球怎么解……想去哪儿，它带你过去</span>`;
     else if(h.cat){const c=h.cat,k=c.kind==='npc'?CAT_CARDS[c.pal]:null;html=k?`<b>${esc(k.name)}</b> · 店猫 · ${esc(k.breed)}（${esc(k.cli)}）<br><span class="how">${esc(k.at)}</span> · <span class="what">擅长：${esc(k.good)}</span>${c.doing?`<br><span class="what">${esc(c.doing)}</span>`:''}`:`<b>${esc(c.name)}</b>${c.doing?' · '+esc(c.doing):''}`}
-    else{const g=game.A.guide.info(h.th.id);html=g?`<b>${esc(g.n)}</b>${g.how?`<br><span class="how">${esc(g.how)}</span>`:''}<br><span class="what">${esc(g.what)}</span>${g.tie?`<br><span class="tie">${esc(g.tie)}</span>`:''}`:`<b>${esc(h.label)}</b>`}
+    // 东西：只写名字；有前提写前提，复杂的带一句很短的提示。会发生什么玩了才知道（"新发现"、图鉴里写）
+    else{const g=game.A.guide.info(h.th.id);html=g?`<b>${esc(g.n)}</b>${g.how?`<br><span class="how">${esc(g.how)}</span>`:''}${g.hint?`<br><span class="what">${esc(g.hint)}</span>`:''}`:`<b>${esc(h.label)}</b>`}
     tip.innerHTML=html;tip.style.display='block';const tw=tip.offsetWidth;tip.style.left=Math.min(e.clientX-gr.left+14,gr.width-tw-8)+'px';tip.style.top=(e.clientY-gr.top+14)+'px'});
   pc.addEventListener('pointerleave',()=>{tip.style.display='none';game.hover(-99,-99)});
   pc.addEventListener('contextmenu',e=>{e.preventDefault();gameEl.focus();if(!live()||dlg.open||game.A.vista.on)return;const w=toW(e),c=game.catAt(w.x,w.y);if(!c){closeMenu();return}menuMode='cat';menuCat=c;const me=game.me,ball=me.hold&&!me.hold.knit,k=c.kind==='npc'?CAT_CARDS[c.pal]:null;
@@ -172,13 +173,8 @@ function bindInput(){const gameEl=$('game'),pc=$('pc'),tip=$('tip'),menu=$('menu
 function showPhoto(cv,names){const s=4,c=$('phc');c.width=cv.width*s;c.height=cv.height*s;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(cv,0,0,c.width,c.height);
   $('phw').textContent='1024 猫咖 · 合照 · '+names.slice(0,12).join('、')+(names.length>12?` 等 ${names.length} 只猫`:'');$('phs').href=c.toDataURL('image/png');$('photo').style.display='flex'}
 
-/* ---------- 时段跟着现实的钟：7～17 点白天，17～19 点黄昏，其余是夜里 ---------- */
-function clockTod(){const h=new Date().getHours();return h>=7&&h<17?'day':h>=17&&h<19?'dusk':'night'}
-
-/* ---------- 天气跟着日子变：每天上午、下午各定一次，按日期算，大家看到的一样；10 月 24 日一定是晴天 ---------- */
-function weatherNow(d=new Date()){const m=d.getMonth()+1,day=d.getDate();if(m===10&&day===24)return 'sun';
-  let h=(d.getFullYear()*1000+m*50+day*2+(d.getHours()<12?0:1))>>>0;h=Math.imul(h^h>>>15,2246822507)>>>0;h=Math.imul(h^h>>>13,3266489909)>>>0;h=(h^h>>>16)>>>0;const r=h%1000/1000;
-  if((m===12||m<=2)&&r<.15)return 'snow';return r>=.8?'rain':'sun'}
+/* ---------- 店里永远是晴天的夜里：三层楼统一，窗外、后院、屋顶是同一片夜空（docs/店内设计.md 第一节开头）。开发工具条还能切时段、天气，只为了调试 ---------- */
+const SHOP_TOD='night',SHOP_WX='sun';
 
 /* ---------- 联机：接了服务端才有（设计见 docs/联机.md） ---------- */
 function startNet(){if(Account.mode!=='server')return;const L=game.A.live;L.send=o=>Net.send(o);
@@ -224,8 +220,7 @@ function devBar(){const b=$('devbar');b.style.display='flex';const n=CFG.bots??4
   b.innerHTML=`<span>机器人</span><input type="range" min="0" max="150" value="${n}" id="dvB"><b id="dvBv">${n}</b><span>时段</span>${['day','dusk','night'].map(t=>`<button data-tod="${t}">${{day:'白天',dusk:'黄昏',night:'夜晚'}[t]}</button>`).join('')}<span>天气</span>${['sun','rain','snow'].map(w=>`<button data-wx="${w}">${{sun:'晴',rain:'雨',snow:'雪'}[w]}</button>`).join('')}
     <span>事件</span>${[['arrive','塞几颗球'],['giant','大毛线团'],['ci','CI 红了'],['laser','激光点'],['bubbles','泡泡'],['bird','小鸟']].map(([k,n])=>`<button data-ev="${k}">${n}</button>`).join('')}<span id="dvP"></span>`;
   $('dvB').oninput=e=>{$('dvBv').textContent=e.target.value;game.bots(+e.target.value)};
-  b.onclick=e=>{const t=e.target;if(t.dataset.tod){game.S.tod=t.dataset.tod;devTod=true}if(t.dataset.wx){game.S.weather=t.dataset.wx;devTod=true}if(t.dataset.ev){const r=game.cmd.event(t.dataset.ev);if(r)ui.toast(r)}$('game').focus()}}
-let devTod=false;
+  b.onclick=e=>{const t=e.target;if(t.dataset.tod)game.S.tod=t.dataset.tod;if(t.dataset.wx)game.S.weather=t.dataset.wx;if(t.dataset.ev){const r=game.cmd.event(t.dataset.ev);if(r)ui.toast(r)}$('game').focus()}}
 
 /* ---------- 主循环 ---------- */
 let last=performance.now(),fno=0,fpsT=0,fpsN=0,jsT=0;
@@ -237,7 +232,6 @@ function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));la
     if(fno%4===0){const m=$('mm'),z=game.miniSize(200);if(m.width!==z.w||m.height!==z.h){m.width=z.w;m.height=z.h}game.mini(mctx,z.w,z.h)}
     if(fno%10===0){$('online').textContent=game.S.cats.filter(c=>!c.gone).length+' 只猫'+(Net.on?' · 在线 '+(1+game.A.live.count()):'');drawMe();drawPanel();hudR=hudRects()}
     if(fno%30===0){tryPrize();tryLotto()}
-    if(fno%1800===0&&!devTod){game.S.tod=clockTod();game.S.weather=weatherNow()}
     if(playing&&(saveT+=dt)>(dirty?3:20)){saveT=0;flush()}}
   jsT+=performance.now()-t0;
   if(toastNext&&performance.now()>=toastHold){const s=toastNext;toastNext=null;ui.toast(s)}if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');
@@ -253,7 +247,7 @@ function drawVeil(t){const k=(performance.now()-veil.t0)/1000;if(veil.how==='dro
 async function boot(progress){const gameEl=$('game');pctx=$('pc').getContext('2d',{willReadFrequently:true});octx=$('oc').getContext('2d');mctx=$('mm').getContext('2d');
   (()=>{const o=C;use($('icYarn').getContext('2d'));yarnBall(3,3,2,0);use($('icPaw').getContext('2d'));pawPrint(1,1,'#f4a6b8');use(o)})();
   progress('点灯……');await tick0();
-  game=makeWorld($('pc'),{play:true,ui,hi:true});window.__game=game;game.S.tod=clockTod();game.S.weather=weatherNow();game.bots(CFG.bots??40,true);
+  game=makeWorld($('pc'),{play:true,ui,hi:true});window.__game=game;game.S.tod=SHOP_TOD;game.S.weather=SHOP_WX;game.bots(CFG.bots??40,true);
   dlg=makeDialog($('dlg'),{pick:i=>{game.A.dlg.pick(i);sfx('page')},act:id=>game.A.dlg.act(id),link:k=>openLink(k),visited:k=>k==='inner'?game.S.stamps.inner:game.S.stamps.site});
   game.A.hudAvoid=()=>hudR;layout();addEventListener('resize',layout);bindInput();drawStamps();if(DEV)devBar();requestAnimationFrame(loop);
   progress('看看你是不是来过……');const resumed=await Account.resume();await progress(null);

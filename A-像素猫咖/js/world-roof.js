@@ -23,8 +23,8 @@ A.seatThing({id:'stargaze',n:'观星毯',hit:[BL.x,BL.y,44,20],at:P.blanketAt,ne
 T({id:'scope',n:'望远镜',hit:[P.scope.x,P.scope.y,26,30],at:P.scopeAt,near:[P.scopeAt.x-16,P.scopeAt.y-14,32,24],label:'凑过去看月亮',ai:{mood:'explore',w:.6},
   go(c){run(c,[{go:P.scopeAt},{fn:c=>{c.face='R';if(c.me){A.settle(c,{k:'sit',ex:'lookUp'});c.doing='在看月亮';A.vista.open('moon')}else stay(c,{k:'sit',ex:'lookUp',face:'R',dur:rr(4,8)})}}])}});
 
-/* ---------- 萤火虫：和后院的蝴蝶一样扑不到 ---------- */
-const FA=P.flyArea;S.ffly=Array.from({length:5},(_,i)=>({x:rr(FA[0]+20,FA[0]+FA[2]-20),y:rr(FA[1]+120,FA[1]+FA[3]),h:rr(14,30),tx:0,ty:0,ph:Math.random(),spook:0}));
+/* ---------- 萤火虫：和后院的飞蛾一样扑不到 ---------- */
+const FA=P.ffArea;S.ffly=Array.from({length:5},(_,i)=>({x:rr(FA[0]+20,FA[0]+FA[2]-20),y:rr(FA[1]+120,FA[1]+FA[3]),h:rr(14,30),tx:0,ty:0,ph:Math.random(),spook:0}));
 tick(dt=>S.ffly.forEach(f=>{if(f.spook>0)f.spook-=dt;if(!f.tx||Math.hypot(f.tx-f.x,f.ty-f.y)<3){f.tx=rr(FA[0]+20,FA[0]+FA[2]-20);f.ty=rr(FA[1]+120,FA[1]+FA[3])}
   const dx=f.tx-f.x,dy=f.ty-f.y,d=Math.hypot(dx,dy)||1,sp=f.spook>0?50:10;f.x+=dx/d*Math.min(d,sp*dt)+Math.sin(now()*3+f.ph*9)*6*dt;f.y+=dy/d*Math.min(d,sp*dt);f.h=Math.max(8,Math.min(48,f.spook>0?f.h+24*dt:f.h+Math.sin(now()*2+f.x)*8*dt))}));
 A.overs.push(vis=>S.ffly.forEach(f=>{const x=Math.round(f.x),y=Math.round(f.y-f.h);if(vis(x-3,y-3,6,6))firefly(x,y,now(),f.ph)}));

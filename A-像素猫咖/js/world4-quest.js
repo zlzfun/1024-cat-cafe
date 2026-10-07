@@ -11,18 +11,19 @@ const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(M
 const chPick=()=>{const s=CHANNELS.reduce((a,[,w])=>a+w,0);let r=Math.random()*s;for(const [n,w] of CHANNELS)if((r-=w)<=0)return n;return CHANNELS[0][0]};
 const Q=A.Q={seen:{},types:{},solved:0,cur:null,last:null};let qno=0;
 
-/* ---------- 给新叼起的球挑一道题：第一颗是答疑，第二颗是派单（挑离你最近的那只店猫），之后按"没见过的类型 + 离得近"加权 ---------- */
+/* ---------- 给新叼起的球挑一道题：每一颗都随机抽，没有固定的第一颗、第二颗 ----------
+   先按类型抽（每类机会差不多，闲聊多给一点），同一类里再平分；见过的题记在你的猫身上（A.guide.qseen），换天再来也先出没见过的，全见过了从头轮。
+   第一颗球（还没解过）不太会抽到"走流程""几只猫一起"：机会小一些，不是不出。 */
 function pickQuest(){if(Q.force){const d=def(Q.force);Q.force=null;if(d)return d}   // Q.force：测试用，指定下一道题
-  if(!Q.seen['q-at'])return def('q-at');
-  if(!Q.types.route){const r=QUEST_BANK.filter(q=>q.type==='route'&&!Q.seen[q.id]&&npc(q.ans)).sort((a,b)=>dist(npc(a.ans),me)-dist(npc(b.ans),me));if(r.length)return r[0]}
-  const pool=QUEST_BANK.filter(q=>!Q.seen[q.id]),L=pool.length?pool:QUEST_BANK,per={};L.forEach(q=>per[q.type]=(per[q.type]||0)+1);
-  // 先按类型分：每类机会差不多（闲聊多给一点），同一类里再平分——闲聊题多，但不会刷屏
-  return A.pickBy(L,q=>{let w=(q.type==='chat'?1.6:1)/per[q.type]/(1+(Q.types[q.type]||0)*1.2);
+  const seen=A.guide.qseen(),ok=q=>!Q.seen[q.id]&&(q.type!=='route'||npc(q.ans));let pool=QUEST_BANK.filter(q=>!seen[q.id]&&ok(q));
+  if(!pool.length){for(const k in seen)delete seen[k];pool=QUEST_BANK.filter(ok)}   // 全见过了：从头轮
+  const L=pool.length?pool:QUEST_BANK,per={},first=!A.guide.balls()&&!Q.solved;L.forEach(q=>per[q.type]=(per[q.type]||0)+1);
+  return A.pickBy(L,q=>{let w=(q.type==='chat'?1.6:1)/per[q.type]/(1+(Q.types[q.type]||0)*1.2);if(first&&(q.type==='flow'||q.type==='coop'))w*=.3;
     if(q.type==='route'){const c=npc(q.ans);w*=c?(dist(c,me)<320?1.6:dist(c,me)<640?1:.5):.2}
     const here=A.roomAt(me.x,me.y).id;if(q.type==='memory')w*=here==='library'?2:A.floorOf(me.y).id==='f2'?1.3:.9;if(q.type==='flow')w*=here==='lab'?2:A.floorOf(me.y).id==='f2'?1.3:.8;   // 在图书馆、工坊附近多出查记忆、走流程的题
     if(q.type==='coop')w*=S.cats.filter(c=>isBot(c)&&near(c,me,260)).length>=2?1.4:.6;return w})}
 // 联机时别的真人传过来的球带着题号（qid）和它经过谁（chain）：接着做同一道题
-function assign(y){const d=(y.qid&&def(y.qid))||pickQuest();Q.seen[d.id]=1;Q.types[d.type]=(Q.types[d.type]||0)+1;
+function assign(y){const d=(y.qid&&def(y.qid))||pickQuest();Q.seen[d.id]=1;A.guide.qseen()[d.id]=1;A.guide.save();Q.types[d.type]=(Q.types[d.type]||0)+1;
   const qs={d,y,no:++qno,ch:d.ch||chPick(),st:'pick',wrong:new Set(),chain:[...(y.chain||['门外']),'你'],flow:{test:0,ci:0,review:0},pp:{},tried:new Set()};
   if(d.opts)qs.opts=shuffle(d.opts.map((o,i)=>({t:o[0],right:!!o[1],why:o[2],pose:o[3],i})));
   if(d.type==='route')qs.cards=shuffle([d.ans,...shuffle([1,2,3,4,5,6].filter(p=>p!==d.ans)).slice(0,2)]);

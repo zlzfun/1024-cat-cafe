@@ -123,8 +123,6 @@ function giantYarn(cx,cy,t,p=0,cols=[0,1,4]){const r=Math.round(13-p*6),y0=cy-r-
   const n=Math.round(10*(1-p))+3;for(let i=0;i<n;i++){const q=hsh(i,21)*Math.PI*2,q2=q+1.2+hsh(i,22)*2,rr=r-1;line(cx+Math.round(Math.cos(q)*rr),y0+Math.round(Math.sin(q)*rr),cx+Math.round(Math.cos(q2)*rr),y0+Math.round(Math.sin(q2)*rr),YARN[cols[1+i%2]][i%3?0:1])}
   P1(cx-Math.round(r*.5),y0-Math.round(r*.6),YARN[cols[0]][2]);P1(cx-Math.round(r*.6),y0-Math.round(r*.5),YARN[cols[0]][2]);
   if(p>0)for(let i=0;i<4;i++){const k=(t*1.6+i/4)%1;P1(cx+Math.round(Math.cos(i*1.7)*(r+2+k*8)),y0+Math.round(Math.sin(i*1.7)*(r+2+k*6))-Math.round(k*4),YARN[cols[i%3]][0])}}
-// 懒人沙发：陷进去。30×18，base=y+18，落脚 y+12
-function beanbag(x,y,col=['#5B9BD5','#34618f','#a8d0f0']){const [a,d,l]=col;disc(x+15,y+11,15,7,OL);disc(x+15,y+11,14,6,a);disc(x+10,y+6,8,6,OL);disc(x+10,y+6,7,5,a);disc(x+9,y+4,4,2,l);disc(x+19,y+11,7,3,d);R(x+3,y+17,24,1,OL)}
 
 /* ---------- 吧台那头（猫的饭碗）、楼梯间的零食机 ---------- */
 function fridge(x,y){box(x,y,28,58,'#eef2f4');R(x+1,y+1,26,2,'#ffffff');R(x+1,y+19,26,1,OL);R(x+22,y+8,2,8,'#9aa3ad');R(x+22,y+24,2,14,'#9aa3ad');R(x+1,y+56,26,1,'#c8cdd2');
@@ -177,12 +175,9 @@ function catTreeTall(x,y,t){const post=(px,y1,y2)=>{R(px,y1,7,y2-y1,OL);R(px+1,y
   box(x,y+116,44,8,'#b8a0d8');R(x+1,y+120,42,3,'#8a70b0');post(x+30,y+14,y+116);post(x+6,y+44,y+116);post(x+24,y+72,y+100);
   plat(x+14,y+10,28);plat(x,y+40,24);plat(x+20,y+68,24);plat(x+2,y+96,24);
   const a=Math.sin(t*2.2)*3,bx=Math.round(x+41+a);line(x+41,y+17,bx,y+27,'#d9d2c4');yarnBall(bx,y+29,2,1)}
-function bubbleMachine(x,y,t,on=0){box(x,y+4,18,10,'#5B9BD5');R(x+1,y+5,16,2,'#a8d0f0');P1(x+3,y+9,on?'#7ee08a':'#34618f');
-  const a=on?t*4:0;for(let i=0;i<4;i++){const q=a+i*Math.PI/2;ring(x+11+Math.round(Math.cos(q)*3),y+4+Math.round(Math.sin(q)*3),1,'#e8b83a')}R(x+10,y+3,2,2,OL)}   // 18×14，base=y+14
 function bubble(x,y,r,pop=0){if(pop){const d=r+Math.round(pop*4);[[1,0],[-1,0],[0,1],[0,-1],[.7,.7],[-.7,.7],[.7,-.7],[-.7,-.7]].forEach(([a,b])=>P1(x+Math.round(a*d),y+Math.round(b*d),'#ffffff'));return}
   alpha(.3,()=>disc(x,y,r-1,r-1,'#cfeef8'));ring(x,y,r,'#e8f6ff');P1(x-Math.round(r/2),y-Math.round(r/2),'#ffffff')}
 function laserDot(x,y){alpha(.35,()=>R(x-2,y-1,5,3,'#ff3048'));R(x-1,y-1,2,2,'#ff3048');P1(x-1,y-1,'#ffc0c8')}
-function laserBox(x,y,t,on){box(x,y,12,7,'#3a3a46');R(x+2,y+2,5,1,'#6b7480');P1(x+9,y+3,on&&Math.floor(t*6)%2?'#ff3048':'#6a2a30')}
 // 猫隧道：钻进去从另一头出来。bulge 0→1 猫在里面走到哪儿（-1 空）。62×18，base=y+18
 function tunnel(x,y,t,bulge=-1){const bx=bulge>=0?x+8+Math.round(bulge*46):-99;
   for(let i=5;i<57;i++){const d=Math.abs(x+i-bx),up=d<6?(d<3?2:1):0;R(x+i,y+2-up,1,14+up,OL);R(x+i,y+3-up,1,12+up,(i%5)?'#5B9BD5':'#34618f');P1(x+i,y+4-up,(i%5)?'#a8d0f0':'#5B9BD5');R(x+i,y+13,1,2,'#34618f')}

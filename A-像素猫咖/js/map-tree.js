@@ -1,7 +1,8 @@
 /* 1024 猫咖 · 毛线巨树：从一楼咖啡厅的地面长出来，穿过二楼的天井，树冠在屋顶上（设计见 docs/店内设计.md 第二节）。
    地图部分在 map-roof.js 后面加载（makeWorld 之前）；WORLD_MODS 里接在 world4-desk.js 后面。
    - 一楼：粗大的树根、裹着五色毛线套的树干、一圈环形长凳；树干往上分出两根低枝，贴着天花板铺到咖啡桌上空。树下一块铭牌。
-   - 二楼：树干从天井里长上来，六根家族横枝各挂一块圆牌（这个家族的猫脸），猫能跳上去窝着；抱着树干能滑回一楼。
+   - 二楼：树干从天井里长上来，六根横枝伸在回廊上空，枝头各挂一盏小灯笼，猫能跳上去窝着；抱着树干能滑回一楼。
+     （横枝原来一根对应一个家族、挂猫脸圆牌，去掉了：家族和模型以后还会加，内网能用的模型也不一样。）
    - 屋顶：金色的树冠，顶上是瞭望台，坐上去画面切到"看风景"；顺着树干也能滑回一楼。
    - 全店一起挂：橱窗里每挂一件成品，树上多挂一件，一楼的低枝、二楼的横枝、屋顶的树冠轮着挂；挂满 36 件，三层一起满树金光十几秒，然后收下来重新挂。
    - 爬树也是上下楼的一条路：你在一楼爬上去，一路穿过二楼爬到树顶；别的猫爬到二楼找根横枝窝着。 */
@@ -9,10 +10,9 @@ const TREE={cx:480,N:36,
   f1:{base:440,top:262},                                        // 一楼：树根落地、树干进天花板
   f2:{well:[400,Y2+380,160,100],base:Y2+470,top:Y2+56},         // 二楼：天井、树干从天井底长到天花板
   rf:{base:Y3+420,canX:280,canY:Y3+70,top:{x:480,y:Y3+170}},    // 屋顶：树干从屋顶的洞里出来，树冠、瞭望台
-  // 二楼的六根横枝：s 朝哪边，y 枝面（猫脚底），len 长度，fam 家族（BREEDS 下标），col 毛线套的颜色
-  br:[{s:-1,y:Y2+344,len:78,fam:1,col:'#d97757'},{s:1,y:Y2+306,len:78,fam:2,col:'#5B8C5A'},{s:-1,y:Y2+268,len:74,fam:3,col:'#5B9BD5'},
-      {s:1,y:Y2+230,len:74,fam:4,col:'#e0533d'},{s:-1,y:Y2+192,len:70,fam:5,col:'#e8b83a'},{s:1,y:Y2+154,len:70,fam:6,col:'#9B7EBD'}]};
-const FAM_NAMES=[null,['布偶猫','Claude'],['缅因猫','Codex'],['暹罗猫','Gemini'],['狸花猫','GLM'],['孟加拉猫','Antigravity'],['金渐层','opencode']];
+  // 二楼的六根横枝：s 朝哪边，y 枝面（猫脚底），len 长度，col 毛线套的颜色
+  br:[{s:-1,y:Y2+344,len:78,col:'#d97757'},{s:1,y:Y2+306,len:78,col:'#5B8C5A'},{s:-1,y:Y2+268,len:74,col:'#5B9BD5'},
+      {s:1,y:Y2+230,len:74,col:'#e0533d'},{s:-1,y:Y2+192,len:70,col:'#e8b83a'},{s:1,y:Y2+154,len:70,col:'#9B7EBD'}]};
 const cx1=y=>TREE.cx+Math.round(4*Math.sin((TREE.f1.base-y)/60)),hw1=y=>Math.round(26+8*Math.max(0,Math.min(1,(y-262)/160)));
 const cx2=y=>TREE.cx+Math.round(5*Math.sin((TREE.f2.base-y)/70)),hw2=y=>Math.round(24+6*Math.max(0,Math.min(1,(y-Y2-60)/400)));
 const brX0=b=>cx2(b.y)+b.s*(hw2(b.y)-3);
@@ -46,7 +46,9 @@ function leafCluster(cx,cy,rx,ry,seed=0){const n=3+Math.round((rx+ry)/10);for(le
 function leafG(x,y,i){const c=['#e8b83a','#f7c940','#c98a1e','#e3a92c'][i%4];if(i%2){R(x,y,2,1,c);P1(x+1,y+1,c)}else{R(x,y,1,2,c);P1(x+1,y,c)}}
 function limb(x0,y0,x1,y1,w0,w1,col='#8a5a3a'){const n=Math.ceil(Math.hypot(x1-x0,y1-y0)),P=[];for(let i=0;i<=n;i+=2){const u=i/n;P.push([Math.round(x0+(x1-x0)*u),Math.round(y0+(y1-y0)*u),Math.max(1,Math.round((w0+(w1-w0)*u)/2))])}
   P.forEach(([x,y,r])=>disc(x,y,r+1,r+1,OL));P.forEach(([x,y,r])=>disc(x,y,r,r,col));P.forEach(([x,y,r])=>{if(r>2)disc(x-Math.round(r*.4),y,Math.max(1,Math.round(r*.3)),Math.max(1,Math.round(r*.6)),'#a8703f')})}
-function famFace(x,y,fam){const b=BREEDS[fam];grid(x,y,[".o...o.","oxo.oxo","obbbbbo","obebebo","obbnbbo",".ooooo."],{o:b.outline,b:b.body,x:b.points||b.stripe||b.spot||b.body,e:'#241a2e',n:'#f4a6b8'})}
+// 横枝上的小灯笼：枝长 62% 处垂一根线，挂一盏纸灯笼，灯笼上下两道和这根枝的毛线套同色。L.y 是灯笼顶
+const brLantern=b=>({x:brX0(b)+b.s*Math.round(b.len*.62),y:b.y+9});
+function branchLantern(x,y,col){line(x,y-5,x,y-1,'#d9d2c4');R(x-2,y-1,5,2,OL);R(x-4,y+1,9,10,OL);R(x-3,y+2,7,8,'#ffe6a0');R(x-3,y+2,7,1,col);R(x-3,y+9,7,1,col);R(x-1,y+3,1,5,'#fff6d0');R(x+2,y+3,1,6,'#f0c060');R(x-2,y+11,5,2,OL);P1(x,y+13,col)}
 function yarnStitch(xx,y,cx,y0,Y,u){const ly=(y-y0)%13;let col=u<.18?Y[2]:u<.72?Y[0]:Y[1];if(ly===0||ly===12)return Y[1];const sx=((xx-cx+100)%4+4)%4,sy=ly%3;
   if(sy===1&&(sx===0||sx===3))col=u<.18?Y[0]:Y[1];else if(sy===2&&(sx===1||sx===2))col=u<.18?Y[0]:Y[1];return col}
 // 一段树干：一行一行画，knit=[y0,y1] 这一段裹着五色毛线套（一圈一个颜色，上下两道米色罗纹边），其余是树皮
@@ -74,16 +76,16 @@ function treeBench(cx,cy){disc(cx,cy+2,66,22,OL);disc(cx,cy+3,65,21,'#6e4430');d
   disc(cx,cy,42,12,OL);disc(cx,cy,41,11,'#5a3a26');for(let i=0;i<30;i++){const a=hsh(i,301)*Math.PI*2,r=Math.sqrt(hsh(i,302))*.9;const x=Math.round(cx+Math.cos(a)*38*r),y=Math.round(cy+Math.sin(a)*9*r);if(hsh(i,303)<.5)R(x,y,2,1,'#5e8a4a');else leafG(x,y,i)}}
 function treePlaque(x,y){R(x+4,y+10,3,6,OL);R(x+29,y+10,3,6,OL);box(x,y,36,12,'#8a5a3a');R(x+2,y+2,32,8,'#5c3a28');txt('CLOWDER',x+5,y+4,'#ffd84a')}
 
-/* ---------- 二楼：树干从天井里长上来，六根家族横枝、圆牌，枝梢一团团叶子 ---------- */
+/* ---------- 二楼：树干从天井里长上来，六根横枝、枝头的小灯笼，枝梢一团团叶子 ---------- */
 const T2={x:330,y:Y2+40,w:300,h:440};
 const TRUNK2=bakeAt(T2.x,T2.y,T2.w,T2.h,()=>{const B=TREE.f2.base;
   trunkRows(TREE.f2.top,B,cx2,hw2,[Y2+372,Y2+460]);trunkRows(Y2+176,Y2+226,cx2,hw2,[Y2+176,Y2+226]);
-  TREE.br.forEach(b=>{const x0=brX0(b),dk=tint(b.col,.72),lt=tint(b.col,1.25);
+  TREE.br.forEach((b,k)=>{const x0=brX0(b),dk=tint(b.col,.72),lt=tint(b.col,1.25),sd=(k+1)*7;
     for(let i=0;i<=b.len;i++){const u=i/b.len,xx=x0+b.s*i,top=b.y-Math.round(4*u*u),th=Math.max(5,13-Math.round(7*u));R(xx,top-1,1,th+2,OL);
       if(i>=4&&i<=18){R(xx,top,1,th,(i%3===0)?dk:b.col);P1(xx,top,lt)}else{R(xx,top,1,th,'#8a5a3a');P1(xx,top,'#b07a48');P1(xx,top+th-1,'#5c3a26')}}
     R(x0+b.s*(b.len+1),b.y-6,1,8,OL);
-    leafCluster(x0+b.s*(b.len+6),b.y-8,17,11,b.fam*7);leafCluster(x0+b.s*(b.len-14),b.y-11,11,6,b.fam*7+3);leafCluster(x0+b.s*Math.round(b.len*.45),b.y-8,7,4,b.fam*7+5);
-    const tx=x0+b.s*Math.round(b.len*.62),ty=b.y+4;line(tx,ty,tx,ty+5,'#d9d2c4');disc(tx,ty+12,7,7,OL);disc(tx,ty+12,6,6,b.col);disc(tx-2,ty+10,2,2,lt);famFace(tx-3,ty+9,b.fam)});
+    leafCluster(x0+b.s*(b.len+6),b.y-8,17,11,sd);leafCluster(x0+b.s*(b.len-14),b.y-11,11,6,sd+3);leafCluster(x0+b.s*Math.round(b.len*.45),b.y-8,7,4,sd+5);
+    const L=brLantern(b);branchLantern(L.x,L.y,b.col)});
   // 天花板那一线也垂下来几团叶子：上面就是屋顶上的树冠
   [[TREE.cx,Y2+56,34,10,1],[TREE.cx-44,Y2+64,14,7,2],[TREE.cx+46,Y2+63,14,7,3]].forEach(([x,y,rx,ry,k])=>leafCluster(x,y,rx,ry,k*17))});
 
@@ -120,7 +122,7 @@ function treeOrnaments(T0,floor){if(!T0)return;T0.orn.forEach((it,i)=>{if(i%3!==
 
 /* ---------- 往 WORLD 里加：一楼的长凳和树、二楼的天井和栏杆、屋顶的树冠 ---------- */
 (()=>{const M=WORLD,P=WP,W=TREE.f2.well;
-Object.assign(P,{treeAt:{x:TREE.cx+2,y:TREE.f1.base+28},plaque:{x:TREE.cx-18,y:TREE.f1.base+18},branchAt:{x:390,y:Y2+372},slideAt:{x:420,y:Y2+374},topAt:{x:TREE.cx+24,y:TREE.rf.base+16}});
+addP({treeAt:{x:TREE.cx+2,y:TREE.f1.base+28},plaque:{x:TREE.cx-18,y:TREE.f1.base+18},branchAt:{x:390,y:Y2+372},slideAt:{x:420,y:Y2+374},topAt:{x:TREE.cx+24,y:TREE.rf.base+16}});
 M.BLOCK.push([W[0]-6,W[1]-4,W[2]+12,W[3]+12]);   // 天井和一圈栏杆
 const bg0=M.bg;M.bg=function(){bg0.call(this);treeBench(TREE.cx,TREE.f1.base);wellHole(W[0],W[1],W[2],W[3])};
 const add=(x,y,w,h,base,draw,o={})=>M.props.push({x,y,w,h,base,draw,...o});
@@ -130,7 +132,8 @@ add(T2.x,T2.y,T2.w,T2.h,TREE.f2.base,(t,S)=>{C.drawImage(TRUNK2,T2.x,T2.y);treeO
 add(W[0]-6,W[1]-6,W[2]+12,14,W[1]+6,()=>railH(W[0]-6,W[1]-6,W[2]+12));add(W[0]-6,W[1]+W[3]-4,W[2]+12,14,W[1]+W[3]+8,()=>railH(W[0]-6,W[1]+W[3]-4,W[2]+12));
 add(W[0]-6,W[1],6,W[3],W[1]+W[3],()=>railV(W[0]-6,W[1],W[3]));add(W[0]+W[2]+2,W[1],6,W[3],W[1]+W[3],()=>railV(W[0]+W[2]+2,W[1],W[3]));
 add(TREE.rf.canX,TREE.rf.canY,CAN_W,TREE.rf.base-TREE.rf.canY,TREE.rf.base,(t,S)=>{C.drawImage(CANOPY_IMG,TREE.rf.canX,TREE.rf.canY);C.drawImage(TRUNK3,TR.x,TR.y);treeOrnaments(S.tree,2)},{ver:S=>S.tree?S.tree.v:0});
-M.lights.push({x:TREE.cx,y:300,r:70,col:'#ffcf60',when:'night',a:.5},{x:TREE.cx,y:Y2+250,r:90,col:'#ffcf60',when:'night',a:.45},{x:TREE.cx,y:Y3+170,r:120,col:'#ffcf60',a:.5});
+M.lights.push({x:TREE.cx,y:300,r:70,col:'#ffcf60',when:'night',a:.5},{x:TREE.cx,y:Y2+250,r:90,col:'#ffcf60',when:'night',a:.45},{x:TREE.cx,y:Y3+170,r:120,col:'#ffcf60',a:.5},
+  ...TREE.br.map(b=>{const L=brLantern(b);return{x:L.x,y:L.y+8,r:16,col:'#ffd890',when:'night',a:.8}}));
 })();
 
 WORLD_MODS.push(A=>{
@@ -185,13 +188,12 @@ A.seatThing({id:'treebench',n:'树下的环形长凳',hit:[TREE.cx-66,TREE.f1.ba
 T({id:'treeplaque',n:'巨树的铭牌',hit:[P.plaque.x,P.plaque.y,36,16],at:{x:P.plaque.x+18,y:P.plaque.y+24},near:[P.plaque.x-6,P.plaque.y+14,48,18],label:'看看铭牌',ai:{mood:'explore',w:.2},
   go(c){run(c,[{go:{x:P.plaque.x+18,y:P.plaque.y+24}},{fn:c=>{c.face='L'}},{k:'sit',dur:.6,ex:'lookUp'},{fn:c=>{if(c.me)openPlaque()}}])}});
 function openPlaque(){const T0=S.tree;A.dlg.show({id:'tree-'+Math.floor(now()*10),kind:'info',head:{icon:'tree',title:'毛线巨树'},blocks:[
-  {k:'text',t:'铭牌上刻着 CLOWDER：一群猫。这棵树从咖啡厅的地面长出来，穿过二楼，树冠在屋顶上。树干上的毛线套一圈一个颜色，是店里的猫一针一针织上去的。二楼的六根横枝，是猫猫咖啡馆的六个家族：'},
-  {k:'words',items:TREE.br.map(b=>{const k=CAT_CARDS[b.fam];return[FAM_NAMES[b.fam][0]+' · '+FAM_NAMES[b.fam][1],k.name+'：'+k.good]})},
+  {k:'text',t:'铭牌上刻着 CLOWDER：一群猫。这棵树从咖啡厅的地面长出来，穿过二楼，树冠在屋顶上。树干上的毛线套一圈一个颜色，是店里的猫一针一针织上去的。'},
   {k:'text',t:'全店每挂出一件成品，树上就多挂一件，一楼、二楼、屋顶轮着挂；挂满 '+TREE.N+' 件，满树金光。'},
   {k:'progress',p:T0.orn.length/TREE.N,t:`树上挂了 ${T0.orn.length} / ${TREE.N} 件`+(T0.blooms?` · 已经满树金光过 ${T0.blooms} 次`:'')}],
-  tip:{...TIPS.family,key:'family'},acts:[{id:'ok',t:'知道了',key:'E'}]})}
-// 二楼：跳上一根家族横枝
-T({id:'branch',n:'巨树的横枝',hit:[TREE.cx-110,Y2+130,220,230],at:P.branchAt,near:[P.branchAt.x-16,P.branchAt.y-14,40,24],label:'跳上一根家族横枝',ok:c=>!c.hold&&freeOf(brOcc,c,[0,1,2,3,4,5])!=null,no:c=>c.hold?'叼着东西跳不上去':'横枝上都有猫了',
+  tip:{...TIPS.multi,key:'multi'},acts:[{id:'ok',t:'知道了',key:'E'}]})}
+// 二楼：跳上一根横枝
+T({id:'branch',n:'巨树的横枝',hit:[TREE.cx-110,Y2+130,220,230],at:P.branchAt,near:[P.branchAt.x-16,P.branchAt.y-14,40,24],label:'跳上一根横枝',ok:c=>!c.hold&&freeOf(brOcc,c,[0,1,2,3,4,5])!=null,no:c=>c.hold?'叼着东西跳不上去':'横枝上都有猫了',
   ai:{mood:'rest',w:1.4},go(c){const i=freeOf(brOcc,c,c.me?[0,2,4,1,3,5]:shuffle([0,1,2,3,4,5]));if(i==null)return;run(c,[{go:P.branchAt},...perchSteps(c,i)])}});
 // 二楼、屋顶：抱着树干滑回一楼
 T({id:'treeslide',n:'抱着树干滑下去',hit:[TREE.cx-20,Y2+384,40,40],at:P.slideAt,near:[P.slideAt.x-14,P.slideAt.y-14,36,24],label:'抱着树干，一路滑回一楼',ok:c=>!c.hold,no:()=>'叼着东西，走楼梯吧',ai:{mood:'explore',w:.3},

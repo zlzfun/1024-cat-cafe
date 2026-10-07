@@ -56,7 +56,7 @@ A.seatThing({id:'readtable',n:'阅读桌',hit:[P.readTable.x,P.readTable.y-8,P.r
 const AF=P.armchair.y+32;
 A.seatThing({id:'armchair',n:'扶手椅',hit:[P.armchair.x,P.armchair.y,30,26],at:{x:P.armchair.x+15,y:AF},near:[P.armchair.x-6,AF-8,42,18],label:'窝进扶手椅',
   spots:[{x:P.armchair.x+15,y:P.armchair.y+16,z:P.armchair.y+26.5,face:'R'}],up:()=>[{x:P.armchair.x+15,y:P.armchair.y+16,z:P.armchair.y+26.5}],down:()=>[{x:P.armchair.x+15,y:AF}],floor:()=>({x:P.armchair.x+15,y:AF}),
-  k:()=>S.tod==='night'||Math.random()<.5?'sleep':'lie',ex:'content',doing:'窝在扶手椅里',ai:{mood:'rest',w:1.2}});
+  k:()=>Math.random()<.5?'sleep':'lie',ex:'content',doing:'窝在扶手椅里',ai:{mood:'rest',w:1.2}});
 const WS=P.winSeat;
 const WF=WS.y+20;
 A.seatThing({id:'winseat',n:'窗边软座',hit:[WS.x,WS.y-8,WS.w,18],at:{x:WS.x+24,y:WF},near:[WS.x-4,WF-8,WS.w+8,18],label:()=>S.tod==='night'?'在窗边睡一觉（会做梦）':'在窗边趴一会儿',
@@ -94,7 +94,7 @@ tick(dt=>{const G=S.chess,occ=chessTh.occ,a=occ[0],b=occ[1],seated=c=>c&&!c.gone
 const BF=P.bench.y+24;
 A.seatThing({id:'bench',n:'长椅',hit:[P.bench.x,P.bench.y-4,P.bench.w,19],at:{x:P.bench.x+21,y:BF},near:[P.bench.x-6,BF-8,P.bench.w+12,16],label:'在长椅上晒太阳',
   spots:[{x:P.bench.x+11,y:P.bench.y+7,z:P.bench.y+15.5,face:'R'},{x:P.bench.x+31,y:P.bench.y+7,z:P.bench.y+15.5,face:'L'}],up:i=>[{x:P.bench.x+11+i*20,y:P.bench.y+7,z:P.bench.y+15.5}],
-  down:i=>[{x:P.bench.x+11+i*20,y:BF}],floor:i=>({x:P.bench.x+11+i*20,y:BF}),k:()=>S.tod==='night'?'sleep':'lie',ex:'content',doing:'在长椅上看许愿池',ai:{mood:'rest',w:1}});
+  down:i=>[{x:P.bench.x+11+i*20,y:BF}],floor:i=>({x:P.bench.x+11+i*20,y:BF}),k:()=>Math.random()<.4?'sleep':'lie',ex:'content',doing:'在长椅上看许愿池',ai:{mood:'rest',w:1}});
 const SG={x:P.sign.x-10,y:P.sign.y+50};
 T({id:'signpost',n:'路标',hit:[P.sign.x-24,P.sign.y,60,46],at:SG,near:[SG.x-20,SG.y-8,56,16],label:'看看路标',ai:{mood:'explore',w:.3},
   go(c){run(c,[{go:SG},{fn:c=>{c.face='R';S.signT=now()+4}},{k:'sit',dur:.7,ex:'lookUp'},{fn:c=>{if(c.me)openSign()}},{k:'sit',dur:1,soft:1}])}});

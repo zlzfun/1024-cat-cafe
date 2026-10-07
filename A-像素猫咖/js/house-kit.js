@@ -163,6 +163,27 @@ function coatRack(x,y){R(x+5,y,2,40,OL);R(x+6,y,1,40,'#a8784a');R(x+1,y+38,10,2,
 // 墙上一排相框：每个里面一只猫
 function catFrames(x,y,list){list.forEach(([dx,b],i)=>frame(x+dx,y,16,16,(ix,iy)=>cat(i%2?'sit':'lie',b,ix+8,iy+15,0,0,i%2?'L':'R')))}
 // 楼层指示牌（楼梯间墙上）：每层一行，一个图标加几个字母
-function floorDirectory(x,y){box(x,y,46,36,'#2f2340','#8a5a3a');[['RF','star','#ffd84a'],['2F','book','#a8d0f0'],['1F','cup','#f4a6b8']].forEach(([s,ic,col],i)=>{const yy=y+4+i*11;txt(s,x+4,yy+1,col);grid(x+16,yy,SIGN_IC[ic],{o:col,w:'#2f2340',r:'#e0533d','.':null});R(x+26,yy+2,16,1,'#5a4e7a');R(x+26,yy+4,10,1,'#5a4e7a')})}
+function floorDirectory(x,y){box(x,y,42,36,'#2f2340','#8a5a3a');[['RF','star','#ffd84a'],['2F','book','#a8d0f0'],['1F','cup','#f4a6b8']].forEach(([s,ic,col],i)=>{const yy=y+4+i*11;txt(s,x+4,yy+1,col);grid(x+16,yy,SIGN_IC[ic],{o:col,w:'#2f2340',r:'#e0533d','.':null});R(x+26,yy+2,12,1,'#5a4e7a');R(x+26,yy+4,8,1,'#5a4e7a')})}   // 42×36
 // 长木凳（楼梯间、二楼回廊）：凳面落脚 y+5，w 宽，base=y+12
 function longBench(x,y,w){R(x,y,w,7,OL);R(x+1,y+1,w-2,3,'#c98d5c');R(x+1,y+1,w-2,1,'#e0a878');R(x+1,y+4,w-2,2,'#8a5a3a');R(x+3,y+7,3,5,OL);R(x+w-6,y+7,3,5,OL)}
+// 大懒人沙发（午睡角）：46×30，base=y+30；靠背鼓在左上，座位的凹陷在右边。col=[主色, 暗, 亮]。能坐两只：(x+15,y+14)、(x+31,y+15)
+function beanbagBig(x,y,[a,d,l]){alpha(.22,()=>disc(x+23,y+28,22,3,'#241a2e'));
+  disc(x+23,y+19,23,10,OL);disc(x+15,y+12,14,10,OL);disc(x+23,y+19,22,9,a);disc(x+15,y+12,13,9,a);
+  disc(x+29,y+19,12,5,d);disc(x+29,y+18,10,3,a);disc(x+11,y+8,6,3,l);disc(x+38,y+16,3,2,l);
+  for(let i=0;i<6;i++)P1(x+5+i*3,y+16+(i%2),d);for(let i=0;i<4;i++)P1(x+36+i*2,y+23+(i%2),d);R(x+5,y+29,36,1,OL)}
+// 大泡泡机（大客厅）：36×32，base=y+32。蓝色机身、正面一个风扇格栅；顶上立着一只泡泡圈转轮（5 个小圈），开着的时候转；前面一盘泡泡水
+function bubbleMachineBig(x,y,t,on){alpha(.22,()=>disc(x+18,y+31,17,2,'#241a2e'));
+  const a=on?t*3:0,cx=x+20,cy=y+10;R(cx-1,cy,2,12,OL);ring(cx,cy,8,'#c98a1e');ring(cx,cy,7,'#e8b83a');
+  for(let i=0;i<5;i++){const q=a+i*Math.PI*2/5,rx=Math.round(cx+Math.cos(q)*8),ry=Math.round(cy+Math.sin(q)*8);disc(rx,ry,2,2,'#ffd84a');P1(rx,ry,'#cfeef8')}R(cx-1,cy-1,3,3,OL);
+  box(x+2,y+16,32,15,'#5B9BD5');R(x+3,y+17,30,3,'#a8d0f0');R(x+3,y+28,30,2,'#34618f');
+  disc(x+11,y+24,5,4,OL);disc(x+11,y+24,4,3,'#34618f');for(let i=-3;i<=3;i+=2)R(x+11+i,y+21,1,7,'#5B9BD5');
+  R(x+20,y+22,11,6,OL);R(x+21,y+23,9,4,'#cfeef8');R(x+21,y+23,9,1,'#ffffff');P1(x+31,y+19,on?'#7ee08a':'#2e4a6a')}
+// 月亮小夜灯（午睡角墙上）：14×14 的弯月，挂一颗小星星
+function moonLamp(x,y){const IN=(i,j)=>(i-6.5)**2+(j-6.5)**2<=42&&(i-10)**2+(j-4)**2>24;
+  for(let j=-1;j<15;j++)for(let i=-1;i<15;i++){if(IN(i,j))P1(x+i,y+j,i+j<10?'#fff2b8':'#ffd870');else if(IN(i-1,j)||IN(i+1,j)||IN(i,j-1)||IN(i,j+1))P1(x+i,y+j,OL)}
+  line(x+11,y+11,x+11,y+15,'#d9d2c4');R(x+10,y+16,3,3,'#ffd84a');P1(x+11,y+16,'#fff8d0')}
+// 激光逗猫器（大客厅墙上）：22×14 的白色小机器，顶上两只猫耳朵，正中一只红镜头；开着的时候镜头一闪一闪
+function laserToy(x,y,t,on){R(x+9,y,4,3,OL);R(x+10,y+1,2,1,'#8a8496');
+  grid(x+2,y+1,["..o..............o..",".ofo............ofo.","ofpfo..........ofpfo"],{o:OL,f:'#e8e4f0',p:'#f4a6b8','.':null});
+  box(x+2,y+4,19,10,'#e8e4f0');R(x+3,y+5,17,2,'#ffffff');R(x+3,y+12,17,1,'#b8b0c8');
+  const blink=on&&Math.floor(t*6)%2;disc(x+11,y+9,3,2,OL);disc(x+11,y+9,2,1,blink?'#ff3048':'#8a2a34');P1(x+10,y+8,blink?'#ffd0d8':'#c86a74');P1(x+17,y+7,on?'#7ee08a':'#4a5a4a')}

@@ -1,13 +1,13 @@
 /* 1024 猫咖 · 屋顶：永远是晴天的夜里（y 2400～2940，设计见 docs/店内设计.md 第一节）。依赖 map-1f.js、map-2f.js（在它们后面加载）。
    上半张是夜空：银河、月亮、星星、流星，天边一排屋顶的剪影；正中是巨树的树冠（map-tree.js）。
    左边一片斜屋顶，屋脊上能坐一排猫，一根烟囱；右边是木头平台：观星毯、望远镜、吊床、猫跑轮和一串大灯泡；最右边是楼梯小屋。
-   为什么永远是夜里：星空是屋顶的主角，来店里的人大多是白天来的。别处照旧跟着现实的钟。 */
+   为什么永远是夜里：星空是屋顶的主角，来店里的人大多是白天来的。全店都是晴天的夜里（2026-10-07 起），一楼、二楼的窗外和屋顶是同一片天。 */
 (()=>{const M=WORLD,P=WP,Y=Y3;
 M.rooms.push({id:'roof',f:'roof',n:'星空露台',x:0,y:Y,w:960,h:540,in:[250,Y+344,500,170],d:'永远是晴天的夜里：屋脊上坐一排猫，观星毯上躺着看满天星，巨树的树冠在头顶；跑起跑轮，串灯一颗颗亮'});
-Object.assign(P,{ridge:[30,62,94,168,198,226].map((x,i)=>({x,y:Y+247,z:Y+251.5,face:i<3?'L':'R'})),ridgeUp:[{x:236,y:Y+384,z:Y+412.5},{x:230,y:Y+316,z:Y+412.5}],ridgeAt:{x:244,y:Y+430},chimney:{x:122,y:Y+206},
+addP({ridge:[30,62,94,168,198,226].map((x,i)=>({x,y:Y+247,z:Y+251.5,face:i<3?'L':'R'})),ridgeUp:[{x:236,y:Y+384,z:Y+412.5},{x:230,y:Y+316,z:Y+412.5}],ridgeAt:{x:244,y:Y+430},chimney:{x:122,y:Y+206},
   blanket:{x:540,y:Y+470},blanketAt:{x:534,y:Y+500},scope:{x:604,y:Y+428},scopeAt:{x:596,y:Y+466},hammock:{x:676,y:Y+452},wheel:{x:768,y:Y+438},dyn:{x:820,y:Y+476},
-  pole:{x:838,y:Y+352,h:134},festA:{x:839,y:Y+354},festB:{x:170,y:Y+282},festSag:34,festN:16,hut:{x:790,y:Y+372},tank:{x:880,y:Y+330},
-  moon:{x:836,y:Y+64},sky:[0,Y,960,316],flyArea:[260,Y+250,520,260]});
+  pole:{x:838,y:Y+352,h:134},festA:{x:839,y:Y+354},festB:{x:170,y:Y+282},festSag:34,festN:16,hut:{x:790,y:Y+372},waterTank:{x:880,y:Y+330},
+  moon:{x:836,y:Y+64},sky:[0,Y,960,316],ffArea:[260,Y+250,520,260]});
 M.WALK.push([250,Y+322,702,212],[8,Y+418,250,116],[814,Y+430,22,24]);
 M.BLOCK.push([792,Y+400,22,54],[836,Y+400,22,54],[814,Y+400,22,30],[884,Y+380,32,8],[450,Y+402,60,22],[602,Y+452,20,6],[676,Y+482,4,8],[736,Y+482,4,8],[772,Y+484,40,6],[820,Y+484,10,6],[836,Y+482,7,6],
   [258,Y+340,14,8],[702,Y+340,14,8],[940,Y+500,14,8],[300,Y+330,120,10],[560,Y+330,120,10],[20,Y+500,40,10],[688,Y+488,40,10]);
@@ -49,5 +49,5 @@ add(P.wheel.x,P.wheel.y,48,50,P.wheel.y+50,(t,S)=>catWheel(P.wheel.x,P.wheel.y,S
 add(P.dyn.x,P.dyn.y,10,12,P.dyn.y+12,(t,S)=>dynamo(P.dyn.x,P.dyn.y,t,S.wheelOn||0),{live:1});
 add(P.pole.x-2,P.pole.y,7,P.pole.h,P.pole.y+P.pole.h,()=>lightPole(P.pole.x,P.pole.y,P.pole.h));
 add(P.hut.x-4,P.hut.y-2,78,82,P.hut.y+80,t=>{stairHut(P.hut.x,P.hut.y,t);antenna(P.hut.x+56,P.hut.y-20,22)});
-add(P.tank.x,P.tank.y-4,40,62,P.tank.y+58,()=>waterTank(P.tank.x,P.tank.y));
+add(P.waterTank.x,P.waterTank.y-4,40,62,P.waterTank.y+58,()=>waterTank(P.waterTank.x,P.waterTank.y));
 })();

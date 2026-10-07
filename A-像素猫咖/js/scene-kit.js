@@ -102,9 +102,10 @@ function cardbox(x,y,state,t,bi=4){R(x+3,y,16,4,OL);R(x+4,y+1,14,2,'#c49656');R(
 function plant(x,y,t,shake=0){const s=shake?Math.round(Math.sin(t*30)):0,L=[[7,5,5,4],[3,10,4,3],[11,10,4,3],[5,2,3,3],[10,3,3,3]];
   L.forEach(([a,b,rx,ry])=>disc(x+a+s,y+b,rx+1,ry+1,OL));L.forEach(([a,b,rx,ry],i)=>{disc(x+a+s,y+b,rx,ry,i%2?'#4a8a4e':'#5ea85e');P1(x+a+s-1,y+b-1,'#8cd08a')});
   R(x+2,y+14,11,10,OL);R(x+3,y+16,9,7,'#c46a44');R(x+2,y+14,11,3,OL);R(x+3,y+15,9,1,'#e08a5a')}         // base=y+24
-function sunbeam(x,y,w,h,shift,t,tod){if(tod==='night')return;const col=tod==='dusk'?'#ffb070':'#fff3b0';
-  alpha(tod==='dusk'?.24:.3,()=>{for(let j=0;j<h;j++){const o=Math.round(j*shift/h);R(x+o,y+j,Math.floor(w/2)-1,1,col);R(x+o+Math.floor(w/2)+1,y+j,Math.ceil(w/2)-1,1,col)}});
-  alpha(.8,()=>{for(let i=0;i<4;i++){const k=(t*.15+i*.27)%1;P1(x+Math.round(k*shift+w*(i/4)),y+Math.round(h*(1-k)),'#fff8d8')}})}
+// 斜照进来的光：白天、黄昏是阳光（带浮尘），夜里是月光（淡蓝、没有浮尘）
+function sunbeam(x,y,w,h,shift,t,tod){const night=tod==='night',col=night?'#e4ecff':tod==='dusk'?'#ffb070':'#fff3b0';
+  alpha(night?.22:tod==='dusk'?.24:.3,()=>{for(let j=0;j<h;j++){const o=Math.round(j*shift/h);R(x+o,y+j,Math.floor(w/2)-1,1,col);R(x+o+Math.floor(w/2)+1,y+j,Math.ceil(w/2)-1,1,col)}});
+  if(!night)alpha(.8,()=>{for(let i=0;i<4;i++){const k=(t*.15+i*.27)%1;P1(x+Math.round(k*shift+w*(i/4)),y+Math.round(h*(1-k)),'#fff8d8')}})}
 
 /* ---------- 毛线球：从门外进来，被解开，织成小物件 ---------- */
 // 五种毛线：[主色, 暗边, 高光]；YARN 也直接喂给 drawCat 的 yarn 选项，让玩球动作里的毛线同色
@@ -187,5 +188,9 @@ function cat(k,bi,x,y,t,o=0,face='R',ex,yarn,mirror){return drawCat(C,k,bi,x,y,t
 const GLOW={};
 function glowTex(r,col){const k=r+col;if(GLOW[k])return GLOW[k];const c=document.createElement('canvas');c.width=c.height=r*2;const g=c.getContext('2d'),gr=g.createRadialGradient(r,r,0,r,r,r);
   gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,r*2,r*2);return GLOW[k]=c}
-function applyTod(w,h,tod,lights=[],tint){if(tod==='day')return;C.save();C.globalCompositeOperation='multiply';C.fillStyle=tod==='dusk'?'#ffd6b4':tint||'#6c68a8';C.fillRect(0,0,w,h);
+// 夜色：整屏乘一层颜色（tint，屋里点着灯，暖一点、亮一点），out 是屋外的几块（{rects:[[x,y,w,h]…], tint}，冷一点、暗一点），再把灯光叠上去
+function applyTod(w,h,tod,lights=[],tint,out){if(tod==='day')return;C.save();C.globalCompositeOperation='multiply';const base=tod==='dusk'?'#ffd6b4':tint||'#6c68a8';
+  if(tod==='night'&&out&&out.rects.length){C.save();C.beginPath();C.rect(0,0,w,h);out.rects.forEach(r=>C.rect(r[0],r[1],r[2],r[3]));C.clip('evenodd');C.fillStyle=base;C.fillRect(0,0,w,h);C.restore();
+    C.fillStyle=out.tint||'#6c68a8';out.rects.forEach(r=>C.fillRect(r[0],r[1],r[2],r[3]))}
+  else{C.fillStyle=base;C.fillRect(0,0,w,h)}
   C.globalCompositeOperation='lighter';lights.forEach(l=>{if(l.when&&l.when!==tod)return;C.globalAlpha=(tod==='dusk'?.35:.55)*(l.a||1);C.drawImage(glowTex(l.r,l.col),l.x-l.r,l.y-l.r)});C.restore()}

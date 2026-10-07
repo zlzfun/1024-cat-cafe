@@ -17,7 +17,7 @@ const ring=()=>{S.bellT=.7;sfx('bell')};
 
 /* ---------- 能玩的东西：GUIDE 的一条 ↔ 店里的一样（毛线篮、橱窗、书架……有好几个） ---------- */
 // 一会儿有一会儿没有、或者要看天气的，不推荐
-const SKIP=['treatBit','pop','dot','fly','paper','sunA','sunB','bath','pile','toyback'];
+const SKIP=['treatBit','pop','dot','fly','paper','sunA','bath','pile','toyback'];
 const center=th=>{const h=val(th.hit,me);if(h)return{x:h[0]+h[2]/2,y:h[1]+h[3]/2};return val(th.at,me)};
 function thingOf(id){const L=TH.filter(t=>GID(t.id)===id&&!(t.hidden&&t.hidden(me))&&(!t.ok||t.ok(me)));return L.sort((a,b)=>dist(center(a),me)-dist(center(b),me))[0]||null}
 // 推荐三样没玩过的：同一间房、近的优先，和猫猫咖啡馆特性有关的再往前挪一点；一间房最多两样
@@ -50,7 +50,7 @@ function leadStep(c,L){c.wait=.25;const t=now();
 let wasNear=false,waveT=-99,greeted=false;
 function deskThink(c){if(lead)return leadStep(c,lead);if(!onDesk()){run(c,backSteps());return}
   c.wait=rr(6,12);if(near(me,c,70)&&!me.hidden){faceTo(c,me);setK(c,rnd(['sit','sit','lick']));return}
-  setK(c,pickW({sit:3,lick:1,knead:1,sleep:S.tod==='night'?3:1}))}
+  setK(c,pickW({sit:3,lick:1,knead:1,sleep:1}))}
 const think0=A.think;A.think=c=>c.desk?deskThink(c):think0(c);
 tick(()=>{if(!A.play||lead)return;const n=near(me,cat,56)&&!me.hidden;
   if(n&&!wasNear&&now()-waveT>25&&onDesk()&&!A.dlg.open){waveT=now();faceTo(cat,me);run(cat,[{k:'maneki',dur:1.6},{k:'sit',dur:.1}]);cat.wait=2;
@@ -69,7 +69,7 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
     const hi=G.count()?rnd(['又见面啦～今天想玩点什么？','想去哪儿？我带你去。','有什么想问的？']):'欢迎光临！第一次来吧？想玩什么、想找谁，问我就好。';
     spec={blocks:[say1(hi),{k:'choices',cols:2,items}],tip:tipOf('concierge'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]};pick=i=>go(items[i].id)}
   else if(id==='fun'){const L=suggest(3);
-    spec=L.length?{blocks:[say1('这几样你还没玩过，都不远：'),{k:'choices',items:L.map(s=>({t:s.g.n,sub:roomAt(val(s.th.at,me).x,val(s.th.at,me).y).n+' · '+s.g.what}))}],tip:tipOf(L[0].g.tip),acts:BACK}
+    spec=L.length?{blocks:[say1('这几样你还没玩过，都不远：'),{k:'choices',items:L.map(s=>({t:s.g.n,sub:roomAt(val(s.th.at,me).x,val(s.th.at,me).y).n+(s.g.hint?' · '+s.g.hint:'')}))}],tip:tipOf(L[0].g.tip),acts:BACK}
       :{blocks:[say1('店里能玩的，你差不多都玩过啦！去毛线篮叼一颗球吧。')],acts:BACK};
     pick=i=>{const s=L[i];if(!s)return;A.dlg.close();startLead(s.k,s.th)}}
   else if(id==='ball'){const items=ball?[]:[{t:'带我去毛线篮'}];
@@ -83,7 +83,7 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
       {k:'text',t:'集齐以后会弹出一张登记表：姓名、工号、联系方式，只用来抽奖和联系领奖。一个工号算一次，和玩得好不好没关系。抽中了，我在店里告诉你。'},...(items.length?[{k:'choices',items}]:[])],tip:tipOf('concierge'),acts:BACK};
     pick=i=>{const it=items[i];if(!it)return;if(it.id==='links'){A.openWelcome();return}const th=thingOf('basket');A.dlg.close();if(me.hold){say('嘴里叼着东西呢：先解开、挂进橱窗');return}if(th)startLead('basket',th)}}
   else if(id==='floors')spec={blocks:[say1('这是一栋三层的小楼。'),
-      {k:'steps',items:[{t:'一楼',sub:'你在这儿：门厅、橱窗长廊、1024 舞台、吧台、咖啡厅；后门出去是后院和河'},{t:'二楼',sub:'猫自己的房间：1024 工坊、图书馆、大客厅、午睡角；巨树的六根家族横枝在回廊上'},
+      {k:'steps',items:[{t:'一楼',sub:'你在这儿：门厅、橱窗长廊、1024 舞台、吧台、咖啡厅；后门出去是后院和河'},{t:'二楼',sub:'猫自己的房间：1024 工坊、图书馆、大客厅、午睡角；巨树的横枝伸在回廊上空，能跳上去窝着'},
         {t:'屋顶',sub:'永远是晴天的夜里：屋脊上坐一排猫，观星毯上看满天星，巨树的树冠和瞭望台'}]},
       {k:'text',t:'上楼走楼梯间的楼梯，走进楼梯口就上去了；也可以在咖啡厅爬上巨树，一路爬到屋顶。右上角的小地图只画你在的那一层。'}],tip:tipOf('concierge'),acts:BACK};
   else if(id==='cafe')spec={blocks:[say1('这家店，是照着猫猫咖啡馆开的。'),
@@ -118,7 +118,7 @@ const HEY={basket:'篮子里有毛线球，叼一颗？',knock:'扒拉一下门�
   kotatsu:'暖桌里能钻六只',fire:'壁炉前最舒服',sofa:'沙发最左边是宪宪的位置',tree:'爬架能一层层跳上去',piano:'地板钢琴，踩上去就响',bubbler:'泡泡机，打开试试',laser:'激光逗猫器！',tunnel:'隧道从这头钻到那头',catnip:'猫薄荷鱼，闻一下',
   wheel:'跑轮跑起来，那串大灯泡会亮',hammock:'吊床晃呀晃，头顶就是星星',toyback:'地上那个，叼回桌上吧',winseat:'窗边软座，夜里能等流星',
   yarntree:'顺着树干爬上去，一路能爬到屋顶',treeplaque:'树下的铭牌，写着这棵树的来历',treebench:'树下的长凳，坐一会儿',chair:'椅子空着，坐下等杯咖啡',stool:'高脚凳，跳上去',
-  coffee:'按一下咖啡机，有拉花',cake:'蛋糕柜，隔着玻璃闻一闻',fish:'栈桥尽头能钓鱼，浮漂一沉就收竿',boat:'小船坐满两只就开',branch:'跳上一根家族横枝窝着',treeslide:'抱着树干，能一路滑回一楼',
+  coffee:'按一下咖啡机，有拉花',cake:'蛋糕柜，隔着玻璃闻一闻',fish:'栈桥尽头能钓鱼，浮漂一沉就收竿',boat:'小船坐满两只就开',branch:'跳上一根横枝窝着',treeslide:'抱着树干，能一路滑回一楼',
   ridge:'跳上屋脊，背后就是星空',stargaze:'躺在观星毯上看星星',scope:'望远镜里是月亮',treetop:'爬到树顶，能看夜里的整条街'};
 let roomId=null,inRoom=0,quiet=0,heyT=-40,chk=0;const heard=new Set();
 A.on('use',()=>{quiet=0});
