@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # 1024 猫咖营业中 · 一键部署（Linux / macOS）。说明见 docs/部署.md。
+# 固定挂在已有网站的 /1024-cat-cafe/ 下：猫咖只听本机（127.0.0.1:1024），那个网站的 nginx 把 /1024-cat-cafe/ 转过来。
+# 脚本不改 nginx：它生成 nginx-1024-cat-cafe.conf，照打印的步骤加进网站的 server { }。
 #
-#   ./deploy.sh                      第一次：检查环境 → 写好配置 → 后台启动 → 打印地址和后台口令
+#   ./deploy.sh                      第一次：检查环境 → 写好配置 → 后台启动 → 生成 nginx 那一段 → 打印步骤、地址和后台口令
 #   ./deploy.sh start [选项]          启动（已经在跑就只打印状态）
-#     --port 1024                    端口（默认 1024）
-#     --host 0.0.0.0                 监听地址：0.0.0.0 让局域网里别的电脑也能打开；放在反向代理后面用 127.0.0.1
+#     --port 1024                    端口（默认 1024；nginx 那一段跟着改）
 #     --data /srv/cat1024-data       数据目录（名册、抽奖登记、后台口令；默认 server/data）
 #     --inner https://…              内源主页地址（写进 config.js；只在内网用，别提交到公开仓库）
 #     --bots 40                      补位的机器人数（写进 config.js）
-#     --proxy                        放在反向代理（nginx 等）后面
+#     --host 127.0.0.1               监听地址（默认只听本机；nginx 在别的机器上才用 0.0.0.0）
+#   ./deploy.sh nginx                重新生成、打印 nginx 那一段和加的步骤
 #   ./deploy.sh stop | restart | status | logs [-f]
 #   ./deploy.sh service              装成 systemd 服务：开机自启、挂了自动拉起（要 sudo，只在 Linux 上）
+#   ./deploy.sh uninstall            撤掉：停下，拆掉装过的 systemd 服务；代码和数据留着，删不删你定
 #   ./deploy.sh backup               把数据目录打包到 backups/（里面有抽奖登记的个人信息，妥善保管）
 #   ./deploy.sh restore 文件          用一份备份恢复数据（先停、再恢复、再启动）
 #   ./deploy.sh reset                清空店里的数据（名册、抽奖登记、计数），保留后台口令；会先自动备份
@@ -34,10 +37,14 @@ warn(){ printf '%s!%s %s\n' "${c_warn}" "${c_0}" "$*"; }
 die(){ printf '%s✗ %s%s\n' "${c_err}" "$*" "${c_0}" >&2; exit 1; }
 
 # ---------- 设置：deploy.env 里的、命令行给的 ----------
-PORT=1024; HOST=0.0.0.0; DATA_DIR="${APP_DIR}/server/data"; TRUST_PROXY=0
+# 挂的路径是固定的；猫咖在 nginx 后面，按 nginx 加在 X-Forwarded-For 最后的地址认人（TRUST_PROXY=1）
+BASE=/1024-cat-cafe; NGINX_FILE="${APP_DIR}/nginx-1024-cat-cafe.conf"
+PORT=1024; HOST=127.0.0.1; DATA_DIR="${APP_DIR}/server/data"; TRUST_PROXY=1
 [ -f "${ENV_FILE}" ] && . "${ENV_FILE}"
+TRUST_PROXY=1
 INNER=; BOTS=; WITH_NODE=; WITH_CONFIG=0; FOLLOW=0
-CMD="${1:-start}"; [ $# -gt 0 ] && shift
+# 第一个参数是命令；直接从选项开头（./deploy.sh --inner …）就是 start
+CMD=start; case "${1:-}" in -h|--help) CMD=help; shift;; ''|-*) ;; *) CMD="$1"; shift;; esac
 while [ $# -gt 0 ]; do
   case "$1" in
     --port) PORT="${2:?--port 后面要写端口}"; shift 2;;
@@ -45,7 +52,7 @@ while [ $# -gt 0 ]; do
     --data) DATA_DIR="${2:?--data 后面要写目录}"; shift 2;;
     --inner) INNER="${2:?--inner 后面要写地址}"; shift 2;;
     --bots) BOTS="${2:?--bots 后面要写数字}"; shift 2;;
-    --proxy) TRUST_PROXY=1; shift;;
+    --proxy) shift;;  # 以前的参数：现在固定在 nginx 后面，不用再写
     --with-node) WITH_NODE="${2:?--with-node 后面要写 Node 的二进制包}"; shift 2;;
     --with-config) WITH_CONFIG=1; shift;;
     -f) FOLLOW=1; shift;;
@@ -79,10 +86,40 @@ check_node(){
 }
 port_free(){ "${NODE}" -e "const s=require('net').createServer();s.once('error',()=>process.exit(1));s.once('listening',()=>s.close(()=>process.exit(0)));s.listen(${PORT},'${HOST}')" 2>/dev/null; }
 health(){ "${NODE}" -e "fetch('http://127.0.0.1:${PORT}/api/health').then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{console.log(JSON.stringify(j));process.exit(0)}).catch(()=>process.exit(1))" 2>/dev/null; }
-lan_ip(){ local ip=""
-  if command -v hostname >/dev/null 2>&1; then ip="$(hostname -I 2>/dev/null | awk '{print $1}')" || true; fi
-  if [ -z "${ip}" ] && command -v ipconfig >/dev/null 2>&1; then ip="$(ipconfig getifaddr en0 2>/dev/null || true)"; fi
-  printf '%s' "${ip}"; }
+
+# ---------- nginx 那一段：挂到网站的 /1024-cat-cafe/ 下。只生成文件，不碰 nginx ----------
+# 内容变了（第一次、换了端口）NGINX_NEW=1：要把新的这段加进网站、reload nginx
+NGINX_NEW=0
+write_nginx(){
+  local up="${HOST}" tmp="${NGINX_FILE}.tmp"; if [ "${up}" = 0.0.0.0 ]; then up=127.0.0.1; fi
+  cat > "${tmp}" <<EOF
+# 1024 猫咖：挂在这个网站的 ${BASE}/ 下（deploy.sh 生成，猫咖的端口 ${PORT}）。
+# 整段放进网站对外的那个 server { } 里，和别的 location 并列。每一行为什么在：docs/部署.md
+# ^~：网站自己按后缀给静态文件的规则（location ~* \\.(js|css)\$ 这种）抢不走猫咖的文件
+location ^~ ${BASE}/ {
+    proxy_pass http://${up}:${PORT}/;         # 结尾的 / 不能少：去掉 ${BASE} 再转给猫咖
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade \$http_upgrade;    # 联机走 WebSocket，这两行不能少
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host \$host;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_read_timeout 600s;                   # 联机是长连接，别让 nginx 一分钟就掐断
+    gzip on;                                   # 只管这一段：第一次进店的下载从约 1.3MB 降到约 650KB
+    gzip_types text/css application/javascript text/javascript application/json image/svg+xml text/plain;
+    # 这一段有了自己的 add_header，就不继承网站在 server 一级加的头（里面要是有 Content-Security-Policy，猫咖会白屏）
+    add_header X-1024-Cat-Cafe 1;
+}
+EOF
+  if [ -f "${NGINX_FILE}" ] && cmp -s "${tmp}" "${NGINX_FILE}"; then rm -f "${tmp}"; else mv "${tmp}" "${NGINX_FILE}"; NGINX_NEW=1; fi
+}
+nginx_steps(){
+  say "${c_ok}接下来${c_0}：把猫咖挂到网站的 ${BASE}/ 下（脚本不改 nginx：这一步你来，或者交给管这个网站的人）"
+  say "  1. 找到网站对外的那个 server { }（https 的那个；只做 80 转 443 的那个不用管）。先把那个文件备份到别处（别放在 sites-enabled、conf.d 里：那里的文件都会被读进去）"
+  say "  2. 把 ${NGINX_FILE} 整段贴进这个 server { } 里"
+  say "  3. sudo nginx -t && sudo systemctl reload nginx（-t 没过就别 reload；别用 restart）"
+  say "  4. 打开 https://网站的地址${BASE}/"
+  say "  ${c_dim}撤：从 server { } 里删掉这一段，再 nginx -t、reload。详见 docs/部署.md 的\"挂到已有网站的 ${BASE}/ 下\"${c_0}"
+}
 
 # ---------- config.js：给了 --inner / --bots，或者还没有这个文件，就写一份 ----------
 # 只改这两样，文件里别的设置（ws、改过的链接……）原样留着；内源主页里有引号、反斜杠也不会写坏（按 JSON 写）
@@ -104,19 +141,42 @@ write_config(){
 
 # ---------- 跑着没有 ----------
 service_on(){ [ -f "${UNIT_FILE}" ] && command -v systemctl >/dev/null 2>&1 && systemctl is-enabled --quiet "${UNIT}" 2>/dev/null; }
-pid_alive(){ [ -f "${PID_FILE}" ] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; }
+# 进程号文件里的进程还在，而且真是这个目录里的猫咖。进程号会被系统回收给别的程序：不认一认，停的时候会停掉别人的进程
+cmd_of(){ if [ -r "/proc/$1/cmdline" ]; then tr '\0' ' ' < "/proc/$1/cmdline"; else ps -ww -o args= -p "$1" 2>/dev/null; fi; }
+cwd_of(){ if [ -e "/proc/$1/cwd" ]; then readlink "/proc/$1/cwd"; else lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p'; fi; }
+pid_alive(){ [ -f "${PID_FILE}" ] || return 1; local p; p="$(cat "${PID_FILE}")"
+  case "${p}" in ''|*[!0-9]*) return 1;; esac; kill -0 "${p}" 2>/dev/null || return 1
+  # 现在用完整路径启动；以前的脚本用相对路径 server/server.js 启动，就看它的工作目录是不是这里
+  case "$(cmd_of "${p}")" in *"${APP_DIR}/server/server.js"*) return 0;; *server/server.js*) [ "$(cwd_of "${p}")" = "$(pwd -P)" ];; *) return 1;; esac; }
 running(){ if service_on; then systemctl is-active --quiet "${UNIT}"; else pid_alive; fi; }
+# 这个服务文件是不是猫咖装的；装的是哪个目录
+unit_ours(){ [ -f "${UNIT_FILE}" ] && grep -q '^Description=1024 猫咖营业中$' "${UNIT_FILE}"; }
+unit_dir(){ sed -n 's/^WorkingDirectory=//p' "${UNIT_FILE}"; }
+
+# 数据目录只放猫咖自己的东西。--data 指到了放着别的文件的目录：不改它的权限、不往里写、不把别人的文件打进备份
+check_data(){ [ -d "${DATA_DIR}" ] || return 0; local f
+  for f in "${DATA_DIR}"/* "${DATA_DIR}"/.[!.]*; do [ -e "${f}" ] || continue
+    case "${f##*/}" in cats.json|cats.json.tmp|admin.key|lost+found|.DS_Store) ;;
+      *) die "数据目录 ${DATA_DIR} 里有不是猫咖的东西（${f##*/}）：给猫咖单独建一个空目录，用 --data 指过去";; esac
+  done; }
+# 共用的服务器上容易忽略的两件事
+warn_root(){ if [ "$(id -u)" = 0 ]; then warn "现在是 root：猫咖用不着 root，只要能写数据目录。共用的服务器上建议换个普通账号来跑"; fi; }
+warn_proxy(){ if [ "${HOST}" = 0.0.0.0 ]; then warn "在听 0.0.0.0：别的电脑能绕过 nginx 直连 ${PORT} 端口，还能自己编 X-Forwarded-For。nginx 和猫咖在同一台机器上就别加 --host 0.0.0.0（默认只听本机）"; fi; }
 
 admin_key(){ if [ -n "${ADMIN_KEY:-}" ]; then printf '%s' "${ADMIN_KEY}"; elif [ -f "${DATA_DIR}/admin.key" ]; then tr -d '\n' < "${DATA_DIR}/admin.key"; fi; }
 show_urls(){
-  local ip; ip="$(lan_ip)"; local key; key="$(admin_key)"
+  local key; key="$(admin_key)"
   say ""
-  say "  店：      http://127.0.0.1:${PORT}/"
-  if [ "${HOST}" = 0.0.0.0 ] && [ -n "${ip}" ]; then say "  局域网：  http://${ip}:${PORT}/"; fi
-  say "  后台：    http://127.0.0.1:${PORT}/admin.html    口令：${key:-（看 ${DATA_DIR}/admin.key）}"
+  say "  店：      https://网站的地址${BASE}/          （nginx 加好那一段以后）"
+  say "  后台：    https://网站的地址${BASE}/admin.html    口令：${key:-（看 ${DATA_DIR}/admin.key）}"
+  say "  本机检查：http://127.0.0.1:${PORT}/          （只有这台服务器自己打得开）"
+  say "  ${c_dim}nginx 那一段：${NGINX_FILE}${c_0}"
   say "  ${c_dim}数据：${DATA_DIR}    日志：$(service_on && echo "journalctl -u ${UNIT}" || echo "${LOG_FILE}")${c_0}"
   say ""
 }
+# 启动、装服务以后：nginx 那一段是新的（第一次、换了端口）就把步骤打出来，没变就一句话
+after_up(){ show_urls
+  if [ "${NGINX_NEW}" = 1 ]; then nginx_steps; else say "${c_dim}nginx 那一段没变：已经加进网站的话不用再动${c_0}"; fi; }
 
 wait_up(){ for _ in $(seq 1 40); do if health >/dev/null; then return 0; fi; sleep 0.25; done; return 1; }
 
@@ -125,17 +185,20 @@ do_start(){
   [ -f "${APP_DIR}/server/server.js" ] && [ -f "${APP_DIR}/index.html" ] || die "这里不是 1024 猫咖的目录（找不到 server/server.js、index.html）"
   # 已经在跑：给了 --inner / --bots 也照样写进 config.js（页面不缓存，大家刷新就生效，不用重启）
   if running; then [ -n "${INNER}${BOTS}" ] && { find_node; write_config; say "${c_dim}config.js 改了：刷新页面就生效${c_0}"; }; ok "已经在跑了"; health >/dev/null && ok "接口正常" || warn "进程在，但接口没应答，看看日志：./deploy.sh logs"; show_urls; return; fi
+  check_data; warn_proxy
   mkdir -p "${DATA_DIR}" "${RUN_DIR}"; chmod 700 "${DATA_DIR}" 2>/dev/null || true
   write_config
-  port_free || die "端口 ${PORT} 被占了。换一个：./deploy.sh start --port 8080"
+  port_free || die "端口 ${PORT} 被占了。换一个：./deploy.sh start --port 8080（nginx 那一段会跟着改，记得重新加）"
+  write_nginx
   if service_on; then sudo systemctl start "${UNIT}"
   else
+    warn_root
     say "${c_dim}启动：PORT=${PORT} HOST=${HOST} DATA_DIR=${DATA_DIR} TRUST_PROXY=${TRUST_PROXY}${c_0}"
-    PORT="${PORT}" HOST="${HOST}" DATA_DIR="${DATA_DIR}" TRUST_PROXY="${TRUST_PROXY}" nohup "${NODE}" server/server.js >> "${LOG_FILE}" 2>&1 &
+    # 用完整路径启动：ps 里一眼看得出是哪个目录的猫咖，停的时候也靠它认
+    PORT="${PORT}" HOST="${HOST}" DATA_DIR="${DATA_DIR}" TRUST_PROXY="${TRUST_PROXY}" nohup "${NODE}" "${APP_DIR}/server/server.js" >> "${LOG_FILE}" 2>&1 &
     echo $! > "${PID_FILE}"
   fi
-  if wait_up; then save_env; ok "开张了"; show_urls
-    [ "${HOST}" = 0.0.0.0 ] && say "${c_dim}别的电脑打不开的话：看看服务器的防火墙有没有放行 ${PORT} 端口。${c_0}"
+  if wait_up; then save_env; ok "开张了"; after_up
   else die "十秒内没起来。看日志：./deploy.sh logs"; fi
 }
 
@@ -163,9 +226,18 @@ do_logs(){
 
 do_service(){
   [ "$(uname -s)" = Linux ] && command -v systemctl >/dev/null 2>&1 || die "只有带 systemd 的 Linux 能装成服务；别的系统用 ./deploy.sh start"
-  check_node; mkdir -p "${DATA_DIR}"; write_config; save_env
-  if pid_alive; then do_stop; fi
+  check_node; check_data
+  # 同名的服务文件已经有了：不是猫咖装的，不覆盖；是另一个目录里的猫咖，说一声再换成这里的
+  if [ -f "${UNIT_FILE}" ]; then
+    unit_ours || die "${UNIT_FILE} 已经有了，不是猫咖装的：不覆盖它（真要装，改 deploy.sh 开头的 UNIT，换个服务名）"
+    local was; was="$(unit_dir)"
+    if [ "${was}" != "${APP_DIR}" ]; then warn "这个服务原来跑的是 ${was} 里的猫咖，现在换成这里的（数据目录 ${DATA_DIR}）"; fi
+  fi
+  warn_proxy
   local user; user="$(id -un)"
+  if [ "${user}" = root ]; then warn "服务会用 root 跑：猫咖用不着 root。共用的服务器上建议用普通账号来跑 ./deploy.sh service（要 sudo 的地方脚本自己会用）"; fi
+  mkdir -p "${DATA_DIR}"; chmod 700 "${DATA_DIR}" 2>/dev/null || true; write_config; save_env; write_nginx
+  if pid_alive; then do_stop; fi
   sudo tee "${UNIT_FILE}" >/dev/null <<EOF
 [Unit]
 Description=1024 猫咖营业中
@@ -188,12 +260,40 @@ TimeoutStopSec=15
 [Install]
 WantedBy=multi-user.target
 EOF
-  sudo systemctl daemon-reload; sudo systemctl enable --now "${UNIT}"
-  if wait_up; then ok "装好了：开机自启，挂了自动拉起（systemctl status ${UNIT}）"; show_urls; else die "服务起不来：journalctl -u ${UNIT} -n 50"; fi
+  # 用 restart 不用 enable --now：服务已经在跑的时候 --now 什么也不做，换了端口、数据目录不会生效
+  sudo systemctl daemon-reload; sudo systemctl enable "${UNIT}"; sudo systemctl restart "${UNIT}"
+  if wait_up; then ok "装好了：开机自启，挂了自动拉起（systemctl status ${UNIT}）"; after_up; else die "服务起不来：journalctl -u ${UNIT} -n 50"; fi
+}
+
+do_nginx(){ write_nginx
+  if [ "${NGINX_NEW}" = 1 ]; then ok "生成了 ${NGINX_FILE}（端口 ${PORT}）"; else ok "${NGINX_FILE} 没变（端口 ${PORT}）"; fi
+  say ""; cat "${NGINX_FILE}"; say ""; nginx_steps; }
+
+# 撤掉：只拆脚本自己装的东西（这个目录的 systemd 服务、后台进程）；代码、数据、备份留着，打印出来让你决定
+do_uninstall(){
+  if unit_ours; then
+    local was; was="$(unit_dir)"
+    if [ "${was}" = "${APP_DIR}" ]; then
+      sudo systemctl stop "${UNIT}" || die "服务停不下来：systemctl status ${UNIT}"
+      sudo systemctl disable "${UNIT}" || true
+      sudo rm -f "${UNIT_FILE}"; sudo systemctl daemon-reload; sudo systemctl reset-failed "${UNIT}" 2>/dev/null || true
+      ok "拆掉了 systemd 服务 ${UNIT}（删了 ${UNIT_FILE}）"
+    else warn "systemd 服务 ${UNIT} 跑的是另一个目录（${was}）里的猫咖：不动它。要拆，到那个目录里 ./deploy.sh uninstall"; fi
+  fi
+  if pid_alive; then do_stop; else ok "后台没有这个目录的猫咖在跑"; fi
+  rm -f "${PID_FILE}"
+  say ""
+  say "猫咖在这台服务器上还剩这些，删不删你定："
+  say "  代码、设置、日志：${APP_DIR}"
+  say "  数据：${DATA_DIR}（名册和抽奖登记，有个人信息；要留就先 ./deploy.sh backup，把备份拷走）"
+  if [ -d "${APP_DIR}/backups" ]; then say "  备份：${APP_DIR}/backups（也有个人信息）"; fi
+  say "  网站 nginx 里加的那段（location ^~ ${BASE}/）：从 server { } 里删掉，再 sudo nginx -t && sudo systemctl reload nginx"
+  say "除了这些，脚本没在服务器上放别的文件。"
 }
 
 do_backup(){
   [ -d "${DATA_DIR}" ] || die "没有数据目录：${DATA_DIR}"
+  check_data
   mkdir -p "${APP_DIR}/backups"; local f; f="${APP_DIR}/backups/data-$(date +%Y%m%d-%H%M%S).tar.gz"
   tar czf "${f}" -C "${DATA_DIR}" . ; chmod 600 "${f}" 2>/dev/null || true
   ok "备份好了：${f}"
@@ -202,13 +302,14 @@ do_backup(){
 
 do_restore(){
   local f="${RESTORE_FILE:-}"; [ -n "${f}" ] && [ -f "${f}" ] || die "用法：./deploy.sh restore backups/data-….tar.gz"
-  local was=0; if running; then was=1; do_stop; fi
+  check_data; local was=0; if running; then was=1; do_stop; fi
   mkdir -p "${DATA_DIR}"; tar xzf "${f}" -C "${DATA_DIR}"; ok "恢复好了：${f} → ${DATA_DIR}"
   [ "${was}" = 1 ] && do_start || true
 }
 
 do_reset(){
   [ -d "${DATA_DIR}" ] || { ok "数据目录本来就是空的"; return; }
+  check_data
   say "要清空店里的数据：所有猫的名册、抽奖登记、抽奖记录、店里的计数（后台口令保留）。"
   printf '确认就输入 RESET：'; local a; read -r a; [ "${a}" = RESET ] || die "没清空"
   do_backup; local was=0; if running; then was=1; do_stop; fi
@@ -236,11 +337,13 @@ case "${CMD}" in
   status) do_status;;
   logs) do_logs;;
   service) do_service;;
+  nginx) do_nginx;;
+  uninstall) do_uninstall;;
   backup) do_backup;;
   restore) do_restore;;
   reset) do_reset;;
   pack) do_pack;;
-  check) check_node; find_node; port_free && ok "端口 ${PORT} 空着" || warn "端口 ${PORT} 被占了"; ok "数据目录：${DATA_DIR}";;
-  -h|--help|help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//';;
+  check) check_node; find_node; check_data; port_free && ok "端口 ${PORT} 空着" || warn "端口 ${PORT} 被占了"; ok "数据目录：${DATA_DIR}";;
+  -h|--help|help) awk 'NR==1{next} /^#/{sub(/^# ?/,"");print;next} {exit}' "$0";;
   *) die "认不得的命令：${CMD}（./deploy.sh help 看说明）";;
 esac

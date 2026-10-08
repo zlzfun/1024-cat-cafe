@@ -15,7 +15,7 @@ node server/server.js          # 打开 http://127.0.0.1:1024
 
 启动日志里还有组织者后台的地址和口令（`/admin.html`）：看名册、抽奖（按工号去重，带领奖码）、导出名单、换名字、封禁。
 
-**开到服务器上**：`./deploy.sh` 一键启动（检查 Node、写配置、后台运行、打印地址和后台口令），`./deploy.sh service` 装成开机自启的服务，`./deploy.sh pack --with-node …` 打一个连 Node 一起的离线包带进内网。详见 [docs/部署.md](../A-像素猫咖/docs/部署.md)。
+**开到服务器上**：固定挂在已有网站的 `/1024-cat-cafe/` 下。`./deploy.sh` 一键启动（检查 Node、写配置、只听本机、后台运行，生成挂到网站下的那一段 nginx 配置，打印加进网站的步骤和后台口令；脚本不改 nginx），`./deploy.sh service` 装成开机自启的服务，`./deploy.sh pack --with-node …` 打一个连 Node 一起的离线包带进内网。详见 [docs/部署.md](../A-像素猫咖/docs/部署.md)。
 
 第一次进店：先是一段 Clowder AI 网页"添加成员"的动画，整个页面变成像素，只剩一个名字框，给你的猫挑个名字；然后扭蛋，最多扭三只，挑一只；在黑底上学会走路和碰东西，最后从毛线巨树上掉进一楼的咖啡厅。
 
@@ -39,7 +39,7 @@ node server/server.js          # 打开 http://127.0.0.1:1024
   - `fonts/`：像素字体（裁剪过的[缝合像素字体](https://github.com/TakWolf/fusion-pixel-font)，SIL OFL 1.1，授权文件在里面）和重新裁剪的脚本
   - `admin.html`：组织者后台
   - `server/`：服务端参考实现，零依赖。`server.js` 入口，`live.js` 联机，`admin.js` 后台接口，`loadtest.js` 压力测试
-  - `deploy.sh`：一键部署（启动、停止、装成服务、备份、离线包）
+  - `deploy.sh`：一键部署（启动、停止、装成服务、生成 nginx 那一段、备份、离线包、撤掉）
   - `config.example.js`：部署配置样例。复制成 `config.js` 再改，`config.js` 不进仓库
   - `docs/`：设计文档，入口是 `docs/README.md`
   - `样页/`：走到成品之前的过程页（scene v1–v4、猫模型的选型和定稿），连同当时的代码一起冻结，只做对照

@@ -45,9 +45,11 @@ function serveFile(req,res,p){if(p==='/')p='/index.html';let f;try{f=path.join(S
   // 没有 config.js 就现给一份；接口地址写相对的 api，放在反向代理的子路径下（/cat/）也能用
   if(p==='/config.js'&&!fs.existsSync(f)){res.writeHead(200,{'Content-Type':MIME['.js'],'Cache-Control':'no-cache'});return res.end("window.CAT1024_CONFIG={api:'api'};")}
   fs.stat(f,(e,st)=>{if(e||!st.isFile()){res.writeHead(404);return res.end('not found')}
-    // 不缓存，但带上修改时间：没改过的文件（字体一百多 KB）浏览器问一声就用自己手里的
-    const lm=st.mtime.toUTCString(),ims=req.headers['if-modified-since'];if(ims&&Date.parse(ims)>=Math.floor(st.mtimeMs/1000)*1000){res.writeHead(304,{'Last-Modified':lm,'Cache-Control':'no-cache'});return res.end()}
-    res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-cache','Last-Modified':lm,'X-Content-Type-Options':'nosniff'});fs.createReadStream(f).pipe(res)})}
+    // 不缓存，但带上修改时间：没改过的文件（字体一百多 KB）浏览器问一声就用自己手里的。
+    // 网页本身（几十 KB）每次都整份发：回 304 的话，浏览器会接着用上一次存下的响应头——前面的 nginx 改过头（比如去掉了原网站的 CSP），打开过的浏览器也还按旧的来
+    const html=path.extname(f)==='.html',lm=st.mtime.toUTCString(),ims=req.headers['if-modified-since'];
+    if(!html&&ims&&Date.parse(ims)>=Math.floor(st.mtimeMs/1000)*1000){res.writeHead(304,{'Last-Modified':lm,'Cache-Control':'no-cache'});return res.end()}
+    res.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-cache',...(html?{}:{'Last-Modified':lm}),'X-Content-Type-Options':'nosniff'});fs.createReadStream(f).pipe(res)})}
 
 function reply(res,out){if(out&&out.csv!=null){res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(out.name),'Cache-Control':'no-store'});return res.end(out.csv)}
   res.writeHead(out[0],{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(out[1]))}
