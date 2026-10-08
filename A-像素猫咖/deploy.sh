@@ -98,7 +98,10 @@ check_node(){
   ok "Node v${v}（${NODE}）"
 }
 port_free(){ "${NODE}" -e "const s=require('net').createServer();s.once('error',()=>process.exit(1));s.once('listening',()=>s.close(()=>process.exit(0)));s.listen(${PORT},'${HOST}')" 2>/dev/null; }
-health(){ "${NODE}" -e "fetch('http://127.0.0.1:${PORT}/api/health').then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{console.log(JSON.stringify(j));process.exit(0)}).catch(()=>process.exit(1))" 2>/dev/null; }
+# 本机检查走哪个地址：听所有网卡的（0.0.0.0）走 127.0.0.1；别的就走它听的那个地址（--host 10.1.2.3 时 127.0.0.1 上没有它）
+chk_host(){ case "${HOST}" in 0.0.0.0|::|'') printf '127.0.0.1';; *) printf '%s' "${HOST}";; esac; }
+chk_url(){ local h; h="$(chk_host)"; case "${h}" in *:*) h="[${h}]";; esac; printf 'http://%s:%s' "${h}" "${PORT}"; }
+health(){ "${NODE}" -e "fetch('$(chk_url)/api/health').then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{console.log(JSON.stringify(j));process.exit(0)}).catch(()=>process.exit(1))" 2>/dev/null; }
 
 # ---------- nginx 那一段：挂到网站的 /1024-cat-cafe/ 下。只生成文件，不碰 nginx ----------
 # 内容变了（第一次、换了端口）NGINX_NEW=1：要把新的这段加进网站、reload nginx
@@ -149,12 +152,12 @@ nginx_state(){ live_init
 
 # ---------- 经过网站访问一遍：页面、脚本、接口、联机、后台；不对的说该查什么（ONLY=health 只查接口，给 status 用） ----------
 VERIFY_JS='const u0=new URL(process.env.SITE),direct=u0.port===String(process.env.PORT),B=direct?"":process.env.BASE,via=process.env.VIA,only=process.env.ONLY,crypto=require("crypto"),zlib=require("zlib"),fs=require("fs");
-const M=u0.protocol==="https:"?require("https"):require("http");
-const get=(p,h={})=>new Promise(res=>{const r=M.request({host:via||u0.hostname,port:u0.port||(u0.protocol==="https:"?443:80),path:p,method:"GET",servername:u0.hostname,rejectUnauthorized:false,headers:{Host:u0.host,...h}},
+const M=u0.protocol==="https:"?require("https"):require("http"),hn=u0.hostname.replace(/^\[|\]$/g,"");   // IPv6 的地址在网址里带方括号，连的时候不要
+const get=(p,h={})=>new Promise(res=>{const r=M.request({host:via||hn,port:u0.port||(u0.protocol==="https:"?443:80),path:p,method:"GET",servername:hn,rejectUnauthorized:false,headers:{Host:u0.host,...h}},
     s=>{const b=[];s.on("data",d=>b.push(d));s.on("end",()=>res({st:s.statusCode,h:s.headers,body:Buffer.concat(b)}))});
   r.on("upgrade",(s,k)=>{k.destroy();res({st:s.statusCode,h:s.headers,body:Buffer.alloc(0)})});
   r.setTimeout(8000,()=>r.destroy(new Error("8 秒没应答")));r.on("error",e=>res({err:e.message,h:{},body:Buffer.alloc(0)}));r.end()});
-const local=p=>new Promise(res=>require("http").get({host:"127.0.0.1",port:process.env.PORT,path:p},s=>{const b=[];s.on("data",d=>b.push(d));s.on("end",()=>res(Buffer.concat(b)))}).on("error",()=>res(null)));
+const local=p=>new Promise(res=>require("http").get({host:process.env.CHK||"127.0.0.1",port:process.env.PORT,path:p},s=>{const b=[];s.on("data",d=>b.push(d));s.on("end",()=>res(Buffer.concat(b)))}).on("error",()=>res(null)));
 let bad=0;const say=(c,m,hint,soft)=>{console.log((c?"  ✓ ":soft?"  ! ":"  ✗ ")+m+(!c&&hint?"\n      → "+hint:""));if(!c&&!soft)bad++};
 const st=r=>r.err||r.st,end=()=>{console.log(bad?"有 "+bad+" 项不对":"全部正常");process.exit(bad?1:0)};
 (async()=>{let r=await get("/");
@@ -181,7 +184,7 @@ const st=r=>r.err||r.st,end=()=>{console.log(bad?"有 "+bad+" 项不对":"全部
   let k="";try{k=fs.readFileSync(process.env.KEYF,"utf8").trim()}catch(e){}
   if(k){r=await get(B+"/api/admin/stats",{"X-Admin-Key":k});say(r.st===200,"组织者后台的接口："+st(r),r.st===429?"口令输错太多次，10 分钟后再试":"")}
   end()})();'
-verify_run(){ SITE="${SITE}" BASE="${BASE}" PORT="${PORT}" VIA="${VIA}" KEYF="${DATA_DIR}/admin.key" ONLY="${1:-}" "${NODE}" -e "${VERIFY_JS}"; }
+verify_run(){ SITE="${SITE}" BASE="${BASE}" PORT="${PORT}" CHK="$(chk_host)" VIA="${VIA}" KEYF="${DATA_DIR}/admin.key" ONLY="${1:-}" "${NODE}" -e "${VERIFY_JS}"; }
 
 # ---------- config.js：给了 --inner / --bots，或者还没有这个文件，就写一份 ----------
 # 只改这两样，文件里别的设置（ws、改过的链接……）原样留着；内源主页里有引号、反斜杠也不会写坏（按 JSON 写）
@@ -203,7 +206,7 @@ write_config(){
 
 # 组织者在后台"店里的设置"里填过补位的猫，就以后台为准：给了 --bots 也说一声，免得以为改了
 bots_note(){ [ -n "${BOTS}" ] || return 0; local b
-  b="$("${NODE}" -e "fetch('http://127.0.0.1:${PORT}/api/settings').then(r=>r.json()).then(j=>{if(Number.isInteger(j.bots))console.log(j.bots)}).catch(()=>{})" 2>/dev/null)" || true
+  b="$("${NODE}" -e "fetch('$(chk_url)/api/settings').then(r=>r.json()).then(j=>{if(Number.isInteger(j.bots))console.log(j.bots)}).catch(()=>{})" 2>/dev/null)" || true
   [ -n "${b}" ] && warn "后台\"店里的设置\"里补位的猫填的是 ${b} 只，以后台为准；要按 config.js 的 ${BOTS} 只，在后台把那一格清空再保存"; return 0; }
 
 # ---------- 跑着没有 ----------
@@ -226,6 +229,9 @@ check_data(){ [ -d "${DATA_DIR}" ] || return 0; local f
     case "${f##*/}" in cats.json|cats.json.tmp|admin.key|lost+found|.DS_Store) ;;
       *) die "数据目录 ${DATA_DIR} 里有不是猫咖的东西（${f##*/}）：给猫咖单独建一个空目录，用 --data 指过去";; esac
   done; }
+# 数据目录里的名册有几只猫：升级时换了目录、没拷 deploy.env，这里就会是"还没有名册"
+roster(){ local f="${DATA_DIR}/cats.json"; [ -f "${f}" ] || { printf '还没有名册，是一家新店'; return 0; }
+  CATS_FILE="${f}" "${NODE}" -e 'try{const j=JSON.parse(require("fs").readFileSync(process.env.CATS_FILE,"utf8"));process.stdout.write("名册里 "+Object.keys(j.cats||{}).length+" 只猫")}catch(e){process.stdout.write("名册读不出来")}' 2>/dev/null || printf '名册读不出来'; }
 # 共用的服务器上容易忽略的两件事
 warn_root(){ if [ "$(id -u)" = 0 ]; then warn "现在是 root：猫咖用不着 root，只要能写数据目录。共用的服务器上建议换个普通账号来跑"; fi; }
 warn_direct(){ [ "${DIRECT}" = 1 ] || return 0
@@ -250,7 +256,7 @@ show_urls(){
   else
     say "  店：      https://网站的地址${BASE}/          （nginx 加好那一段以后）"
     say "  后台：    https://网站的地址${BASE}/admin.html    口令：${key:-（看 ${DATA_DIR}/admin.key）}"
-    say "  本机检查：http://127.0.0.1:${PORT}/          （只有这台服务器自己打得开）"
+    say "  本机检查：$(chk_url)/          （只有这台服务器自己打得开）"
     say "  ${c_dim}nginx 那一段：${NGINX_FILE}${c_0}"
   fi
   say "  ${c_dim}数据：${DATA_DIR}    日志：$(service_on && echo "journalctl -u ${UNIT}" || echo "${LOG_FILE}")${c_0}"
@@ -443,7 +449,8 @@ case "${CMD}" in
   restore) do_restore;;
   reset) do_reset;;
   pack) do_pack;;
-  check) check_node; find_node; check_data; port_free && ok "端口 ${PORT} 空着" || warn "端口 ${PORT} 被占了"; ok "数据目录：${DATA_DIR}";;
+  check) check_node; find_node; check_data; port_free && ok "端口 ${PORT} 空着" || warn "端口 ${PORT} 被占了"; ok "数据目录：${DATA_DIR}（$(roster)）"
+    ok "监听：${HOST}:${PORT}（$([ "${DIRECT}" = 1 ] && echo "不经过 nginx，直接对外" || echo "只听本机，前面是网站的 nginx")）";;
   -h|--help|help) awk 'NR==1{next} /^#/{sub(/^# ?/,"");print;next} {exit}' "$0";;
   *) die "认不得的命令：${CMD}（./deploy.sh help 看说明）";;
 esac
