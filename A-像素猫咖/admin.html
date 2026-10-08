@@ -52,7 +52,12 @@
   /* 抽奖登记 */
   #entries .big{margin:0 0 6px;font-size:22px;font-weight:600;color:var(--acc)}#entries .big small{font-size:13px;font-weight:400;color:var(--sub);margin-left:8px}
   #entries .row{display:flex;gap:12px;align-items:center;margin-top:12px}
-  td.en small{color:var(--sub)}
+  td.en small{color:var(--sub)}td.en small.no{color:var(--dim)}
+  #entries .tag{margin:0}
+  /* 店里的设置 */
+  .sr{padding:12px 0 4px;border-top:2px solid var(--line)}.sr:first-of-type{border-top:0;padding-top:0}
+  .sr>b{display:block;font-size:13px;font-weight:600;margin-bottom:8px}
+  .sr .form input[type=number]{width:90px}.sr .msg{font-size:12px;color:var(--ok)}.sr .msg.bad{color:var(--bad)}
   /* 名册 */
   .bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:10px}
   .bar input[type=text]{width:220px}.bar label{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px}.bar .sp{flex:1}
@@ -108,11 +113,23 @@
       <section class="card" id="entries">
         <h2>抽奖登记<small>姓名、工号、联系方式只在这里看得到</small></h2>
         <p class="big" id="enum">—</p>
-        <p class="hint">同一个工号登记在几只猫上（换了浏览器又扭了一只，或者开了小号），名册里标"同工号"，抽奖时只算一个人，姓名和联系方式以最早那次登记为准。工号是不是真的、和姓名对不对得上，领奖时核对。</p>
+        <p class="hint">同一个工号登记在几只猫上（换了浏览器又扭了一只，或者开了小号），名册里标"同工号"，抽奖时只算一个人；姓名以最早那次登记为准，手机号也是（那次没留的，用最早留了的那次）。手机号是选填的，没留的抽中了在店里看领奖码，按工号找人。工号是不是真的、和姓名对不对得上，领奖时核对。</p>
+        <div class="row"><span class="tag" id="estate">—</span><button class="lbtn warn" id="etoggle">截止登记</button><span class="hint" id="etmsg"></span></div>
+        <p class="hint">截止以后，店里不再收新登记和修改，集章卡、前台猫、迎宾立牌都说"抽奖登记已经截止"；已经登记的照样能抽。最后一轮抽奖之前点，后来的人就不会白填。随时可以重新开放。</p>
         <div class="row"><button class="lbtn warn" id="eclear">清空抽奖登记</button><span class="hint" id="emsg"></span></div>
         <p class="hint">活动结束、名单导出以后再清：删掉所有猫上的姓名、工号、联系方式，中奖记录里的也一起抹掉，只留猫的名字和领奖码。</p>
       </section>
     </div>
+    <section class="card" id="shop">
+      <h2>店里的设置<small>改了马上对店里每只猫生效，不用刷新、不用重启</small></h2>
+      <div class="sr"><b>补位的猫</b>
+        <div class="form"><label><input type="number" id="sbots" min="0" max="150" step="1"> 只</label><button class="pbtn" id="sbgo">保存</button><span class="msg" id="sbmsg"></span></div>
+        <p class="hint">店里人少时由机器人补到这么多只：在线的真人越多，机器人越少，但最少留 12 只（设得比 12 少就按设的）。机器人只在各人自己的画面里，每个人看到的不一样。0～150 只；多了旧电脑会卡，少于 12 只时几只猫一起解的毛线球不一定凑得齐帮手。空着保存，就按 config.js 里的 <span id="sbdef">40</span> 只。</p></div>
+      <div class="sr"><b>店里的公告</b>
+        <div class="form"><input type="text" class="how" id="snote" maxlength="60" placeholder="一句话，最多 60 个字。比如：18:00 第一轮抽奖，集齐三个章的记得登记"><button class="pbtn" id="sngo">发布</button><button class="lbtn" id="snoff">撤下</button><span class="msg" id="snmsg"></span></div>
+        <p class="hint" id="snnow"></p>
+        <p class="hint">发布以后，店里每只猫的画面正上方马上出一张"店里的公告"，左下角的新闻里也有一行；之后进店的猫进门时看到一次。前台猫那里一直看得到，直到撤下。</p></div>
+    </section>
     <section class="card" id="roster">
       <h2>名册<small id="rcount"></small></h2>
       <div class="bar"><input type="text" id="q" placeholder="按猫名、姓名、工号找"><label><input type="checkbox" id="onlyElig"> 只看能抽的</label><label><input type="checkbox" id="onlyOn"> 只看在线的</label><span class="sp"></span><button class="lbtn" id="exAll">导出全部</button><button class="lbtn" id="reload">刷新</button></div>

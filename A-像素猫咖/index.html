@@ -217,6 +217,8 @@
   .disc .tipsb{margin-top:12px}.disc:not(.show) .more{pointer-events:none}
   .disc.egg{--wl:var(--acc);--wd:#3a2a08;background:#2c2030}
   .reply{--wl:var(--pink)}.reply h5{color:var(--pink)}
+  /* 店里的公告（组织者在后台发的）：和人类回信同一个位置，金边、铃铛 */
+  .reply.notice{--wl:var(--acc);--wd:#3a2a08;background:#2c2030}.reply.notice h5{color:var(--acc)}.reply.notice>p{margin:0;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--ink);overflow-wrap:anywhere}
   .reply q{display:block;margin:4px 0 8px;padding:4px 12px;quotes:none;color:#3a2630;background:#fff8e8;box-shadow:var(--u) var(--u) 0 var(--dk)}
   .reply .chain{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--ok)}
   /* 悬停卡、右键菜单：小号窗框；店猫是哪个家族（猫猫咖啡馆的）用深青底；菜单当前项前面一个像素小箭头 ▶，和 RPG 的菜单一样 */
@@ -385,8 +387,8 @@
   <div id="ltf"><p class="lead" id="ltlead"></p>
     <label><span>姓名</span><input id="lreal" maxlength="20" autocomplete="name"></label>
     <label><span>工号</span><input id="lemp" maxlength="32" autocomplete="off" spellcheck="false"></label>
-    <label><span>手机号</span><input id="lcon" maxlength="20" inputmode="tel" autocomplete="tel" spellcheck="false" placeholder="11 位手机号"></label>
-    <p class="note">这三项只用来抽奖和联系领奖，只有组织者看得到，活动结束后删除。一个工号只算一次抽奖机会。</p>
+    <label><span>手机号</span><input id="lcon" maxlength="20" inputmode="tel" autocomplete="tel" spellcheck="false" placeholder="选填 · 11 位手机号"></label>
+    <p class="note">手机号可以不留：抽中了，前台猫会在店里告诉你领奖码。这几项只用来抽奖和联系领奖，只有组织者看得到，活动结束后删除。一个工号只算一次抽奖机会。</p>
     <p class="err" id="lerr"></p>
     <div class="row"><button class="lbtn" id="lno">等会儿再说</button><button class="pbtn" id="lgo">登记</button></div></div>
   <div id="ltd" hidden><p class="lead" id="ltdp"></p><div class="row"><button class="pbtn" id="lok">好</button></div></div></div></div>

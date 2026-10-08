@@ -143,10 +143,10 @@ function freeze(by){S.freeze=3.2;if(A.play&&near(me,P.jar,300))sfx('beep');let n
 const ST={x:P.stand.x+16,y:P.stand.y+42};
 T({id:'stand',n:'迎宾立牌',hit:[P.stand.x-2,P.stand.y-2,34,34],at:ST,near:[ST.x-16,ST.y-10,32,18],label:'看看迎宾立牌',ai:{mood:'explore',w:.2},
   go(c){run(c,[{go:ST},{fn:c=>{c.face='R'}},{k:'sit',dur:.5,ex:'lookUp'},{fn:c=>{if(c.me)A.openWelcome()}}])}});
-// 迎宾立牌（点集章卡也打开这段）：猫咖的来历 + 集章抽奖的规矩（盖了哪几个）+ 三个入口
+// 迎宾立牌（点集章卡也打开这段）：猫咖的来历 + 集章抽奖的规矩（盖了哪几个；组织者截止了登记就说截止了）+ 三个入口
 A.openWelcome=()=>{const st=S.stamps;A.dlg.show({id:'welcome-'+Math.floor(now()*10),kind:'link',head:{icon:'cat',title:'欢迎光临 1024 猫咖'},blocks:[
     {k:'text',t:'这家店照着 Clowder AI（猫猫咖啡馆）开。在猫猫咖啡馆里，Claude、GPT、Gemini……每只 AI 猫都有自己的身份、画像和记忆，会互相 @、互相 review，一起把你的想法做成能跑的东西。\n在这里，你也是一只猫：接住人类从门缝塞进来的毛线球，解开它，挂进橱窗。'},
-    {k:'h',t:'集章抽奖：集齐三个章，就能登记抽奖（一个工号算一次）'},
+    {k:'h',t:A.shop&&A.shop.entry===false?'集章抽奖：抽奖登记已经截止了，登记过的照样能抽':'集章抽奖：集齐三个章，就能登记抽奖（一个工号算一次）'},
     {k:'steps',items:[{t:'交付',sub:'解开一颗毛线球，挂进一楼的橱窗',done:!!st.ball},{t:'内源',sub:'逛逛内源主页（下面第一个链接）',done:!!st.inner},{t:'官网',sub:'看看官网或 GitHub',done:!!st.site}]},
     {k:'links',items:['inner','site','github'].map(k=>({key:k,...LINKS[k]}))}],tip:tipOf('multi'),acts:[{id:'close',t:'进店逛逛',key:'Esc'}]})};
 

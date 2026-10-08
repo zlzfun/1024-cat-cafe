@@ -5,7 +5,7 @@
    TRUST_PROXY=1 node server/server.js            → 放在反向代理后面时：按代理加在 X-Forwarded-For 最后的那个地址计数（输错后台口令的次数）
    - 账号接口（docs/登录与进店.md）：名字从池子里发、全店唯一；不设密码，这个浏览器记着的令牌就是身份（库里只存散列）；集齐三个章的猫可以登记抽奖。
    - 联机（docs/联机.md）：/ws 上的 WebSocket，见 live.js。
-   - 组织者后台（docs/组织者后台.md）：/admin.html 页面 + /api/admin/* 接口，见 admin.js。口令在 server/data/admin.key；开在终端里时启动就打印出来，放在后台（nohup、systemd）时日志里只写口令在哪。
+   - 组织者后台（docs/组织者后台.md）：/admin.html 页面 + /api/admin/* 接口，见 admin.js；后台改的店里的设置，店里用 GET /api/settings 取。口令在 server/data/admin.key；开在终端里时启动就打印出来，放在后台（nohup、systemd）时日志里只写口令在哪。
    - 页面要的 config.js：目录里有就发那份；没有就现给一份 {api:'api'}。
    - 部署：deploy.sh 一键启动、装成服务、备份、打离线包，见 docs/部署.md；GET /api/health 给它看活着没有。 */
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
@@ -28,12 +28,14 @@ const API={
   'GET /me':({me})=>{if(!me)return[401,{err:'auth'}];const c=me.c;c.prev=c.last;c.last=Date.now();S.save();return[200,{cat:S.pub(c)}]},
   'PUT /me/state':({me,body})=>{if(!me)return[401,{err:'auth'}];const s=body.state;if(!s||typeof s!=='object'||JSON.stringify(s).length>STATE_MAX)return[400,{err:'bad'}];
     me.c.state={...me.c.state,...s};me.c.last=Date.now();S.syncEggs(me.c);S.save();return[200,{ok:true}]},
-  // 登记抽奖：三个章都盖了才收；改的话第一次登记的时间不变（按工号去重时以最早那次为准）
-  'POST /me/entry':({me,body})=>{if(!me)return[401,{err:'auth'}];const st=(me.c.state&&me.c.state.stamps)||{};if(!(st.ball&&st.inner&&st.site))return[403,{err:'stamps'}];
+  // 登记抽奖：三个章都盖了才收；组织者截止了登记，新登记和修改都不收；改的话第一次登记的时间不变（按工号去重时以最早那次为准）
+  'POST /me/entry':({me,body})=>{if(!me)return[401,{err:'auth'}];if(db.settings.entry===false)return[403,{err:'closed'}];const st=(me.c.state&&me.c.state.stamps)||{};if(!(st.ball&&st.inner&&st.site))return[403,{err:'stamps'}];
     const bad=S.ACC.entryWhy(body);if(bad)return[400,{err:'bad',field:bad.field,why:bad.why}];const e=S.ACC.entryClean(body),now=Date.now();
     me.c.entry={real:e.real,emp:e.emp,contact:e.contact,t:(me.c.entry&&me.c.entry.t)||now,u:now};S.save();return[200,{entry:S.pubEntry(me.c)}]},
   // 看过"你被抽中了"，下次不再弹
   'POST /me/prize-seen':({me,body})=>{if(!me)return[401,{err:'auth'}];for(const p of me.c.prizes||[])if(p.no===body.no)p.seen=true;S.save();return[200,{ok:true}]},
+  // 店里的设置（组织者在后台改）：补位的猫有多少只、抽奖登记开着没有、店里的公告。不用身份，网页建店之前取一次
+  'GET /settings':()=>[200,S.pubSettings()],
   'POST /logout':({me})=>{if(me){delete db.tokens[me.h];live.dropToken(me.h);S.save()}return[200,{ok:true}]},
   // 健康检查（deploy.sh、监控用）：只给数，不给名字
   'GET /health':()=>[200,{ok:true,cats:Object.keys(db.cats).length,online:live.stats().online,up:Math.round(process.uptime())}]};

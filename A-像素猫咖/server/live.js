@@ -1,4 +1,4 @@
-/* 1024 猫咖 · 联机：谁在店里、各自在哪儿，把走路、表情、快捷短语、蹭蹭、传球转给附近的猫；巨树、小黑板、彩蛋、吧台大鱼缸的计数全店共用。设计见 docs/联机.md。
+/* 1024 猫咖 · 联机：谁在店里、各自在哪儿，把走路、表情、快捷短语、蹭蹭、传球转给附近的猫；巨树、小黑板、彩蛋、吧台大鱼缸的计数全店共用；组织者改了店里的设置，推给全店。设计见 docs/联机.md。
    - 身份只认令牌（第一条消息 {t:'hi', token}），名字和长相由服务端按令牌填，浏览器发来的消息里不带名字。令牌被作废（离店），用它连着的通道也断开。
    - 不转任何自由文字：短语只传序号，毛线球只传题号。每样字段都查（姿态、表情按 js/cat-sprites.js 里真有的查），不对的消息直接丢掉。
      处理一条消息出了任何错，只断开这一条连接，不影响别人。
@@ -59,7 +59,7 @@ function upgrade(req,socket,head){if(conns.size>=MAX_CONN){socket.end('HTTP/1.1 
 function hello(c,m,hiT){const me=typeof m.token==='string'&&m.token.length<200?S.who(m.token):null;if(!me){send(c,{t:'bye',why:'auth'});return c.ws.close(1008)}clearTimeout(hiT);
   const old=byCat.get(me.c.id);if(old){send(old,{t:'bye',why:'elsewhere'});old.ws.close(4000);if(old.announced)leaves.push({id:me.c.id,n:old.n})}
   c.cat=me.c;c.h=me.h;c.n=nseq=nseq%999999+1;byCat.set(me.c.id,c);const p=S.pub(me.c);
-  send(c,{t:'welcome',id:me.c.id,me:{name:p.name,prizes:p.prizes},cats:live().filter(o=>o!==c&&o.announced).map(o=>{c.seen.set(o.n,o.ver);return info(o)}),world:worldInfo()})}
+  send(c,{t:'welcome',id:me.c.id,me:{name:p.name,prizes:p.prizes},cats:live().filter(o=>o!==c&&o.announced).map(o=>{c.seen.set(o.n,o.ver);return info(o)}),world:worldInfo(),cfg:S.pubSettings()})}
 // 限速：每条连接一个桶（每秒补 30 条，最多攒 60 条），有的消息还有最短间隔；老是超就断开
 function allow(c,t){const now=Date.now();c.bucket=Math.min(60,c.bucket+(now-c.bt)*.03);c.bt=now;if(c.bucket<1){st.drop++;return strike(c),false}c.bucket--;
   const g=GAP.get(t);if(g){if(now-(c.last.get(t)||0)<g*1000){st.drop++;return false}c.last.set(t,now)}return true}
@@ -121,6 +121,8 @@ function kick(id,why){const c=byCat.get(id);if(c){send(c,{t:'bye',why});c.ws.clo
 function dropToken(h){for(const c of conns)if(c.h===h){send(c,{t:'bye',why:'auth'});c.ws.close(4000)}}
 function rename(id,name){const c=byCat.get(id);if(c)c.cat.name=name;for(const o of conns)if(o.cat)send(o,{t:'rename',id,name})}
 function prize(id,p){const c=byCat.get(id);if(c)send(c,{...p,t:'prize'})}
+// 组织者改了店里的设置（补位的猫、抽奖登记开关、公告）：全店在线的猫都收到
+function cfg(g){for(const o of conns)if(o.cat)send(o,{t:'cfg',cfg:g})}
 // 收发速率每 5 秒算一次
 let rate={inPerSec:0,outPerSec:0,kbInPerSec:0,kbOutPerSec:0,dropped:0,errors:0,cpu:0,rssMB:0},cpu0=process.cpuUsage();
 setInterval(()=>{const sec=(Date.now()-st.t0)/1000,cu=process.cpuUsage(cpu0);cpu0=process.cpuUsage();
@@ -129,4 +131,4 @@ setInterval(()=>{const sec=(Date.now()-st.t0)/1000,cu=process.cpuUsage(cpu0);cpu
   Object.assign(st,{in:0,out:0,bytesIn:0,bytesOut:0,drop:0,err:0,t0:Date.now()})},5000).unref();
 const stats=()=>({online:[...byCat.values()].filter(c=>c.announced).length,conns:conns.size,...rate,tickMs:+st.tickMs.toFixed(3)});
 const isOnline=id=>byCat.has(id);
-module.exports={upgrade,kick,dropToken,rename,prize,stats,isOnline};
+module.exports={upgrade,kick,dropToken,rename,prize,cfg,stats,isOnline};

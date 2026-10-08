@@ -8,7 +8,7 @@
 #     --port 1024                    端口（默认 1024；nginx 那一段跟着改）
 #     --data /srv/cat1024-data       数据目录（名册、抽奖登记、后台口令；默认 server/data）
 #     --inner https://…              内源主页地址（写进 config.js；只在内网用，别提交到公开仓库）
-#     --bots 40                      补位的机器人数（写进 config.js）
+#     --bots 40                      补位的机器人数（写进 config.js；后台"店里的设置"填过的以后台为准）
 #     --host 127.0.0.1               监听地址（默认只听本机，前面是网站的 nginx；写 0.0.0.0 或者内网 IP 就是不经过 nginx、
 #                                    同事直接打开 http://这台:端口，见 docs/部署.md 的"不经过 nginx，直接跑"）
 #   ./deploy.sh nginx                重新生成、打印 nginx 那一段和装的步骤；看网站的 nginx 用的是不是最新的
@@ -201,6 +201,11 @@ write_config(){
   return 0
 }
 
+# 组织者在后台"店里的设置"里填过补位的猫，就以后台为准：给了 --bots 也说一声，免得以为改了
+bots_note(){ [ -n "${BOTS}" ] || return 0; local b
+  b="$("${NODE}" -e "fetch('http://127.0.0.1:${PORT}/api/settings').then(r=>r.json()).then(j=>{if(Number.isInteger(j.bots))console.log(j.bots)}).catch(()=>{})" 2>/dev/null)" || true
+  [ -n "${b}" ] && warn "后台\"店里的设置\"里补位的猫填的是 ${b} 只，以后台为准；要按 config.js 的 ${BOTS} 只，在后台把那一格清空再保存"; return 0; }
+
 # ---------- 跑着没有 ----------
 service_on(){ [ -f "${UNIT_FILE}" ] && command -v systemctl >/dev/null 2>&1 && systemctl is-enabled --quiet "${UNIT}" 2>/dev/null; }
 # 进程号文件里的进程还在，而且真是这个目录里的猫咖。进程号会被系统回收给别的程序：不认一认，停的时候会停掉别人的进程
@@ -265,7 +270,7 @@ do_start(){
   check_node
   [ -f "${APP_DIR}/server/server.js" ] && [ -f "${APP_DIR}/index.html" ] || die "这里不是 1024 猫咖的目录（找不到 server/server.js、index.html）"
   # 已经在跑：给了 --inner / --bots 也照样写进 config.js（页面不缓存，大家刷新就生效，不用重启）
-  if running; then [ -n "${INNER}${BOTS}" ] && { find_node; write_config; say "${c_dim}config.js 改了：刷新页面就生效${c_0}"; }; ok "已经在跑了"; health >/dev/null && ok "接口正常" || warn "进程在，但接口没应答，看看日志：./deploy.sh logs"; show_urls; return; fi
+  if running; then [ -n "${INNER}${BOTS}" ] && { find_node; write_config; say "${c_dim}config.js 改了：刷新页面就生效${c_0}"; bots_note; }; ok "已经在跑了"; health >/dev/null && ok "接口正常" || warn "进程在，但接口没应答，看看日志：./deploy.sh logs"; show_urls; return; fi
   check_data; warn_direct
   mkdir -p "${DATA_DIR}" "${RUN_DIR}"; chmod 700 "${DATA_DIR}" 2>/dev/null || true
   write_config
@@ -279,7 +284,7 @@ do_start(){
     PORT="${PORT}" HOST="${HOST}" DATA_DIR="${DATA_DIR}" TRUST_PROXY="${TRUST_PROXY}" nohup "${NODE}" "${APP_DIR}/server/server.js" >> "${LOG_FILE}" 2>&1 &
     echo $! > "${PID_FILE}"
   fi
-  if wait_up; then save_env; ok "开张了"; after_up
+  if wait_up; then save_env; ok "开张了"; bots_note; after_up
   else die "十秒内没起来。看日志：./deploy.sh logs"; fi
 }
 
@@ -404,7 +409,7 @@ do_restore(){
 do_reset(){
   [ -d "${DATA_DIR}" ] || { ok "数据目录本来就是空的"; return; }
   check_data
-  say "要清空店里的数据：所有猫的名册、抽奖登记、抽奖记录、店里的计数（后台口令保留）。"
+  say "要清空店里的数据：所有猫的名册、抽奖登记、抽奖记录、店里的计数、后台的\"店里的设置\"（后台口令保留）。"
   printf '确认就输入 RESET：'; local a; read -r a; [ "${a}" = RESET ] || die "没清空"
   do_backup; local was=0; if running; then was=1; do_stop; fi
   rm -f "${DATA_DIR}/cats.json" "${DATA_DIR}/cats.json.tmp"; ok "清空了"

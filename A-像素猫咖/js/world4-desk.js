@@ -3,6 +3,7 @@
    - 前台：门厅西边一张小桌子（位置在 map-1f.js），桌上一只服务铃。点它就能问：
      听说店里有棵大树（没爬过时才有这一问，它带你去咖啡厅）、怎么参加抽奖（三个章各在哪儿盖，缺哪个带你去哪儿）、这附近有什么好玩的（这一层里挑，它带你走过去）、
      楼上有什么、我是哪只猫、毛线球怎么解、猫猫咖啡馆是什么、你是谁、打开图鉴
+     组织者在后台发了店里的公告（A.shop，app.js 填），第一句话下面就是它；截止了抽奖登记，"怎么参加抽奖"改说截止了
    - 店猫搭话：你在一间房里待了一会儿、什么都没碰，附近醒着的店猫偶尔朝一样你没玩过的东西看过去，说一句。至少隔 50 秒，一样东西只说一次
    画面上不给东西加记号：鼠标移到能玩的东西上会变成猫爪（页面里做）；走近了，按 E 会用到的那一样头上有 E 键帽（world4-guide.js）。 */
 WORLD_MODS.push(A=>{
@@ -58,7 +59,9 @@ tick(()=>{if(!A.play||lead)return;const n=near(me,cat,56)&&!me.hidden;
   wasNear=n});
 
 /* ---------- 对话框 ---------- */
-const lottoSub=()=>{const st=S.stamps,n=['ball','inner','site'].filter(k=>st[k]).length;return n===3?'三个章都集齐了':`集齐三个章就能登记 · 你有 ${n} 个`};
+// 店里的设置（组织者在后台改）：shut 抽奖登记截止了，notice 店里的公告
+const shut=()=>!!(A.shop&&A.shop.entry===false),notice=()=>A.shop&&A.shop.notice||'';
+const lottoSub=()=>{const st=S.stamps,n=['ball','inner','site'].filter(k=>st[k]).length;return shut()?'登记已经截止了':n===3?'三个章都集齐了':`集齐三个章就能登记 · 你有 ${n} 个`};
 const HEAD={icon:'bell',title:NAME,chips:['有事问我']};
 const say1=t=>({k:'say',pal:DESK_PAL,name:NAME,t});
 const BACK=[{id:'back',t:'回去'},{id:'close',t:'再逛逛',key:'Esc'}];
@@ -68,7 +71,7 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
       ...(G.disc.yarntree?[]:[{id:'tree',t:'听说店里有棵大树？',sub:'就在咖啡厅正中间，我带你去'}]),{id:'lotto',t:'怎么参加抽奖？',sub:lottoSub()},{id:'games',t:'有什么小游戏？',sub:'七个，能一直玩下去'},{id:'fun',t:'这附近有什么好玩的？',sub:'我带你过去'},{id:'floors',t:'楼上楼下有什么？',sub:'二楼、屋顶，还有地下'},{id:'eggs',t:'店里有彩蛋吗？',sub:A.eggs.count()?`你找到了 ${A.eggs.count()} / ${A.eggs.total} 个`:'八个，找到了有挂坠'},{id:'me',t:'我是哪只猫？'},{id:'ball',t:'毛线球是什么？怎么解？'},
       {id:'cafe',t:'猫猫咖啡馆是什么？',sub:'官网、GitHub、内源主页'},{id:'who',t:'你是谁？'},{id:'book',t:'把图鉴给我看看',sub:'全店能玩的都在里面（B）'}];
     const hi=G.count()?rnd(['又见面啦～今天想玩点什么？','想去哪儿？我带你去。','有什么想问的？']):'欢迎光临！第一次来吧？想玩什么、想找谁，问我就好。';
-    spec={blocks:[say1(hi),{k:'choices',cols:2,items}],tip:tipOf('concierge'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]};pick=i=>go(items[i].id)}
+    spec={blocks:[say1(hi),...(notice()?[{k:'text',t:'店里的公告：'+notice()}]:[]),{k:'choices',cols:2,items}],tip:tipOf('concierge'),acts:[{id:'close',t:'再逛逛',key:'Esc'}]};pick=i=>go(items[i].id)}
   else if(id==='fun'){const L=suggest(3);
     spec=L.length?{blocks:[say1('这几样你还没玩过，都不远：'),{k:'choices',items:L.map(s=>({t:s.g.n,sub:roomAt(val(s.th.at,me).x,val(s.th.at,me).y).n+(s.g.hint?' · '+s.g.hint:'')}))}],tip:tipOf(L[0].g.tip),acts:BACK}
       :{blocks:[say1('店里能玩的，你差不多都玩过啦！去毛线篮叼一颗球吧。')],acts:BACK};
@@ -83,9 +86,9 @@ function page(id){const q=A.Q&&A.Q.cur,ball=me.hold&&!me.hold.knit;let spec,pick
         {t:'挂进橱窗',sub:'织好的东西叼去一楼的橱窗长廊挂上，挂上才算交付'},{t:'等回信',sub:'人类取走以后，会回一封信'}]},...(items.length?[{k:'choices',items}]:[])],tip:tipOf('ball'),acts:BACK};
     pick=()=>{const th=thingOf('basket')||thingOf('knock');A.dlg.close();if(th)startLead(GID(th.id),th)}}
   else if(id==='lotto'){const st=S.stamps,n=['ball','inner','site'].filter(k=>st[k]).length,items=[...(st.ball?[]:[{id:'basket',t:'带我去毛线篮',sub:'叼一颗，解开，挂进橱窗'}]),...(st.inner&&st.site?[]:[{id:'links',t:'打开内源主页和官网的入口',sub:'点一下链接就盖章'}])];
-    spec={blocks:[say1(n===3?'三个章你都集齐啦！登记了吗？左上角的集章卡点一下就能登记。':`集齐三个章，就能登记抽奖。你现在有 ${n} 个。`),
+    spec={blocks:[say1(shut()?'抽奖登记已经截止了：已经登记的照样能抽，抽中了我在店里告诉你。三个章还能接着集。':n===3?'三个章你都集齐啦！登记了吗？左上角的集章卡点一下就能登记。':`集齐三个章，就能登记抽奖。你现在有 ${n} 个。`),
       {k:'steps',items:[{t:'交付',sub:'叼一颗毛线球，按便签解开，挂进一楼的橱窗——只解开不算',done:!!st.ball},{t:'内源',sub:'逛逛内源主页：迎宾立牌、河对岸的路标上都有入口',done:!!st.inner},{t:'官网',sub:'看看官网或 GitHub：入口和内源主页在一起',done:!!st.site}]},
-      {k:'text',t:'集齐以后会弹出一张登记表：姓名、工号、联系方式，只用来抽奖和联系领奖。一个工号算一次，和玩得好不好没关系。抽中了，我在店里告诉你。'},...(items.length?[{k:'choices',items}]:[])],tip:tipOf('concierge'),acts:BACK};
+      ...(shut()?[]:[{k:'text',t:'集齐以后会弹出一张登记表：姓名、工号，手机号可以不留；只用来抽奖和联系领奖。一个工号算一次，和玩得好不好没关系。抽中了，我在店里告诉你。'}]),...(items.length?[{k:'choices',items}]:[])],tip:tipOf('concierge'),acts:BACK};
     pick=i=>{const it=items[i];if(!it)return;if(it.id==='links'){A.openWelcome();return}const th=thingOf('basket');A.dlg.close();if(me.hold){say('嘴里叼着东西呢：先解开、挂进橱窗');return}if(th)startLead('basket',th)}}
   else if(id==='floors')spec={blocks:[say1('这是一栋三层的小楼，地下还有一层。'),
       {k:'steps',items:[{t:'一楼',sub:'你在这儿：门厅、橱窗长廊、1024 舞台（抓娃娃机）、吧台、咖啡厅；后门出去是后院（秋千）和河（小船、钓鱼）'},{t:'二楼',sub:'猫自己的房间：1024 工坊、图书馆、大客厅（地板钢琴）、午睡角；巨树的横枝伸在回廊上空，能跳上去窝着'},

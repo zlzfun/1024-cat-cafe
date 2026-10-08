@@ -7,8 +7,9 @@
    Account.create({name,look}) → {cat} | {err:'taken'|'name'|'bad'|'store'|'net'}
    Account.resume()            → cat | null              这个浏览器记住的猫
    Account.save(state)、Account.logout()、Account.prizeSeen(no)
-   Account.entry({real,emp,contact}) → {entry} | {err:'bad', field, why} | {err:'stamps'|'local'|'net'}   登记抽奖（只有服务端模式能登记）
+   Account.entry({real,emp,contact}) → {entry} | {err:'bad', field, why} | {err:'stamps'|'closed'|'local'|'net'}   登记抽奖（只有服务端模式能登记；contact 是手机号，可以空着）
    Account.entryWhy(e)         → null | {field, why}     抽奖登记的格式（前后端同一份）
+   Account.settings()          → {bots, entry, notice, noticeAt} | null   组织者在后台改的店里的设置（服务端模式才有；取不到是 null）
    Account.token()             → 联机用的令牌（服务端模式才有）；Account.wsUrl() → 联机的地址
    cat = {id, name, look:{coat, collar, face}, created, last, state, prizes?, entry?} */
 const Account=(()=>{
@@ -31,15 +32,15 @@ function pick(n,taken,skip=[]){const out=[],no=new Set(skip),ok=x=>!taken(x)&&!n
   return out}
 const okLook=l=>l&&Number.isInteger(l.coat)&&l.coat>=0&&l.coat<9&&Number.isInteger(l.collar)&&l.collar>=0&&l.collar<6&&typeof l.face==='string'&&l.face.length<16;
 
-/* ---------- 抽奖登记：姓名、工号、联系方式 ---------- */
+/* ---------- 抽奖登记：姓名、工号、手机号（选填） ---------- */
 const clip=s=>String(s??'').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g,'').trim();
-// 联系方式只收手机号（2026-10-07 定：组织者要打电话、发短信通知领奖）：去掉空格、短横、括号和前面的 +86，剩下 11 位、1 开头、第二位 3～9
+// 联系方式只收手机号，可以不留（2026-10-08 定：抽中了前台猫在店里告诉领奖码，组织者按工号找人）；留了就去掉空格、短横、括号和前面的 +86，剩下 11 位、1 开头、第二位 3～9
 const phoneClean=s=>{let p=clip(s).replace(/[\s\-()（）]/g,'');if(/^(\+?86|0086)1\d{10}$/.test(p))p=p.replace(/^(\+?86|0086)/,'');return p};
 const entryClean=e=>({real:clip(e.real),emp:clip(e.emp).replace(/\s+/g,''),contact:phoneClean(e.contact)});
 function entryWhy(e){if(!e||typeof e!=='object')return{field:'real',why:'填一下姓名'};const {real,emp,contact}=entryClean(e);
   if(!real)return{field:'real',why:'填一下姓名'};if([...real].length>20)return{field:'real',why:'姓名最多 20 个字'};
   if(!emp)return{field:'emp',why:'填一下工号'};if(!/^[A-Za-z0-9_-]{2,32}$/.test(emp))return{field:'emp',why:'工号是字母和数字，2～32 位'};
-  if(!contact)return{field:'contact',why:'留个手机号'};if(!/^1[3-9]\d{9}$/.test(contact))return{field:'contact',why:'手机号是 11 位数字，1 开头'};
+  if(contact&&!/^1[3-9]\d{9}$/.test(contact))return{field:'contact',why:'手机号是 11 位数字，1 开头；不想留可以空着'};
   return null}
 // 按工号去重时比的东西：去掉空白、转大写
 const empKey=emp=>clip(emp).replace(/\s+/g,'').toUpperCase();
@@ -83,7 +84,8 @@ const remote={
   async save(state,keepalive){const j=await call('PUT','/me/state',{state},keepalive);return j.status===200},
   async logout(){await call('POST','/logout').catch(()=>{});LS.del(TK)},
   async prizeSeen(no){await call('POST','/me/prize-seen',{no})},
-  async entry(e){const j=await call('POST','/me/entry',e);if(j.entry)return{entry:j.entry};return{err:j.err||'net',field:j.field,why:j.why}}};
+  async entry(e){const j=await call('POST','/me/entry',e);if(j.entry)return{entry:j.entry};return{err:j.err||'net',field:j.field,why:j.why}},
+  async settings(){const j=await call('GET','/settings');return j.status===200?{bots:j.bots,entry:j.entry,notice:j.notice,noticeAt:j.noticeAt}:null}};
 
 const B=API?remote:local;
 // 连不上服务端时别整页卡死：返回 {err:'net'}，界面上说"店门口网不好"
@@ -91,6 +93,7 @@ const safe=f=>async(...a)=>{try{return await f(...a)}catch(e){console.warn('[acc
 return{NAMES,inPool,pick,key,okLook,entryWhy,entryClean,empKey,mode:API?'server':'local',
   offer:safe(B.offer),create:safe(B.create),entry:safe(B.entry),resume:async()=>{try{return await B.resume()}catch(e){return null}},
   save:(s,k)=>B.save(s,k).catch(()=>false),logout:()=>B.logout().catch(()=>{}),prizeSeen:no=>API?remote.prizeSeen(no).catch(()=>{}):null,
+  settings:()=>API?remote.settings().catch(()=>null):Promise.resolve(null),
   token:()=>API?LS.get(TK,null):null,
   // 联机地址：和接口同一台服务器的 /ws（config.js 里也可以用 ws 另给）
   wsUrl:()=>{if(!API)return null;if(CFG.ws)return CFG.ws;const u=new URL(API,location.href);if(!/^https?:$/.test(u.protocol))return null;u.protocol=u.protocol==='https:'?'wss:':'ws:';u.pathname=u.pathname.replace(/\/api\/?$/,'')+'/ws';u.search='';return u.href}}})();

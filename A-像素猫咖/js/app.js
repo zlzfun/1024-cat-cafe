@@ -2,11 +2,13 @@
    由 index.html 的加载器在所有脚本到齐后调用 App.boot(progress)。
    - 店里的记录（图鉴、解了几颗球、交付了几件、集章、上次站在哪）跟着账号存：Account.save，隔几秒存一次，关页面前再存一次。
    - 同一只猫在两个窗口里开着：后开的那个接着玩，先开的那个显示"它在另一个窗口醒着"。
-   - 其他在线的猫：接了服务端就联机（net.js + world-online.js，见 docs/联机.md），人少时由机器人补位（数量在 config.js 里）。人类始终不出场。
+   - 其他在线的猫：接了服务端就联机（net.js + world-online.js，见 docs/联机.md），人少时由机器人补位（数量：组织者在后台改过的为准，没改按 config.js）。人类始终不出场。
+   - 店里的设置（组织者在后台改，docs/组织者后台.md）：补位的猫有多少只、抽奖登记开着没有、店里的公告。建店前问一次服务端，联机推过来的随时换上（applyShop）。
    - 店里永远是晴天的夜里（三层楼统一）。
    - 地址后面加 ?dev 出一条开发用的工具条（机器人数量、时段、天气、触发事件）。 */
 const App=(()=>{
 const CFG=window.CAT1024_CONFIG||{},DEV=/[?&]dev\b/.test(location.search);
+const SHOP={bots:null,entry:true,notice:'',noticeAt:0},botsNow=()=>SHOP.bots??CFG.bots??40,shut=()=>Account.mode==='server'&&!SHOP.entry;   // 店里的设置；shut：抽奖登记截止了
 const $=id=>document.getElementById(id),dpr=Math.min(2,window.devicePixelRatio||1),WW=Math.min(...WORLD.floors.map(f=>f.w)),WH=Math.min(...WORLD.floors.map(f=>f.h));   // 画面最大不超过最小的那一层
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 if(CFG.links)for(const k in CFG.links)if(LINKS[k]&&CFG.links[k])LINKS[k].url=CFG.links[k];
@@ -54,7 +56,7 @@ const ui={prompt:s=>{const el=$('prompt'),on=!!s&&!dlg.open&&playing;if(s!==prom
   // 新发现：上面是发生了什么，下面一块 Tips 牌子（这样东西对应猫猫咖啡馆的哪项特性；TIPS 里有这一条就带"了解更多"）；有 Tips 的多停两秒
   discover:d=>{sfx('disc');const el=$('disc'),tp=d.tipObj,t=d.tie||(tp&&tp.t)||'';el.classList.remove('egg','fish');discHold=false;
     el.innerHTML=`<h5><canvas data-ic="book"></canvas>新发现 · ${esc(d.n)}</h5><p>${esc(d.what)}</p>${t?tipsHTML(t,tp&&tp.l):''}`;icons(el);el.classList.add('show');discT=t?8:6},
-  reply:r=>{sfx('bell');const el=$('reply');el.innerHTML=`<h5><canvas data-ic="mail"></canvas>人类回信 · 毛线球 #${r.no}</h5><q>${esc(r.thx)}</q><div class="chain">球权链：${r.chain.map(esc).join(' → ')}</div>`;icons(el);el.classList.add('show');replyT=8;drawStamps()},
+  reply:r=>{sfx('bell');const el=$('reply');el.classList.remove('notice');el.innerHTML=`<h5><canvas data-ic="mail"></canvas>人类回信 · 毛线球 #${r.no}</h5><q>${esc(r.thx)}</q><div class="chain">球权链：${r.chain.map(esc).join(' → ')}</div>`;icons(el);el.classList.add('show');replyT=8;drawStamps()},
   stamps:()=>{drawStamps();touch()},book:pg=>openGuide(pg),renamed:n=>{if(cat)cat.name=n;meKey=''},prizes:L=>L.forEach(queuePrize)};
 // 画面上方三分之一处的大字，同一时间只出一个：大号（进店欢迎、第一次见到巨树和星空）出来的时候，房间名不叠着出；大号来了，直接换掉房间名
 let ttlT1=0,ttlT2=0,ttlBig=0;
@@ -100,13 +102,14 @@ function drawPanel(){const tr=game.A.Q.tracker();let html='';
 // 集章抽奖：三个章就是抽奖的条件。刚盖上的那个"啪"地盖下去，上方弹一条还差什么
 const STAMPS=[['ball','交付','解球·挂进橱窗'],['inner','内源','逛内源主页'],['site','官网','官网/GitHub']];
 let stPrev=null;
-function drawStamps(){const s=game.S.stamps,n=STAMPS.filter(([k])=>s[k]).length,en=cat&&cat.entry,el=$('stamps'),
+// 组织者截止了抽奖登记（shut）：不再说"集齐就能登记"
+function drawStamps(){const s=game.S.stamps,n=STAMPS.filter(([k])=>s[k]).length,en=cat&&cat.entry,el=$('stamps'),sh=shut(),
     fresh=stPrev?STAMPS.filter(([k])=>s[k]&&!stPrev[k]).map(([k])=>k):[];stPrev={...s};
-  if(fresh.length&&playing){sfx('stamp');const left=STAMPS.filter(([k])=>!s[k]).map(([,a])=>a);ui.toast(`盖章 · ${STAMPS.find(([k])=>k===fresh[0])[1]}（${n}/3）`+(left.length?` · 还差${left.join('、')}，集齐就能登记抽奖`:' · 集齐了，可以登记抽奖'),1)}
-  el.classList.toggle('fold',hadTask);el.title=n===3?'':'集齐三个章，就能登记抽奖';
-  if(hadTask){el.innerHTML=`<h4>集章抽奖</h4><span class="dots">${STAMPS.map(([k,a])=>`<span class="${s[k]?'on':''}${fresh.includes(k)?' new':''}">${a[0]}</span>`).join('')}</span><i>${n} / 3${n<3?' · 集齐就能抽奖':en?' · 已登记':' · 可以登记了'}</i>`;return}
+  if(fresh.length&&playing){sfx('stamp');const left=STAMPS.filter(([k])=>!s[k]).map(([,a])=>a);ui.toast(`盖章 · ${STAMPS.find(([k])=>k===fresh[0])[1]}（${n}/3）`+(left.length?` · 还差${left.join('、')}`+(sh?'':'，集齐就能登记抽奖'):sh?' · 集齐了':' · 集齐了，可以登记抽奖'),1)}
+  el.classList.toggle('fold',hadTask);el.title=n===3||sh?'':'集齐三个章，就能登记抽奖';
+  if(hadTask){el.innerHTML=`<h4>集章抽奖</h4><span class="dots">${STAMPS.map(([k,a])=>`<span class="${s[k]?'on':''}${fresh.includes(k)?' new':''}">${a[0]}</span>`).join('')}</span><i>${n} / 3${n===3&&en?' · 已登记':sh?' · 登记已截止':n<3?' · 集齐就能抽奖':' · 可以登记了'}</i>`;return}
   el.innerHTML=`<h4>集章抽奖<span class="r">${n} / 3</span></h4><div class="row">`+STAMPS.map(([k,a,b])=>`<div data-st="${k}" class="${s[k]?'on':''}"><div class="s${fresh.includes(k)?' new':''}">${a}</div>${b}</div>`).join('')+'</div>'+
-    `<p class="lt ${n<3?'':en?'done':'go'}">${n<3?'集齐三个章，就能登记抽奖':en?'已登记抽奖 · 点这里修改':'集齐了！点这里登记抽奖 →'}</p>`}
+    `<p class="lt ${n===3&&en?'done':n<3||sh?'':'go'}">${n===3&&en?(sh?'已登记抽奖':'已登记抽奖 · 点这里修改'):sh?(n<3?'抽奖登记已截止':'集齐了 · 抽奖登记已截止'):n<3?'集齐三个章，就能登记抽奖':'集齐了！点这里登记抽奖 →'}</p>`}
 // 点集章卡：集齐了就登记抽奖；点没盖的"交付"——叼着球就打开便签，没叼着就指向最近的毛线篮；别的地方打开迎宾立牌那段介绍（规矩 + 链接）
 function clickStamps(e){const A=game.A,k=(e.target.closest('[data-st]')||{}).dataset;if(cat&&full()){openLotto();return}
   if(k&&k.st==='ball'&&!game.S.stamps.ball){const me=game.me,h=me.hold;if(A.Q.cur)A.Q.open();else if(h&&h.knit)ui.toast(`叼着织好的${KNIT_NAMES[h.kind][0]}：挂进一楼的橱窗，就盖上这个章`);else if(h)A.solveHere(me);
@@ -191,7 +194,8 @@ const SHOP_TOD='night',SHOP_WX='sun';
 
 /* ---------- 联机：接了服务端才有（设计见 docs/联机.md） ---------- */
 function startNet(){if(Account.mode!=='server')return;const L=game.A.live;L.send=o=>Net.send(o);
-  Net.start({onState:s=>L.state(s),onMsg:m=>{if(m.t==='bye'){if(m.why==='elsewhere')sleep(true);else gone(m.why);return}if(m.t==='prize'){queuePrize(m);return}L.recv(m)}})}
+  Net.start({onState:s=>L.state(s),onMsg:m=>{if(m.t==='bye'){if(m.why==='elsewhere')sleep(true);else gone(m.why);return}if(m.t==='prize'){queuePrize(m);return}
+    if(m.t==='cfg'){applyShop(m.cfg);return}if(m.t==='welcome')applyShop(m.cfg);L.recv(m)}})}   // welcome 先换上设置：机器人按新的数补位
 // 被封禁、这个浏览器记着的猫店里不认了：请出店，点"好"回到进店第一步
 function gone(why){playing=false;Net.stop();const T={ban:['这只猫暂时不能进店','有疑问请找组织者。']}[why]||['找不到你的猫了','店里不认这个浏览器记着的猫了。点"好"，重新扭一只。'];
   $('goneh').textContent=T[0];$('gonep').textContent=T[1];$('gone').style.display='flex';$('goneb').onclick=()=>Account.logout().then(()=>location.reload())}
@@ -203,25 +207,44 @@ function tryPrize(){if(!prizeQ.length||!playing||asleep||dlg.open||game.A.arrivi
     {k:'code',label:'领奖码',t:p.code},...(p.how?[{k:'text',t:'怎么领：'+p.how}]:[]),{k:'text',t:'这个码只有你看得到。把它发给组织者，就能领奖。'}],acts:[{id:'ok',t:'记下了',key:'E'}]},{close:()=>Account.prizeSeen(p.no)})}
 
 /* ---------- 登记抽奖：集齐三个章以后（设计见 docs/店内设计.md、docs/组织者后台.md） ----------
-   盖上第三个章、手上没别的事时自己弹一次（这一次进店里只弹一次）；以后点集章卡打开，登记过的可以改。只有服务端模式能登记。 */
+   盖上第三个章、手上没别的事时自己弹一次（这一次进店里只弹一次）；以后点集章卡打开，登记过的可以改。只有服务端模式能登记。
+   手机号选填。组织者截止了登记（shut）：不再自己弹，点开只说一句截止了，登记过的也不能改。 */
 let lottoAsked=false;
 const full=()=>{const s=game.S.stamps;return !!(s.ball&&s.inner&&s.site)},lottoOpen=()=>$('lotto').style.display==='flex';
 const LF={real:'lreal',emp:'lemp',contact:'lcon'};
 function openLotto(){const e=cat.entry;$('lotto').style.display='flex';$('lerr').textContent='';Object.values(LF).forEach(id=>$(id).classList.remove('bad'));
   if(Account.mode!=='server'){lottoDone('现在是本机模式，没有连着店里的服务器，不能登记抽奖。');return}
-  $('ltf').hidden=false;$('ltd').hidden=true;$('ltlead').textContent=e?'改一改登记的信息。':'三个章都集齐了！留下这三项，抽中了好找到你。';
+  if(shut()){lottoDone(shutText());return}
+  $('ltf').hidden=false;$('ltd').hidden=true;$('ltlead').textContent=e?'改一改登记的信息。':'三个章都集齐了！留下姓名和工号，抽中了好找到你。';
   $('lreal').value=e?e.real:'';$('lemp').value=e?e.emp:'';$('lcon').value=e?e.contact:'';$('lgo').textContent=e?'改好了':'登记';$('lgo').disabled=false;
   setTimeout(()=>$('lreal').focus(),30)}
+const shutText=()=>'抽奖登记已经截止了。'+(cat&&cat.entry?'你已经登记过，照样能抽；抽中了，前台猫会在店里告诉你。':'');
 function lottoDone(t){$('ltf').hidden=true;$('ltd').hidden=false;$('ltdp').textContent=t;setTimeout(()=>$('lok').focus(),30)}
 function closeLotto(){$('lotto').style.display='none';$('game').focus()}
 async function sendLotto(){if($('lgo').disabled)return;const v={real:$('lreal').value,emp:$('lemp').value,contact:$('lcon').value};Object.values(LF).forEach(id=>$(id).classList.remove('bad'));
   const bad=e=>{$('lerr').textContent=e.why||'格式不对';const f=$(LF[e.field]);if(f){f.classList.add('bad');f.focus()}};
   const b=Account.entryWhy(v);if(b)return bad(b);
   $('lgo').disabled=true;$('lerr').textContent='';await Account.save(snapshot());const r=await Account.entry(v);$('lgo').disabled=false;
-  if(r.entry){const first=!cat.entry;cat.entry=r.entry;drawStamps();sfx('stamp');lottoDone(first?'登记好了。抽中了，前台猫会在店里告诉你，组织者也会按你留的联系方式找你。':'改好了。');return}
+  if(r.entry){const first=!cat.entry;cat.entry=r.entry;drawStamps();sfx('stamp');lottoDone(first?'登记好了。抽中了，前台猫会在店里告诉你'+(r.entry.contact?'，组织者也会按你留的手机号联系你。':'领奖码。'):'改好了。');return}
   if(r.err==='bad'&&LF[r.field])return bad(r);
+  if(r.err==='closed'){SHOP.entry=false;drawStamps();lottoDone(shutText());return}
   $('lerr').textContent=r.err==='stamps'?'三个章还没存到店里，过几秒再点一次':'店门口网不好，等一下再点一次'}
-function tryLotto(){if(lottoAsked||!cat||cat.entry||Account.mode!=='server'||!full()||!playing||asleep||dlg.open||prizeQ.length||lottoOpen()||game.A.arriving()||game.A.vista.on)return;lottoAsked=true;openLotto()}
+function tryLotto(){if(lottoAsked||!cat||cat.entry||Account.mode!=='server'||shut()||!full()||!playing||asleep||dlg.open||prizeQ.length||lottoOpen()||game.A.arriving()||game.A.vista.on)return;lottoAsked=true;openLotto()}
+
+/* ---------- 店里的设置（组织者在后台改，docs/组织者后台.md"店里的设置"）：补位的猫、抽奖登记开关、店里的公告 ----------
+   建店前、联机连上（welcome）、组织者改了（cfg）都走这里。公告比这个浏览器看过的新，就等进店动画、看风景、人类回信都过去，在正上方出一次 */
+const NK='cat1024.notice';let noticeQ=null;
+const noticeSeen=()=>{try{return +localStorage.getItem(NK)||0}catch(e){return 0}};
+function applyShop(c){if(!c||typeof c!=='object')return;const b0=botsNow(),e0=SHOP.entry;
+  SHOP.bots=Number.isInteger(c.bots)&&c.bots>=0&&c.bots<=150?c.bots:null;SHOP.entry=c.entry!==false;
+  SHOP.notice=typeof c.notice==='string'?c.notice.slice(0,60):'';SHOP.noticeAt=Number.isFinite(c.noticeAt)?c.noticeAt:0;
+  noticeQ=SHOP.notice&&SHOP.noticeAt>noticeSeen()?{s:SHOP.notice,at:SHOP.noticeAt}:null;
+  if(!game)return;if(botsNow()!==b0)game.bots(botsNow());
+  const el=$('reply');if(!SHOP.notice&&el.classList.contains('notice')&&el.classList.contains('show')){el.classList.remove('show');replyT=0}   // 撤下了：正显示着的也收起来
+  if(SHOP.entry!==e0){drawStamps();if(!SHOP.entry&&lottoOpen()&&!$('ltf').hidden)lottoDone(shutText())}}
+// 人类回信正显示着就等它淡掉；正显示着的是上一条公告，新的直接换上去
+function tryNotice(){const el=$('reply');if(!noticeQ||!playing||asleep||game.A.arriving()||game.A.vista.on||replyT>0&&!el.classList.contains('notice'))return;const n=noticeQ;noticeQ=null;try{localStorage.setItem(NK,String(n.at))}catch(e){}
+  el.classList.add('notice');el.innerHTML=`<h5><canvas data-ic="bell"></canvas>店里的公告</h5><p>${esc(n.s)}</p>`;icons(el);el.classList.add('show');replyT=12;sfx('bell');ui.news('店里的公告：'+n.s)}
 
 /* ---------- 同一只猫开在两个窗口：后开的接着玩 ---------- */
 let chan=null;const TAB=Math.random().toString(36).slice(2);
@@ -229,7 +252,7 @@ function claim(){try{chan=chan||new BroadcastChannel('cat1024');chan.onmessage=e
 function sleep(on){asleep=on;$('elsewhere').style.display=on?'flex':'none';if(on)Net.stop();else{claim();startNet();$('game').focus()}}
 
 /* ---------- 开发用 ---------- */
-function devBar(){const b=$('devbar');b.style.display='flex';const n=CFG.bots??40;
+function devBar(){const b=$('devbar');b.style.display='flex';const n=botsNow();
   b.innerHTML=`<span>机器人</span><input type="range" min="0" max="150" value="${n}" id="dvB"><b id="dvBv">${n}</b><span>时段</span>${['day','dusk','night'].map(t=>`<button class="lbtn sm" data-tod="${t}">${{day:'白天',dusk:'黄昏',night:'夜晚'}[t]}</button>`).join('')}<span>天气</span>${['sun','rain','snow'].map(w=>`<button class="lbtn sm" data-wx="${w}">${{sun:'晴',rain:'雨',snow:'雪'}[w]}</button>`).join('')}
     <span>事件</span>${[['arrive','塞几颗球'],['giant','大毛线团'],['ci','CI 红了'],['laser','激光点'],['bubbles','泡泡'],['bird','小鸟'],['fireworks','烟花'],['lantern','孔明灯'],['owl','猫头鹰飞'],['stars','满屋星星'],['disco','迪斯科时间'],['shark','鲨鱼游过'],['clock','10:24 报时'],['earstar','耳朵星划过']].map(([k,n])=>`<button class="lbtn sm" data-ev="${k}">${n}</button>`).join('')}<span id="dvP"></span>`;
   $('dvB').oninput=e=>{$('dvBv').textContent=e.target.value;game.bots(+e.target.value)};
@@ -252,7 +275,7 @@ function loop(ms){const t=ms/1000,dt=Math.min(.05,Math.max(0,(ms-last)/1000));la
     if(veil)drawVeil(t);
     if(fno%4===0){const m=$('mm'),z=game.miniSize(204);if(m.width!==z.w||m.height!==z.h){m.width=z.w;m.height=z.h}game.mini(mctx,z.w,z.h)}
     if(fno%10===0){$('online').textContent=game.S.cats.filter(c=>!c.gone).length+' 只猫'+(Net.on?' · 在线 '+(1+game.A.live.count()):'');drawMe();drawPanel();hudR=hudRects()}
-    if(fno%30===0){tryPrize();tryLotto()}
+    if(fno%30===0){tryPrize();tryLotto();tryNotice()}
     if(playing&&(saveT+=dt)>(dirty?3:20)){saveT=0;flush()}}
   jsT+=performance.now()-t0;
   if(toastNext&&performance.now()>=toastHold){const s=toastNext;toastNext=null;ui.toast(s)}if(toastT>0&&(toastT-=dt)<=0)$('toast').style.opacity=0;if(discT>0&&!discHold&&(discT-=dt)<=0)$('disc').classList.remove('show');if(replyT>0&&(replyT-=dt)<=0)$('reply').classList.remove('show');
@@ -266,11 +289,13 @@ function drawVeil(t){const k=(performance.now()-veil.t0)/1000;if(veil.how==='dro
 
 /* ---------- 启动：加载器调它 ---------- */
 async function boot(progress){const gameEl=$('game');pctx=$('pc').getContext('2d',{willReadFrequently:true});octx=$('oc').getContext('2d');mctx=$('mm').getContext('2d');
+  const shop0=Promise.race([Account.settings(),new Promise(r=>setTimeout(()=>r(null),2500))]);   // 店里的设置：和字体一起等，建店前拿到（取不到就按 config.js）
   (()=>{const o=C;use($('icYarn').getContext('2d'));yarnBall(3,3,2,0);use($('icPaw').getContext('2d'));pawPrint(1,1,'#f4a6b8');use(o)})();
   progress('点灯……');await tick0();
   // 像素字体：底图里画的中文招牌要用它，建店之前等它加载好（最多等三秒，加载不出来就落回系统字体）
   if(typeof PXT!=='undefined')await Promise.race([PXT.ready,new Promise(r=>setTimeout(r,3000))]);
-  game=makeWorld($('pc'),{play:true,ui,hi:true});window.__game=game;game.S.tod=SHOP_TOD;game.S.weather=SHOP_WX;game.bots(CFG.bots??40,true);
+  applyShop(await shop0);
+  game=makeWorld($('pc'),{play:true,ui,hi:true});window.__game=game;game.A.shop=SHOP;game.S.tod=SHOP_TOD;game.S.weather=SHOP_WX;game.bots(botsNow(),true);
   dlg=makeDialog($('dlg'),{pick:i=>{game.A.dlg.pick(i);sfx('page')},act:id=>game.A.dlg.act(id),link:k=>openLink(k),visited:k=>k==='inner'?game.S.stamps.inner:game.S.stamps.site});
   game.A.hudAvoid=()=>hudR;layout();addEventListener('resize',layout);bindInput();drawStamps();if(DEV)devBar();requestAnimationFrame(loop);
   progress('看看你是不是来过……');const resumed=await Account.resume();await progress(null);
@@ -290,8 +315,9 @@ function enter({cat:c,how}){cat=c;const me=game.me,st=c.state||{};SAVE={g:st.g||
   game.A.arrive(how,{...(st.pos||{}),onLand:()=>{},onDone:()=>{flush();$('game').focus()}});
   // 第一次来：大字里就写抽奖的条件，大字散去以后集章卡亮一圈；再来：写交付过几件、集了几个章
   const sn=STAMPS.filter(([k])=>game.S.stamps[k]).length,hung=game.A.guide.hung();
-  if(how==='drop'){title('1024 猫咖营业中','欢迎，'+c.name,'集齐左上角三个章，就能登记抽奖 · 前台猫在门厅，有事问它',{delay:1900,hold:4600,big:1});setTimeout(()=>{const e=$('stamps');e.classList.add('hl');setTimeout(()=>e.classList.remove('hl'),3800)},6700)}
-  else title('欢迎回来',c.name,[c.prev?'上次来是 '+Entry.ago(c.prev):'又见面了',hung?`交付过 ${hung} 件`:'',sn<3?`集章 ${sn} / 3，集齐就能登记抽奖`:''].filter(Boolean).join(' · '),{delay:1400,hold:3800,big:1});
+  // 组织者截止了抽奖登记：大字里不提抽奖，集章卡也不亮
+  if(how==='drop'){title('1024 猫咖营业中','欢迎，'+c.name,(shut()?'':'集齐左上角三个章，就能登记抽奖 · ')+'前台猫在门厅，有事问它',{delay:1900,hold:4600,big:1});if(!shut())setTimeout(()=>{const e=$('stamps');e.classList.add('hl');setTimeout(()=>e.classList.remove('hl'),3800)},6700)}
+  else title('欢迎回来',c.name,[c.prev?'上次来是 '+Entry.ago(c.prev):'又见面了',hung?`交付过 ${hung} 件`:'',sn<3&&!shut()?`集章 ${sn} / 3，集齐就能登记抽奖`:''].filter(Boolean).join(' · '),{delay:1400,hold:3800,big:1});
   $('game').focus();
   addEventListener('pagehide',()=>flush(true));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush(true)})}
 return{boot,get game(){return game},sleep}})();

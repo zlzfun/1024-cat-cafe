@@ -14,7 +14,7 @@ async function api(method,path,body){const r=await fetch(API+path,{method,header
   const ct=r.headers.get('content-type')||'';if(ct.includes('text/csv'))return{blob:await r.blob(),name:decodeURIComponent((/filename\*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition')||'')||[])[1]||'名单.csv')};
   return{status:r.status,...await r.json().catch(()=>({}))}}
 function lock(msg){key='';try{sessionStorage.removeItem(KK)}catch(e){}$('app').hidden=true;$('out').hidden=true;$('login').hidden=false;$('loginerr').textContent=msg||'';$('live').textContent=''}
-async function unlock(){$('login').hidden=true;$('app').hidden=false;$('out').hidden=false;await Promise.all([loadStats(),loadCats(),loadDraws()])}
+async function unlock(){$('login').hidden=true;$('app').hidden=false;$('out').hidden=false;await Promise.all([loadStats(),loadCats(),loadDraws(),loadShop()])}
 $('loginf').onsubmit=async e=>{e.preventDefault();key=$('key').value.trim();if(!key)return;try{await api('GET','/stats');try{sessionStorage.setItem(KK,key)}catch(x){}$('key').value='';unlock()}catch(x){}};
 $('out').onclick=()=>lock('');
 
@@ -49,12 +49,12 @@ function drawRows(){const q=$('q').value.trim().toLowerCase(),el=$('onlyElig').c
     tr.innerHTML=`<td><div class="who"><span class="pc"></span><div><b>${esc(c.name)}</b>${c.online?'<i class="dot" title="在线"></i>':''}${c.banned?'<span class="tag ban">封禁</span>':''}${c.flag?'<span class="tag flag" title="盖了解球章，服务端却没记到它挂过">待核</span>':''}${canDraw(c)?'<span class="tag">能抽</span>':c.eligible?'<span class="tag">集齐</span>':''}</div></div></td>
       <td>${esc(when(c.created))}</td><td>${esc(when(c.last))}</td><td class="n">${esc(c.visits||0)}</td><td class="n">${esc(c.balls||0)}</td><td class="n">${esc(c.hangs||0)}</td>
       <td><span class="st"><i class="${s.ball?'on':''}" title="解一颗球">球</i><i class="${s.inner?'on':''}" title="内源主页">源</i><i class="${s.site?'on':''}" title="官网 / GitHub">官</i></span></td>
-      <td class="en">${c.entry?`${esc(c.entry.real)} · ${esc(c.entry.emp)}${c.dup?`<span class="tag flag" title="同一个工号还登记在 ${esc(c.dup)} 只别的猫上">同工号</span>`:''}<br><small>${esc(c.entry.contact)}</small>`:'—'}</td>
+      <td class="en">${c.entry?`${esc(c.entry.real)} · ${esc(c.entry.emp)}${c.dup?`<span class="tag flag" title="同一个工号还登记在 ${esc(c.dup)} 只别的猫上">同工号</span>`:''}<br>${c.entry.contact?`<small>${esc(c.entry.contact)}</small>`:'<small class="no">没留手机号</small>'}`:'—'}</td>
       <td>${(c.won||[]).length?esc(c.won.map(n=>'第 '+n+' 轮').join('、')):'—'}</td>
       <td><div class="acts"><button class="lbtn" data-a="rename">换个名字</button><button class="lbtn warn" data-a="ban">${c.banned?'解封':'封禁'}</button></div></td>`;
     tr.querySelector('.pc').replaceWith(portrait(c.look||{}));tr.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a,c));tb.appendChild(tr)}
   $('more').textContent=L.length>SHOW?`只列出前 ${SHOW} 只（最近来过的在前），还有 ${L.length-SHOW} 只，按名字找。`:''}
-['q','onlyElig','onlyOn'].forEach(id=>$(id).oninput=drawRows);$('reload').onclick=()=>{loadCats();loadStats()};
+['q','onlyElig','onlyOn'].forEach(id=>$(id).oninput=drawRows);$('reload').onclick=()=>{loadCats();loadStats();loadShop()};
 
 /* ---------- 每一行的两件事 ---------- */
 function modal(html,wire){$('mbox').innerHTML=html;$('modal').style.display='flex';wire&&wire($('mbox'))}
@@ -84,5 +84,23 @@ $('exElig').onclick=()=>download('/export?what=people');$('exAll').onclick=()=>d
 /* ---------- 清空抽奖登记（活动结束、名单导出以后） ---------- */
 $('eclear').onclick=async()=>{if(!confirm('清空所有抽奖登记？\n所有猫上的姓名、工号、联系方式，和中奖记录里的，都会删掉，不能撤回。\n要留的名单先导出。'))return;
   const r=await api('POST','/entries/clear');$('emsg').textContent=r.ok?`清掉了 ${r.n} 份登记`:'没清成';loadStats();loadCats();loadDraws()};
+
+/* ---------- 店里的设置：补位的猫、抽奖登记开关、店里的公告。服务端改完马上推给店里每只猫 ---------- */
+let shop={bots:null,entry:true,notice:'',noticeAt:0};const BOTS0=(window.CAT1024_CONFIG||{}).bots??40;
+async function loadShop(){const r=await api('GET','/settings');if(r.status===200){shop=r;drawShop()}}
+function drawShop(){$('sbdef').textContent=BOTS0;$('sbots').placeholder='按 config.js：'+BOTS0;if(document.activeElement!==$('sbots'))$('sbots').value=shop.bots??'';
+  $('estate').textContent=shop.entry?'登记开着':'登记已截止';$('estate').className='tag'+(shop.entry?'':' ban');$('etoggle').textContent=shop.entry?'截止登记':'重新开放';
+  $('snnow').innerHTML=shop.notice?`现在的公告：「${esc(shop.notice)}」（${esc(when(shop.noticeAt).replace(/\d$/,'$& '))}发布）`:'现在没有公告。'}
+// 按钮旁边的一句回话：几秒后自己消失，免得过时的提示一直挂着
+const say=(el,t,bad)=>{el.textContent=t;el.classList.toggle('bad',!!bad);clearTimeout(el._t);el._t=setTimeout(()=>{el.textContent=''},6000)};
+async function saveShop(body,el,done){const r=await api('POST','/settings',body);
+  if(!r.ok){say(el,{bots:'填 0～150 的整数，或者空着',notice:'公告最多 60 个字'}[r.err]||'没保存上',1);return false}shop=r.settings;drawShop();say(el,done);return true}
+$('sbgo').onclick=()=>{const v=$('sbots').value.trim(),n=v===''?null:Number(v);if(n!==null&&!(Number.isInteger(n)&&n>=0&&n<=150))return say($('sbmsg'),'填 0～150 的整数，或者空着',1);
+  saveShop({bots:n},$('sbmsg'),n===null?`按 config.js：${BOTS0} 只`:`保存了：店里的机器人会一只一只变成 ${n} 只`)};
+$('sngo').onclick=async()=>{const t=$('snote').value.trim();if(!t)return say($('snmsg'),'先写一句',1);if(!confirm('发布这条公告？店里每只猫马上看到：\n'+t))return;
+  if(await saveShop({notice:t},$('snmsg'),'发布了'))$('snote').value=''};
+$('snoff').onclick=()=>{if(!shop.notice)return say($('snmsg'),'现在没有公告');saveShop({notice:''},$('snmsg'),'撤下了')};
+$('etoggle').onclick=()=>{const on=!shop.entry;if(!on&&!confirm('截止抽奖登记？\n店里不再收新登记和修改，集章卡、前台猫、迎宾立牌都会说截止了；已经登记的照样能抽。\n随时可以重新开放。'))return;
+  saveShop({entry:on},$('etmsg'),on?'重新开放了':'截止了')};
 
 if(key)api('GET','/stats').then(unlock).catch(()=>{});else lock('')})();

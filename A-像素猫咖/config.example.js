@@ -9,6 +9,6 @@ window.CAT1024_CONFIG = {
     // site 官网 · docs 文档 · github 仓库 · issues 提 issue · releases 下载安装包 · tips 使用小 Tips · concierge 猫猫球设计文档 · evidence 信源卫生设计文档
     // site: 'https://…',
   },
-  bots: 40,                // 补位的机器人：这个数减去在线的真人数（最少留 12 只）
+  bots: 40,                // 补位的机器人：这个数减去在线的真人数（最少留 12 只）；组织者后台"店里的设置"里填过的，以后台为准
   // ws: 'wss://…/ws',     // 联机地址；不写就用页面所在路径下的 ws（https://网站/1024-cat-cafe/ → wss://网站/1024-cat-cafe/ws）
 };

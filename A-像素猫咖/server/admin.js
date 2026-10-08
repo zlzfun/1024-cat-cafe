@@ -1,4 +1,4 @@
-/* 1024 猫咖 · 组织者后台的接口：名册、换名字、封禁、抽奖登记按工号去重、抽奖（带领奖码）、导出 CSV、清空登记。设计见 docs/组织者后台.md。
+/* 1024 猫咖 · 组织者后台的接口：名册、换名字、封禁、抽奖登记按工号去重、抽奖（带领奖码）、导出 CSV、清空登记、店里的设置。设计见 docs/组织者后台.md。
    全部要带请求头 X-Admin-Key；同一个地址 10 分钟内错 10 次，先歇一会儿。 */
 const crypto=require('crypto');
 module.exports=(S,live)=>{
@@ -21,9 +21,10 @@ const empCount=()=>{const m=new Map();for(const c of cats())if(c.entry)m.set(ek(
 function row(c,ec=empCount()){const g=(c.state&&typeof c.state.g==='object'&&c.state.g)||{},s=stamps(c);
   return{id:c.id,name:c.name,look:c.look,created:c.created,last:c.last,visits:int(c.state&&c.state.visits),balls:int(g.balls),disc:g.disc&&typeof g.disc==='object'?Object.keys(g.disc).length:0,hangs:int(c.hangs),
     stamps:s,entry:S.pubEntry(c),dup:c.entry?ec.get(ek(c))-1:0,eligible:eligible(c),online:live.isOnline(c.id),banned:!!c.banned,flag:s.ball&&!c.hangs?'noHang':null,won:won(c)}}
-/* ---------- 能抽的人：集齐三个章、登记了、没被封禁的猫，按工号合成一个人；姓名和联系方式以最早那次登记为准 ---------- */
+/* ---------- 能抽的人：集齐三个章、登记了、没被封禁的猫，按工号合成一个人；姓名以最早那次登记为准，手机号也是（那次没留的，用最早留了的那次） ---------- */
 function people(){const m=new Map();for(const c of cats()){if(!c.entry||!eligible(c))continue;const k=ek(c);let p=m.get(k);if(!p){p={k,first:c.entry,cats:[]};m.set(k,p)}p.cats.push(c);if(c.entry.t<p.first.t)p.first=c.entry}
-  return[...m.values()].map(p=>({cats:p.cats,real:p.first.real,emp:p.first.emp,contact:p.first.contact,t:p.first.t}))}
+  return[...m.values()].map(p=>{const tel=p.cats.map(c=>c.entry).filter(e=>e.contact).sort((a,b)=>a.t-b.t)[0];
+    return{cats:p.cats,real:p.first.real,emp:p.first.emp,contact:p.first.contact||(tel?tel.contact:''),t:p.first.t}})}
 const find=id=>typeof id==='string'&&S.byId(id);
 
 /* ---------- 抽奖：从能抽的人里用加密随机数洗牌，抽中的每个人一个 6 位领奖码，他名下的猫都会在店里收到 ---------- */
@@ -65,7 +66,10 @@ const R={
   'POST /draw':({body})=>draw(body||{}),
   // 活动结束以后：删掉所有猫上的姓名、工号、联系方式，中奖记录里的也一起抹掉，只留猫的名字和领奖码
   'POST /entries/clear':()=>{let n=0;for(const c of cats())if(c.entry){delete c.entry;n++}for(const d of S.db.draws)for(const w of d.winners){delete w.real;delete w.emp;delete w.contact}S.save();return[200,{ok:true,n}]},
-  'GET /export':({url})=>exportCsv(url.searchParams)};
+  'GET /export':({url})=>exportCsv(url.searchParams),
+  // 店里的设置：补位的猫、抽奖登记开关、店里的公告。改完马上推给店里每只猫
+  'GET /settings':()=>[200,S.pubSettings()],
+  'POST /settings':({body})=>{const bad=S.setSettings(body&&typeof body==='object'&&!Array.isArray(body)?body:{});if(bad)return[400,{err:bad}];const g=S.pubSettings();live.cfg(g);return[200,{ok:true,settings:g}]}};
 
 function handle(method,sub,ctx){const a=auth(ctx.req,ctx.ip);if(a===429)return[429,{err:'lock'}];if(a)return[401,{err:'key'}];const h=R[method+' '+sub];return h?h(ctx):[404,{err:'none'}]}
 return{KEY,handle}};

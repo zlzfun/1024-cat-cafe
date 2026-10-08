@@ -1,6 +1,7 @@
 /* 1024 猫咖 · 服务端的库：名册、令牌、店里共同的计数、抽奖记录，以及发名字（名字池和前端是同一份：js/account.js 的 Account.NAMES）。
    数据在 server/data/（不进仓库；环境变量 DATA_DIR 可以换一个目录，压力测试时用）：
-   - cats.json：{cats:{名字键:猫}, tokens:{令牌散列:{id,k,exp}}, world:{hung, days:{日期:件数}, tree:[{kind,ci}], eggs:{彩蛋键:几只猫找到}, crystal:{n,gold}}, draws:[...]}
+   - cats.json：{cats:{名字键:猫}, tokens:{令牌散列:{id,k,exp}}, world:{hung, days:{日期:件数}, tree:[{kind,ci}], eggs:{彩蛋键:几只猫找到}, crystal:{n,gold}}, draws:[...], settings:{...}}
+     settings 是组织者在后台改的店里的设置（docs/组织者后台.md"店里的设置"）：{bots 补位的猫（null 按 config.js）, entry 抽奖登记开着没有, notice 店里的公告, noticeAt 公告发布的时间}
      猫身上的 eggs 是它找到过的彩蛋（{键:时间}，计数用，同一个只算一次），tank 是它往吧台大鱼缸里放过几条水晶鱼
      猫身上的 entry 是它的抽奖登记 {real 姓名, emp 工号, contact 联系方式, t 第一次登记, u 最近一次改}
    - admin.key：后台口令（第一次启动时生成；也可以用环境变量 ADMIN_KEY） */
@@ -16,8 +17,9 @@ const okLook=ACC.okLook;
 const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
 
 /* ---------- 库 ---------- */
-const db={cats:{},tokens:{},world:{hung:0,days:{},tree:[]},draws:[]};
-try{const j=JSON.parse(fs.readFileSync(DB_FILE,'utf8'));Object.assign(db,j);db.world={hung:0,days:{},tree:[],...(j.world||{})};db.draws=j.draws||[]}catch(e){}
+const SETTINGS0={bots:null,entry:true,notice:'',noticeAt:0};
+const db={cats:{},tokens:{},world:{hung:0,days:{},tree:[]},draws:[],settings:{...SETTINGS0}};
+try{const j=JSON.parse(fs.readFileSync(DB_FILE,'utf8'));Object.assign(db,j);db.world={hung:0,days:{},tree:[],...(j.world||{})};db.draws=j.draws||[];db.settings={...SETTINGS0,...(j.settings||{})}}catch(e){}
 // 彩蛋、大鱼缸的计数：第一次（旧的库里没有）按名册里每只猫存档里的记录补算一遍，以后跟着联机消息加
 const EGG_KEYS=['planet','ninelives','shark','milk','disco','clock','konami','credits'];
 // 存档里记着的、计数里还没算上的（比如断线的时候找到的）补上：同一只猫同一个彩蛋只算一次，大鱼缸每只猫最多算三条
@@ -49,8 +51,19 @@ const pubEntry=c=>c.entry?{real:c.entry.real,emp:c.entry.emp,contact:c.entry.con
 const pub=c=>({id:c.id,name:c.name,look:c.look,created:c.created,last:c.last,prev:c.prev,state:c.state||{},prizes:(c.prizes||[]).filter(p=>!p.seen).map(({no,code,how,t})=>({no,code,how,t})),entry:pubEntry(c)});
 const today=(t=Date.now())=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
+/* ---------- 店里的设置：后台改（admin.js），店里每只猫都看得到（GET /api/settings、联机的 welcome 和 cfg） ---------- */
+const BOTS_MAX=150,NOTICE_MAX=60;
+const pubSettings=()=>{const g=db.settings;return{bots:g.bots,entry:g.entry!==false,notice:g.notice||'',noticeAt:g.noticeAt||0}};
+// 只改给了的几项；哪一项不对，整个不改，返回那一项的名字。公告去掉换行和控制字符，字变了才算新发布
+function setSettings(b){const g=db.settings,next={};
+  if('bots' in b){const n=b.bots;if(n!==null&&!(Number.isInteger(n)&&n>=0&&n<=BOTS_MAX))return'bots';next.bots=n}
+  if('entry' in b){if(typeof b.entry!=='boolean')return'entry';next.entry=b.entry}
+  if('notice' in b){if(typeof b.notice!=='string')return'notice';const t=b.notice.replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
+    if([...t].length>NOTICE_MAX)return'notice';if(t!==g.notice){next.notice=t;next.noticeAt=t?Date.now():0}}
+  Object.assign(g,next);save();return null}
+
 /* ---------- 后台口令 ---------- */
 function adminKey(){if(process.env.ADMIN_KEY)return process.env.ADMIN_KEY;try{const k=fs.readFileSync(KEY_FILE,'utf8').trim();if(k)return k}catch(e){}
   const k=crypto.randomBytes(12).toString('base64url');fs.mkdirSync(DATA,{recursive:true});fs.writeFileSync(KEY_FILE,k+'\n',{mode:0o600});return k}
 
-module.exports={ROOT,DATA,ACC,EGG_KEYS,syncEggs,db,key,clean,okLook,sha,byId,reindex,save,flush,offer,issue,who,revoke,rename,pub,pubEntry,today,adminKey};
+module.exports={ROOT,DATA,ACC,EGG_KEYS,syncEggs,db,key,clean,okLook,sha,byId,reindex,save,flush,offer,issue,who,revoke,rename,pub,pubEntry,today,pubSettings,setSettings,adminKey};
