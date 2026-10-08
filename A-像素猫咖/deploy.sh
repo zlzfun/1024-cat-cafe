@@ -9,7 +9,8 @@
 #     --data /srv/cat1024-data       数据目录（名册、抽奖登记、后台口令；默认 server/data）
 #     --inner https://…              内源主页地址（写进 config.js；只在内网用，别提交到公开仓库）
 #     --bots 40                      补位的机器人数（写进 config.js）
-#     --host 127.0.0.1               监听地址（默认只听本机；nginx 在别的机器上才用 0.0.0.0）
+#     --host 127.0.0.1               监听地址（默认只听本机，前面是网站的 nginx；写 0.0.0.0 或者内网 IP 就是不经过 nginx、
+#                                    同事直接打开 http://这台:端口，见 docs/部署.md 的"不经过 nginx，直接跑"）
 #   ./deploy.sh nginx                重新生成、打印 nginx 那一段和装的步骤；看网站的 nginx 用的是不是最新的
 #   ./deploy.sh verify https://网站的地址 [--via 127.0.0.1]
 #                                    经过网站把页面、脚本、接口、联机、后台都访问一遍，不对的给出该查什么；
@@ -41,11 +42,10 @@ warn(){ printf '%s!%s %s\n' "${c_warn}" "${c_0}" "$*"; }
 die(){ printf '%s✗ %s%s\n' "${c_err}" "$*" "${c_0}" >&2; exit 1; }
 
 # ---------- 设置：deploy.env 里的、命令行给的 ----------
-# 挂的路径是固定的；猫咖在 nginx 后面，按 nginx 加在 X-Forwarded-For 最后的地址认人（TRUST_PROXY=1）
+# 挂的路径是固定的
 BASE=/1024-cat-cafe; NGINX_FILE="${APP_DIR}/nginx-1024-cat-cafe.conf"
-PORT=1024; HOST=127.0.0.1; DATA_DIR="${APP_DIR}/server/data"; TRUST_PROXY=1; SITE=; VIA=
+PORT=1024; HOST=127.0.0.1; DATA_DIR="${APP_DIR}/server/data"; SITE=; VIA=
 [ -f "${ENV_FILE}" ] && . "${ENV_FILE}"
-TRUST_PROXY=1
 INNER=; BOTS=; WITH_NODE=; WITH_CONFIG=0; FOLLOW=0
 # 第一个参数是命令；直接从选项开头（./deploy.sh --inner …）就是 start
 CMD=start; case "${1:-}" in -h|--help) CMD=help; shift;; ''|-*) ;; *) CMD="$1"; shift;; esac
@@ -56,7 +56,7 @@ while [ $# -gt 0 ]; do
     --data) DATA_DIR="${2:?--data 后面要写目录}"; shift 2;;
     --inner) INNER="${2:?--inner 后面要写地址}"; shift 2;;
     --bots) BOTS="${2:?--bots 后面要写数字}"; shift 2;;
-    --proxy) shift;;  # 以前的参数：现在固定在 nginx 后面，不用再写
+    --proxy) shift;;  # 以前的参数：现在按 --host 自己定（见下面 DIRECT）
     --with-node) WITH_NODE="${2:?--with-node 后面要写 Node 的二进制包}"; shift 2;;
     --with-config) WITH_CONFIG=1; shift;;
     --via) VIA="${2:?--via 后面要写地址（一般是 127.0.0.1）}"; shift 2;;
@@ -67,6 +67,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 if [ -n "${SITE_ARG:-}" ]; then case "${SITE_ARG}" in http://*|https://*) SITE="${SITE_ARG%/}";; *) die "网站的地址要从 http:// 或 https:// 开头：${SITE_ARG}";; esac; fi
+# 只听本机：前面是网站的 nginx，按 nginx 加在 X-Forwarded-For 最后的地址认人（TRUST_PROXY=1）。
+# 听 0.0.0.0 或者内网 IP：同事不经过 nginx 直接打开 http://这台:端口（DIRECT=1），这个头谁都能编，不信它
+case "${HOST}" in 127.*|::1|localhost) DIRECT=0; TRUST_PROXY=1;; *) DIRECT=1; TRUST_PROXY=0;; esac
 case "${PORT}" in ''|*[!0-9]*) die "端口要是数字：${PORT}";; esac
 [ -n "${BOTS}" ] && case "${BOTS}" in *[!0-9]*) die "--bots 要是数字：${BOTS}";; esac
 case "${DATA_DIR}" in /*) ;; *) DATA_DIR="${APP_DIR}/${DATA_DIR}";; esac
@@ -145,7 +148,7 @@ nginx_state(){ live_init
   else warn "网站的 nginx 装的那一段（${LIVE}）和这里新生成的不一样：sudo install -m 644 ${NGINX_FILE} ${LIVE} && sudo nginx -t && sudo systemctl reload nginx"; fi; }
 
 # ---------- 经过网站访问一遍：页面、脚本、接口、联机、后台；不对的说该查什么（ONLY=health 只查接口，给 status 用） ----------
-VERIFY_JS='const u0=new URL(process.env.SITE),B=process.env.BASE,via=process.env.VIA,only=process.env.ONLY,crypto=require("crypto"),zlib=require("zlib"),fs=require("fs");
+VERIFY_JS='const u0=new URL(process.env.SITE),direct=u0.port===String(process.env.PORT),B=direct?"":process.env.BASE,via=process.env.VIA,only=process.env.ONLY,crypto=require("crypto"),zlib=require("zlib"),fs=require("fs");
 const M=u0.protocol==="https:"?require("https"):require("http");
 const get=(p,h={})=>new Promise(res=>{const r=M.request({host:via||u0.hostname,port:u0.port||(u0.protocol==="https:"?443:80),path:p,method:"GET",servername:u0.hostname,rejectUnauthorized:false,headers:{Host:u0.host,...h}},
     s=>{const b=[];s.on("data",d=>b.push(d));s.on("end",()=>res({st:s.statusCode,h:s.headers,body:Buffer.concat(b)}))});
@@ -155,25 +158,26 @@ const local=p=>new Promise(res=>require("http").get({host:"127.0.0.1",port:proce
 let bad=0;const say=(c,m,hint,soft)=>{console.log((c?"  ✓ ":soft?"  ! ":"  ✗ ")+m+(!c&&hint?"\n      → "+hint:""));if(!c&&!soft)bad++};
 const st=r=>r.err||r.st,end=()=>{console.log(bad?"有 "+bad+" 项不对":"全部正常");process.exit(bad?1:0)};
 (async()=>{let r=await get("/");
-  if(r.err){say(false,"连不上 "+u0.origin+"："+r.err,via?"nginx 在不在听这个端口":"服务器上解析不了、或者走不到这个域名：加 --via 127.0.0.1，直接连本机的 nginx");end()}
+  if(r.err){say(false,"连不上 "+u0.origin+"："+r.err,direct?"猫咖在不在跑（./deploy.sh status）、听的是不是这个地址（--host）；从别的电脑连不上，多半是服务器的防火墙没放行这个端口":via?"nginx 在不在听这个端口":"服务器上解析不了、或者走不到这个域名：加 --via 127.0.0.1，直接连本机的 nginx");end()}
   if(only==="health"){r=await get(B+"/api/health");process.exit(r.st===200&&/"ok":true/.test(r.body)?0:1)}
-  say(true,"网站首页 "+u0.origin+"/："+r.st);
-  r=await get(B);say(r.st===301&&/\/1024-cat-cafe\/$/.test(r.h.location||""),B+" → "+st(r)+" "+(r.h.location||""),"应该 301 到 "+B+"/：那一段没生效，见下一条");
-  r=await get(B+"/");
-  say(r.st===200&&r.body.toString().includes("1024 猫咖营业中"),B+"/："+st(r),
-    r.st===404?"那一段没生效：include 那一行加在网站对外的 server { } 里了吗（不是只做跳转的那个）？nginx -t、reload 了吗？":
-    r.st===502||r.st===504?"nginx 连不上猫咖：./deploy.sh status 看在不在跑；网站装的那一段端口对不对（./deploy.sh nginx）；nginx 的 error.log 里有 (13: Permission denied) 就是 SELinux 拦了，见 docs/部署.md":
-    r.st===301||r.st===302||r.st===401||r.st===403?"网站要先登录或者不让访问：见 docs/部署.md 的“网站的 server { } 里，这几样也会管到”":"");
-  if(r.st!==200)end();
-  say(r.h["x-1024-cat-cafe"]==="1","用的是 deploy.sh 生成的那一段（有 X-1024-Cat-Cafe 头）","没有 X-1024-Cat-Cafe 头：装的那一段被改过？重新装（./deploy.sh nginx）");
-  say(!r.h["content-security-policy"],"没带上网站的 Content-Security-Policy","add_header 那一行丢了：猫咖会白屏");
+  if(direct){say(r.st===200&&r.body.toString().includes("1024 猫咖营业中"),"直接打开 "+u0.origin+"/："+st(r),"这个地址上的不是猫咖：端口对不对（./deploy.sh status）");if(r.st!==200)end()}
+  else{say(true,"网站首页 "+u0.origin+"/："+r.st);
+    r=await get(B);say(r.st===301&&/\/1024-cat-cafe\/$/.test(r.h.location||""),B+" → "+st(r)+" "+(r.h.location||""),"应该 301 到 "+B+"/：那一段没生效，见下一条");
+    r=await get(B+"/");
+    say(r.st===200&&r.body.toString().includes("1024 猫咖营业中"),B+"/："+st(r),
+      r.st===404?"那一段没生效：include 那一行加在网站对外的 server { } 里了吗（不是只做跳转的那个）？nginx -t、reload 了吗？":
+      r.st===502||r.st===504?"nginx 连不上猫咖：./deploy.sh status 看在不在跑；网站装的那一段端口对不对（./deploy.sh nginx）；nginx 的 error.log 里有 (13: Permission denied) 就是 SELinux 拦了，见 docs/部署.md":
+      r.st===301||r.st===302||r.st===401||r.st===403?"网站要先登录或者不让访问：见 docs/部署.md 的“网站的 server { } 里，这几样也会管到”":"");
+    if(r.st!==200)end();
+    say(r.h["x-1024-cat-cafe"]==="1","用的是 deploy.sh 生成的那一段（有 X-1024-Cat-Cafe 头）","没有 X-1024-Cat-Cafe 头：装的那一段被改过？重新装（./deploy.sh nginx）");
+    say(!r.h["content-security-policy"],"没带上网站的 Content-Security-Policy","add_header 那一行丢了：猫咖会白屏")}
   r=await get(B+"/api/health");say(r.st===200&&/"ok":true/.test(r.body),B+"/api/health："+(r.st===200?r.body.toString().slice(0,70):st(r)),"接口不通：./deploy.sh status");
   r=await get(B+"/js/app.js",{"Accept-Encoding":"gzip"});let same=false;
   try{const b=r.h["content-encoding"]==="gzip"?zlib.gunzipSync(r.body):r.body,l=await local("/js/app.js");same=!!l&&b.equals(l)}catch(e){}
-  say(r.st===200&&same,B+"/js/app.js："+st(r)+(r.st===200&&!same?"（不是猫咖的）":""),"脚本被网站自己的规则抢走了：location 后面的 ^~ 丢了");
-  say(r.h["content-encoding"]==="gzip","脚本压缩传（gzip）","没压缩：不影响用，只是第一次进店慢一点（那一段里的 gzip 两行）",true);
+  say(r.st===200&&same,B+"/js/app.js："+st(r)+(r.st===200&&!same?"（不是猫咖的）":""),direct?"拿到的脚本和这台上的不一样：这个地址上跑的是不是这一份猫咖":"脚本被网站自己的规则抢走了：location 后面的 ^~ 丢了");
+  if(!direct)say(r.h["content-encoding"]==="gzip","脚本压缩传（gzip）","没压缩：不影响用，只是第一次进店慢一点（那一段里的 gzip 两行）",true);
   r=await get(B+"/ws",{Connection:"Upgrade",Upgrade:"websocket","Sec-WebSocket-Version":"13","Sec-WebSocket-Key":crypto.randomBytes(16).toString("base64")});
-  say(r.st===101,"联机 "+B+"/ws："+st(r),"WebSocket 没接通：那一段里 Upgrade、Connection 两行；网站前面还有一层负载均衡或 WAF 不放行 WebSocket 的话，找管网络的人");
+  say(r.st===101,"联机 "+B+"/ws："+st(r),direct?"WebSocket 没接通：猫咖在不在跑；从这台服务器上通、同事那边不通的话，多半是公司的上网代理不放行（WebSocket 过代理要用 CONNECT，很多代理只放行 443）":"WebSocket 没接通：那一段里 Upgrade、Connection 两行；网站前面还有一层负载均衡或 WAF 不放行 WebSocket 的话，找管网络的人");
   let k="";try{k=fs.readFileSync(process.env.KEYF,"utf8").trim()}catch(e){}
   if(k){r=await get(B+"/api/admin/stats",{"X-Admin-Key":k});say(r.st===200,"组织者后台的接口："+st(r),r.st===429?"口令输错太多次，10 分钟后再试":"")}
   end()})();'
@@ -219,21 +223,38 @@ check_data(){ [ -d "${DATA_DIR}" ] || return 0; local f
   done; }
 # 共用的服务器上容易忽略的两件事
 warn_root(){ if [ "$(id -u)" = 0 ]; then warn "现在是 root：猫咖用不着 root，只要能写数据目录。共用的服务器上建议换个普通账号来跑"; fi; }
-warn_proxy(){ if [ "${HOST}" = 0.0.0.0 ]; then warn "在听 0.0.0.0：别的电脑能绕过 nginx 直连 ${PORT} 端口，还能自己编 X-Forwarded-For。nginx 和猫咖在同一台机器上就别加 --host 0.0.0.0（默认只听本机）"; fi; }
+warn_direct(){ [ "${DIRECT}" = 1 ] || return 0
+  warn "不经过 nginx、直接对外（http）：抽奖登记的个人信息、后台口令在网上是明文；开张以后别换地址。见 docs/部署.md 的\"不经过 nginx，直接跑\""
+  if [ "${HOST}" = 0.0.0.0 ]; then warn "听 0.0.0.0：服务器的每块网卡上都开着（有外网网卡的话外网也打得开）；只给内网用，写 --host 这台的内网 IP"; fi; }
+# 直接对外时，同事打开的地址
+lan_ip(){ local ip=""
+  if command -v hostname >/dev/null 2>&1; then ip="$(hostname -I 2>/dev/null | awk '{print $1}')" || true; fi
+  if [ -z "${ip}" ] && command -v ipconfig >/dev/null 2>&1; then ip="$(ipconfig getifaddr en0 2>/dev/null || true)"; fi
+  printf '%s' "${ip}"; }
+direct_addr(){ local a="${HOST}"; if [ "${a}" = 0.0.0.0 ]; then a="$(lan_ip)"; fi; printf '%s' "${a:-这台的IP}"; }
+# verify、status 经过的地址：直接对外的就是 http://这台:端口/，挂在网站下的是 网站/1024-cat-cafe/
+site_url(){ case "${SITE##*:}" in "${PORT}") printf '%s/' "${SITE}";; *) printf '%s%s/' "${SITE}" "${BASE}";; esac; }
 
 admin_key(){ if [ -n "${ADMIN_KEY:-}" ]; then printf '%s' "${ADMIN_KEY}"; elif [ -f "${DATA_DIR}/admin.key" ]; then tr -d '\n' < "${DATA_DIR}/admin.key"; fi; }
 show_urls(){
   local key; key="$(admin_key)"
   say ""
-  say "  店：      https://网站的地址${BASE}/          （nginx 加好那一段以后）"
-  say "  后台：    https://网站的地址${BASE}/admin.html    口令：${key:-（看 ${DATA_DIR}/admin.key）}"
-  say "  本机检查：http://127.0.0.1:${PORT}/          （只有这台服务器自己打得开）"
-  say "  ${c_dim}nginx 那一段：${NGINX_FILE}${c_0}"
+  if [ "${DIRECT}" = 1 ]; then local a; a="$(direct_addr)"
+    say "  店：      http://${a}:${PORT}/          （不经过 nginx，直接打开）"
+    say "  后台：    http://${a}:${PORT}/admin.html    口令：${key:-（看 ${DATA_DIR}/admin.key）}"
+  else
+    say "  店：      https://网站的地址${BASE}/          （nginx 加好那一段以后）"
+    say "  后台：    https://网站的地址${BASE}/admin.html    口令：${key:-（看 ${DATA_DIR}/admin.key）}"
+    say "  本机检查：http://127.0.0.1:${PORT}/          （只有这台服务器自己打得开）"
+    say "  ${c_dim}nginx 那一段：${NGINX_FILE}${c_0}"
+  fi
   say "  ${c_dim}数据：${DATA_DIR}    日志：$(service_on && echo "journalctl -u ${UNIT}" || echo "${LOG_FILE}")${c_0}"
   say ""
 }
 # 启动、装服务以后：网站已经装了那一段，就看它是不是最新的；还没装、又是新生成的（第一次、换了端口），把步骤打出来
-after_up(){ show_urls; live_init
+after_up(){ show_urls
+  if [ "${DIRECT}" = 1 ]; then say "${c_dim}别的电脑打不开：服务器的防火墙要放行 ${PORT} 端口（别人的服务器，改之前先问人）。验一遍：./deploy.sh verify http://$(direct_addr):${PORT}${c_0}"; return 0; fi
+  live_init
   if [ -e "${LIVE}" ]; then nginx_state
   elif [ "${NGINX_NEW}" = 1 ]; then nginx_steps
   else say "${c_dim}nginx 那一段没变；网站还没装上的话：./deploy.sh nginx 看步骤${c_0}"; fi; }
@@ -245,7 +266,7 @@ do_start(){
   [ -f "${APP_DIR}/server/server.js" ] && [ -f "${APP_DIR}/index.html" ] || die "这里不是 1024 猫咖的目录（找不到 server/server.js、index.html）"
   # 已经在跑：给了 --inner / --bots 也照样写进 config.js（页面不缓存，大家刷新就生效，不用重启）
   if running; then [ -n "${INNER}${BOTS}" ] && { find_node; write_config; say "${c_dim}config.js 改了：刷新页面就生效${c_0}"; }; ok "已经在跑了"; health >/dev/null && ok "接口正常" || warn "进程在，但接口没应答，看看日志：./deploy.sh logs"; show_urls; return; fi
-  check_data; warn_proxy
+  check_data; warn_direct
   mkdir -p "${DATA_DIR}" "${RUN_DIR}"; chmod 700 "${DATA_DIR}" 2>/dev/null || true
   write_config
   port_free || die "端口 ${PORT} 被占了。换一个：./deploy.sh start --port 8080（nginx 那一段会跟着改，记得重新加）"
@@ -275,8 +296,8 @@ do_status(){
   find_node
   if running; then ok "在跑（$(service_on && echo "systemd 服务 ${UNIT}" || echo "进程 $(cat "${PID_FILE}")")）"
     local h; if h="$(health)"; then ok "接口正常：${h}"; else warn "接口没应答"; fi; show_urls
-    if [ -f "${NGINX_FILE}" ]; then nginx_state; fi
-    if [ -n "${SITE}" ]; then if verify_run health >/dev/null 2>&1; then ok "经过网站（${SITE}${BASE}/）：接口正常"; else warn "经过网站（${SITE}${BASE}/）访问不通：./deploy.sh verify 看是哪一步"; fi; fi
+    if [ "${DIRECT}" = 0 ] && [ -f "${NGINX_FILE}" ]; then nginx_state; fi
+    if [ -n "${SITE}" ]; then if verify_run health >/dev/null 2>&1; then ok "经过 $(site_url)：接口正常"; else warn "经过 $(site_url) 访问不通：./deploy.sh verify 看是哪一步"; fi; fi
   else warn "没在跑。启动：./deploy.sh start"; fi
 }
 
@@ -295,7 +316,7 @@ do_service(){
     local was; was="$(unit_dir)"
     if [ "${was}" != "${APP_DIR}" ]; then warn "这个服务原来跑的是 ${was} 里的猫咖，现在换成这里的（数据目录 ${DATA_DIR}）"; fi
   fi
-  warn_proxy
+  warn_direct
   local user; user="$(id -un)"
   if [ "${user}" = root ]; then warn "服务会用 root 跑：猫咖用不着 root。共用的服务器上建议用普通账号来跑 ./deploy.sh service（要 sudo 的地方脚本自己会用）"; fi
   mkdir -p "${DATA_DIR}"; chmod 700 "${DATA_DIR}" 2>/dev/null || true; write_config; save_env; write_nginx
@@ -337,7 +358,7 @@ do_verify(){
   find_node; [ -n "${NODE}" ] || die "没找到 Node"
   health >/dev/null || warn "本机的猫咖没应答（./deploy.sh status）：经过网站多半也不通"
   save_env   # 记下网站的地址：以后 status 也经过网站查一下
-  say "经过 ${SITE}${BASE}/ 访问一遍${VIA:+（直接连 ${VIA} 上的 nginx）}："
+  say "经过 $(site_url) 访问一遍${VIA:+（直接连 ${VIA}）}："
   verify_run
 }
 
