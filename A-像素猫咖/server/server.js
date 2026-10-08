@@ -5,7 +5,7 @@
    TRUST_PROXY=1 node server/server.js            → 放在反向代理后面时：按代理加在 X-Forwarded-For 最后的那个地址计数（输错后台口令的次数）
    - 账号接口（docs/登录与进店.md）：名字从池子里发、全店唯一；不设密码，这个浏览器记着的令牌就是身份（库里只存散列）；集齐三个章的猫可以登记抽奖。
    - 联机（docs/联机.md）：/ws 上的 WebSocket，见 live.js。
-   - 组织者后台（docs/组织者后台.md）：/admin.html 页面 + /api/admin/* 接口，见 admin.js。口令在 server/data/admin.key，启动时打印出来。
+   - 组织者后台（docs/组织者后台.md）：/admin.html 页面 + /api/admin/* 接口，见 admin.js。口令在 server/data/admin.key；开在终端里时启动就打印出来，放在后台（nohup、systemd）时日志里只写口令在哪。
    - 页面要的 config.js：目录里有就发那份；没有就现给一份 {api:'api'}。
    - 部署：deploy.sh 一键启动、装成服务、备份、打离线包，见 docs/部署.md；GET /api/health 给它看活着没有。 */
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
@@ -61,5 +61,7 @@ const server=http.createServer((req,res)=>{const u=new URL(req.url,'http://x'),i
   req.on('end',()=>{if(big)return;let body={};if(raw){try{body=JSON.parse(raw)}catch(e){res.writeHead(400);return res.end('{"err":"bad"}')}}
     let out;try{out=isAdmin?admin.handle(req.method,sub.slice(6),{body,ip,req,url:u}):h({body,ip,me:bearer(req)})}catch(e){console.error(e);out=[500,{err:'server'}]}reply(res,out)})});
 server.on('upgrade',(req,socket,head)=>{if(new URL(req.url,'http://x').pathname==='/ws')live.upgrade(req,socket,head);else socket.destroy()});
-server.listen(PORT,HOST,()=>{const base=`http://${HOST==='0.0.0.0'?'localhost':HOST}:${PORT}`;console.log(`1024 猫咖营业中：${base}\n组织者后台：${base}/admin.html  口令：${admin.KEY}`)});
+// 口令只在开在终端里时打出来：放在后台时日志进文件或 journald，共用的服务器上别的账号可能读得到
+server.listen(PORT,HOST,()=>{const base=`http://${HOST==='0.0.0.0'?'localhost':HOST}:${PORT}`,where=process.env.ADMIN_KEY?'环境变量 ADMIN_KEY':path.join(S.DATA,'admin.key');
+  console.log(`1024 猫咖营业中：${base}\n组织者后台：${base}/admin.html  口令：${process.stdout.isTTY?admin.KEY:'见 '+where}`)});
 for(const sig of ['SIGINT','SIGTERM'])process.on(sig,()=>{S.flush();process.exit(0)});

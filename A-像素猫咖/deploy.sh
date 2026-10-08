@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 1024 猫咖营业中 · 一键部署（Linux / macOS）。说明见 docs/部署.md。
 # 固定挂在已有网站的 /1024-cat-cafe/ 下：猫咖只听本机（127.0.0.1:1024），那个网站的 nginx 把 /1024-cat-cafe/ 转过来。
-# 脚本不改 nginx：它生成 nginx-1024-cat-cafe.conf，照打印的步骤加进网站的 server { }。
+# 脚本不改 nginx：它生成 nginx-1024-cat-cafe.conf，照打印的步骤装到 nginx 的 snippets/，在网站的 server { } 里 include 它。
 #
 #   ./deploy.sh                      第一次：检查环境 → 写好配置 → 后台启动 → 生成 nginx 那一段 → 打印步骤、地址和后台口令
 #   ./deploy.sh start [选项]          启动（已经在跑就只打印状态）
@@ -10,7 +10,10 @@
 #     --inner https://…              内源主页地址（写进 config.js；只在内网用，别提交到公开仓库）
 #     --bots 40                      补位的机器人数（写进 config.js）
 #     --host 127.0.0.1               监听地址（默认只听本机；nginx 在别的机器上才用 0.0.0.0）
-#   ./deploy.sh nginx                重新生成、打印 nginx 那一段和加的步骤
+#   ./deploy.sh nginx                重新生成、打印 nginx 那一段和装的步骤；看网站的 nginx 用的是不是最新的
+#   ./deploy.sh verify https://网站的地址 [--via 127.0.0.1]
+#                                    经过网站把页面、脚本、接口、联机、后台都访问一遍，不对的给出该查什么；
+#                                    服务器上解析不了网站的域名就加 --via 127.0.0.1（直接连本机的 nginx）。网站的地址记下来，以后 status 也查
 #   ./deploy.sh stop | restart | status | logs [-f]
 #   ./deploy.sh service              装成 systemd 服务：开机自启、挂了自动拉起（要 sudo，只在 Linux 上）
 #   ./deploy.sh uninstall            撤掉：停下，拆掉装过的 systemd 服务；代码和数据留着，删不删你定
@@ -24,6 +27,7 @@
 #
 # 设置记在 deploy.env（不进仓库）：下次 start / restart / service 沿用。
 set -euo pipefail
+umask 077   # 生成的设置、日志、备份只有自己读得到：共用的服务器上别的账号看不到
 cd "$(dirname "$0")"
 APP_DIR="$(pwd)"
 RUN_DIR="${APP_DIR}/.run"; PID_FILE="${RUN_DIR}/server.pid"; LOG_FILE="${RUN_DIR}/server.log"
@@ -39,7 +43,7 @@ die(){ printf '%s✗ %s%s\n' "${c_err}" "$*" "${c_0}" >&2; exit 1; }
 # ---------- 设置：deploy.env 里的、命令行给的 ----------
 # 挂的路径是固定的；猫咖在 nginx 后面，按 nginx 加在 X-Forwarded-For 最后的地址认人（TRUST_PROXY=1）
 BASE=/1024-cat-cafe; NGINX_FILE="${APP_DIR}/nginx-1024-cat-cafe.conf"
-PORT=1024; HOST=127.0.0.1; DATA_DIR="${APP_DIR}/server/data"; TRUST_PROXY=1
+PORT=1024; HOST=127.0.0.1; DATA_DIR="${APP_DIR}/server/data"; TRUST_PROXY=1; SITE=; VIA=
 [ -f "${ENV_FILE}" ] && . "${ENV_FILE}"
 TRUST_PROXY=1
 INNER=; BOTS=; WITH_NODE=; WITH_CONFIG=0; FOLLOW=0
@@ -55,10 +59,14 @@ while [ $# -gt 0 ]; do
     --proxy) shift;;  # 以前的参数：现在固定在 nginx 后面，不用再写
     --with-node) WITH_NODE="${2:?--with-node 后面要写 Node 的二进制包}"; shift 2;;
     --with-config) WITH_CONFIG=1; shift;;
+    --via) VIA="${2:?--via 后面要写地址（一般是 127.0.0.1）}"; shift 2;;
     -f) FOLLOW=1; shift;;
-    *) if [ "${CMD}" = restore ] && [ -z "${RESTORE_FILE:-}" ]; then RESTORE_FILE="$1"; shift; else die "认不得的参数：$1（看 ./deploy.sh 开头的说明）"; fi;;
+    *) if [ "${CMD}" = restore ] && [ -z "${RESTORE_FILE:-}" ]; then RESTORE_FILE="$1"; shift
+       elif [ "${CMD}" = verify ] && [ -z "${SITE_ARG:-}" ]; then SITE_ARG="$1"; shift
+       else die "认不得的参数：$1（看 ./deploy.sh 开头的说明）"; fi;;
   esac
 done
+if [ -n "${SITE_ARG:-}" ]; then case "${SITE_ARG}" in http://*|https://*) SITE="${SITE_ARG%/}";; *) die "网站的地址要从 http:// 或 https:// 开头：${SITE_ARG}";; esac; fi
 case "${PORT}" in ''|*[!0-9]*) die "端口要是数字：${PORT}";; esac
 [ -n "${BOTS}" ] && case "${BOTS}" in *[!0-9]*) die "--bots 要是数字：${BOTS}";; esac
 case "${DATA_DIR}" in /*) ;; *) DATA_DIR="${APP_DIR}/${DATA_DIR}";; esac
@@ -68,6 +76,8 @@ PORT=${PORT}
 HOST=${HOST}
 DATA_DIR="${DATA_DIR}"
 TRUST_PROXY=${TRUST_PROXY}
+SITE="${SITE}"
+VIA="${VIA}"
 EOF
 }
 
@@ -112,14 +122,62 @@ location ^~ ${BASE}/ {
 EOF
   if [ -f "${NGINX_FILE}" ] && cmp -s "${tmp}" "${NGINX_FILE}"; then rm -f "${tmp}"; else mv "${tmp}" "${NGINX_FILE}"; NGINX_NEW=1; fi
 }
-nginx_steps(){
-  say "${c_ok}接下来${c_0}：把猫咖挂到网站的 ${BASE}/ 下（脚本不改 nginx：这一步你来，或者交给管这个网站的人）"
-  say "  1. 找到网站对外的那个 server { }（https 的那个；只做 80 转 443 的那个不用管）。先把那个文件备份到别处（别放在 sites-enabled、conf.d 里：那里的文件都会被读进去）"
-  say "  2. 把 ${NGINX_FILE} 整段贴进这个 server { } 里"
-  say "  3. sudo nginx -t && sudo systemctl reload nginx（-t 没过就别 reload；别用 restart）"
-  say "  4. 打开 https://网站的地址${BASE}/"
-  say "  ${c_dim}撤：从 server { } 里删掉这一段，再 nginx -t、reload。详见 docs/部署.md 的\"挂到已有网站的 ${BASE}/ 下\"${c_0}"
+# 网站的 nginx 的配置目录，那一段装到它下面的 snippets/：先看 nginx -V 里的 conf-path（系统包装的 nginx 都写了），
+# 没写（自己编的、OpenResty……）就看 nginx -t 说的配置文件在哪（只读不改），再没有就按 /etc/nginx
+LIVE=
+live_init(){ [ -z "${LIVE}" ] || return 0; local c
+  c="$(nginx -V 2>&1 | sed -n 's/.*--conf-path=\([^ ]*\).*/\1/p')" || true
+  [ -n "${c}" ] || c="$(nginx -t 2>&1 | sed -n 's/.*configuration file \([^ ]*\) .*/\1/p' | head -1)" || true
+  if [ -n "${c}" ]; then LIVE="$(dirname "${c}")/snippets/1024-cat-cafe.conf"; else LIVE=/etc/nginx/snippets/1024-cat-cafe.conf; fi; }
+nginx_steps(){ live_init
+  say "${c_ok}接下来${c_0}：把猫咖挂到网站的 ${BASE}/ 下（脚本不改 nginx：这几步你来，或者交给管这个网站的人。详见 docs/部署.md）"
+  say "  1. 找到网站对外的那个 server { }（https 的那个；只做 80 转 443 的那个不用管），把它所在的文件备份到别处（别放在 sites-enabled、conf.d 里）"
+  say "  2. sudo mkdir -p -m 755 ${LIVE%/*} && sudo install -m 644 ${NGINX_FILE} ${LIVE}"
+  say "  3. 在那个 server { } 里加一行（listen 443 那一行下面就行）：include ${LIVE};"
+  say "  4. sudo nginx -t && sudo systemctl reload nginx（-t 没过就别 reload；别用 restart）"
+  say "  5. ./deploy.sh verify https://网站的地址"
+  say "  ${c_dim}撤：删掉 include 那一行和 ${LIVE}，再 sudo nginx -t && sudo systemctl reload nginx${c_0}"
 }
+# 网站的 nginx 装的那一份和这里生成的一样吗？换了端口忘了更新，网站那边就是 502
+nginx_state(){ live_init
+  if [ ! -e "${LIVE}" ]; then say "${c_dim}网站的 nginx 还没装上那一段（没有 ${LIVE}）：./deploy.sh nginx 看步骤${c_0}"
+  elif cmp -s "${LIVE}" "${NGINX_FILE}"; then ok "网站的 nginx 装的就是这一段（${LIVE}；include、reload 了没有，用 verify 看）"
+  else warn "网站的 nginx 装的那一段（${LIVE}）和这里新生成的不一样：sudo install -m 644 ${NGINX_FILE} ${LIVE} && sudo nginx -t && sudo systemctl reload nginx"; fi; }
+
+# ---------- 经过网站访问一遍：页面、脚本、接口、联机、后台；不对的说该查什么（ONLY=health 只查接口，给 status 用） ----------
+VERIFY_JS='const u0=new URL(process.env.SITE),B=process.env.BASE,via=process.env.VIA,only=process.env.ONLY,crypto=require("crypto"),zlib=require("zlib"),fs=require("fs");
+const M=u0.protocol==="https:"?require("https"):require("http");
+const get=(p,h={})=>new Promise(res=>{const r=M.request({host:via||u0.hostname,port:u0.port||(u0.protocol==="https:"?443:80),path:p,method:"GET",servername:u0.hostname,rejectUnauthorized:false,headers:{Host:u0.host,...h}},
+    s=>{const b=[];s.on("data",d=>b.push(d));s.on("end",()=>res({st:s.statusCode,h:s.headers,body:Buffer.concat(b)}))});
+  r.on("upgrade",(s,k)=>{k.destroy();res({st:s.statusCode,h:s.headers,body:Buffer.alloc(0)})});
+  r.setTimeout(8000,()=>r.destroy(new Error("8 秒没应答")));r.on("error",e=>res({err:e.message,h:{},body:Buffer.alloc(0)}));r.end()});
+const local=p=>new Promise(res=>require("http").get({host:"127.0.0.1",port:process.env.PORT,path:p},s=>{const b=[];s.on("data",d=>b.push(d));s.on("end",()=>res(Buffer.concat(b)))}).on("error",()=>res(null)));
+let bad=0;const say=(c,m,hint,soft)=>{console.log((c?"  ✓ ":soft?"  ! ":"  ✗ ")+m+(!c&&hint?"\n      → "+hint:""));if(!c&&!soft)bad++};
+const st=r=>r.err||r.st,end=()=>{console.log(bad?"有 "+bad+" 项不对":"全部正常");process.exit(bad?1:0)};
+(async()=>{let r=await get("/");
+  if(r.err){say(false,"连不上 "+u0.origin+"："+r.err,via?"nginx 在不在听这个端口":"服务器上解析不了、或者走不到这个域名：加 --via 127.0.0.1，直接连本机的 nginx");end()}
+  if(only==="health"){r=await get(B+"/api/health");process.exit(r.st===200&&/"ok":true/.test(r.body)?0:1)}
+  say(true,"网站首页 "+u0.origin+"/："+r.st);
+  r=await get(B);say(r.st===301&&/\/1024-cat-cafe\/$/.test(r.h.location||""),B+" → "+st(r)+" "+(r.h.location||""),"应该 301 到 "+B+"/：那一段没生效，见下一条");
+  r=await get(B+"/");
+  say(r.st===200&&r.body.toString().includes("1024 猫咖营业中"),B+"/："+st(r),
+    r.st===404?"那一段没生效：include 那一行加在网站对外的 server { } 里了吗（不是只做跳转的那个）？nginx -t、reload 了吗？":
+    r.st===502||r.st===504?"nginx 连不上猫咖：./deploy.sh status 看在不在跑；网站装的那一段端口对不对（./deploy.sh nginx）；nginx 的 error.log 里有 (13: Permission denied) 就是 SELinux 拦了，见 docs/部署.md":
+    r.st===301||r.st===302||r.st===401||r.st===403?"网站要先登录或者不让访问：见 docs/部署.md 的“网站的 server { } 里，这几样也会管到”":"");
+  if(r.st!==200)end();
+  say(r.h["x-1024-cat-cafe"]==="1","用的是 deploy.sh 生成的那一段（有 X-1024-Cat-Cafe 头）","没有 X-1024-Cat-Cafe 头：装的那一段被改过？重新装（./deploy.sh nginx）");
+  say(!r.h["content-security-policy"],"没带上网站的 Content-Security-Policy","add_header 那一行丢了：猫咖会白屏");
+  r=await get(B+"/api/health");say(r.st===200&&/"ok":true/.test(r.body),B+"/api/health："+(r.st===200?r.body.toString().slice(0,70):st(r)),"接口不通：./deploy.sh status");
+  r=await get(B+"/js/app.js",{"Accept-Encoding":"gzip"});let same=false;
+  try{const b=r.h["content-encoding"]==="gzip"?zlib.gunzipSync(r.body):r.body,l=await local("/js/app.js");same=!!l&&b.equals(l)}catch(e){}
+  say(r.st===200&&same,B+"/js/app.js："+st(r)+(r.st===200&&!same?"（不是猫咖的）":""),"脚本被网站自己的规则抢走了：location 后面的 ^~ 丢了");
+  say(r.h["content-encoding"]==="gzip","脚本压缩传（gzip）","没压缩：不影响用，只是第一次进店慢一点（那一段里的 gzip 两行）",true);
+  r=await get(B+"/ws",{Connection:"Upgrade",Upgrade:"websocket","Sec-WebSocket-Version":"13","Sec-WebSocket-Key":crypto.randomBytes(16).toString("base64")});
+  say(r.st===101,"联机 "+B+"/ws："+st(r),"WebSocket 没接通：那一段里 Upgrade、Connection 两行；网站前面还有一层负载均衡或 WAF 不放行 WebSocket 的话，找管网络的人");
+  let k="";try{k=fs.readFileSync(process.env.KEYF,"utf8").trim()}catch(e){}
+  if(k){r=await get(B+"/api/admin/stats",{"X-Admin-Key":k});say(r.st===200,"组织者后台的接口："+st(r),r.st===429?"口令输错太多次，10 分钟后再试":"")}
+  end()})();'
+verify_run(){ SITE="${SITE}" BASE="${BASE}" PORT="${PORT}" VIA="${VIA}" KEYF="${DATA_DIR}/admin.key" ONLY="${1:-}" "${NODE}" -e "${VERIFY_JS}"; }
 
 # ---------- config.js：给了 --inner / --bots，或者还没有这个文件，就写一份 ----------
 # 只改这两样，文件里别的设置（ws、改过的链接……）原样留着；内源主页里有引号、反斜杠也不会写坏（按 JSON 写）
@@ -174,9 +232,11 @@ show_urls(){
   say "  ${c_dim}数据：${DATA_DIR}    日志：$(service_on && echo "journalctl -u ${UNIT}" || echo "${LOG_FILE}")${c_0}"
   say ""
 }
-# 启动、装服务以后：nginx 那一段是新的（第一次、换了端口）就把步骤打出来，没变就一句话
-after_up(){ show_urls
-  if [ "${NGINX_NEW}" = 1 ]; then nginx_steps; else say "${c_dim}nginx 那一段没变：已经加进网站的话不用再动${c_0}"; fi; }
+# 启动、装服务以后：网站已经装了那一段，就看它是不是最新的；还没装、又是新生成的（第一次、换了端口），把步骤打出来
+after_up(){ show_urls; live_init
+  if [ -e "${LIVE}" ]; then nginx_state
+  elif [ "${NGINX_NEW}" = 1 ]; then nginx_steps
+  else say "${c_dim}nginx 那一段没变；网站还没装上的话：./deploy.sh nginx 看步骤${c_0}"; fi; }
 
 wait_up(){ for _ in $(seq 1 40); do if health >/dev/null; then return 0; fi; sleep 0.25; done; return 1; }
 
@@ -215,6 +275,8 @@ do_status(){
   find_node
   if running; then ok "在跑（$(service_on && echo "systemd 服务 ${UNIT}" || echo "进程 $(cat "${PID_FILE}")")）"
     local h; if h="$(health)"; then ok "接口正常：${h}"; else warn "接口没应答"; fi; show_urls
+    if [ -f "${NGINX_FILE}" ]; then nginx_state; fi
+    if [ -n "${SITE}" ]; then if verify_run health >/dev/null 2>&1; then ok "经过网站（${SITE}${BASE}/）：接口正常"; else warn "经过网站（${SITE}${BASE}/）访问不通：./deploy.sh verify 看是哪一步"; fi; fi
   else warn "没在跑。启动：./deploy.sh start"; fi
 }
 
@@ -260,6 +322,7 @@ TimeoutStopSec=15
 [Install]
 WantedBy=multi-user.target
 EOF
+  sudo chmod 644 "${UNIT_FILE}"   # 脚本的 umask 是 077：服务文件照常给大家读（下次装、拆的时候要认它是不是猫咖的）
   # 用 restart 不用 enable --now：服务已经在跑的时候 --now 什么也不做，换了端口、数据目录不会生效
   sudo systemctl daemon-reload; sudo systemctl enable "${UNIT}"; sudo systemctl restart "${UNIT}"
   if wait_up; then ok "装好了：开机自启，挂了自动拉起（systemctl status ${UNIT}）"; after_up; else die "服务起不来：journalctl -u ${UNIT} -n 50"; fi
@@ -267,7 +330,16 @@ EOF
 
 do_nginx(){ write_nginx
   if [ "${NGINX_NEW}" = 1 ]; then ok "生成了 ${NGINX_FILE}（端口 ${PORT}）"; else ok "${NGINX_FILE} 没变（端口 ${PORT}）"; fi
-  say ""; cat "${NGINX_FILE}"; say ""; nginx_steps; }
+  say ""; cat "${NGINX_FILE}"; say ""; nginx_steps; nginx_state; }
+
+do_verify(){
+  [ -n "${SITE}" ] || die "用法：./deploy.sh verify https://网站的地址 [--via 127.0.0.1]"
+  find_node; [ -n "${NODE}" ] || die "没找到 Node"
+  health >/dev/null || warn "本机的猫咖没应答（./deploy.sh status）：经过网站多半也不通"
+  save_env   # 记下网站的地址：以后 status 也经过网站查一下
+  say "经过 ${SITE}${BASE}/ 访问一遍${VIA:+（直接连 ${VIA} 上的 nginx）}："
+  verify_run
+}
 
 # 撤掉：只拆脚本自己装的东西（这个目录的 systemd 服务、后台进程）；代码、数据、备份留着，打印出来让你决定
 do_uninstall(){
@@ -287,7 +359,8 @@ do_uninstall(){
   say "  代码、设置、日志：${APP_DIR}"
   say "  数据：${DATA_DIR}（名册和抽奖登记，有个人信息；要留就先 ./deploy.sh backup，把备份拷走）"
   if [ -d "${APP_DIR}/backups" ]; then say "  备份：${APP_DIR}/backups（也有个人信息）"; fi
-  say "  网站 nginx 里加的那段（location ^~ ${BASE}/）：从 server { } 里删掉，再 sudo nginx -t && sudo systemctl reload nginx"
+  live_init
+  say "  网站的 nginx 里装的那一段：删掉网站 server { } 里 include ${LIVE} 那一行和这个文件，再 sudo nginx -t && sudo systemctl reload nginx"
   say "除了这些，脚本没在服务器上放别的文件。"
 }
 
@@ -338,6 +411,7 @@ case "${CMD}" in
   logs) do_logs;;
   service) do_service;;
   nginx) do_nginx;;
+  verify) do_verify;;
   uninstall) do_uninstall;;
   backup) do_backup;;
   restore) do_restore;;
