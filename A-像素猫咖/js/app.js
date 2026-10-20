@@ -21,7 +21,7 @@ window.CAT_SAVE={load:k=>SAVE[k],save:(k,v)=>{SAVE[k]=v;touch()}};
 function touch(){dirty=true}
 function snapshot(){const m=game.me;return{g:SAVE.g||{},stamps:{...game.S.stamps},pos:{x:Math.round(m.x),y:Math.round(m.y)},arrived:1,visits:SAVE.visits||1}}
 // 存档交不上、因为这只猫刚和另一只合成了一只（这个窗口是合之前打开的）：别再存，请人重新打开（docs/登录与进店.md"两只合成一只"）
-function flush(keep){if(!cat||asleep||!playing)return;dirty=false;Account.save(snapshot(),keep).then(r=>{if(r==='stale')gone('stale')})}
+function flush(keep){if(!cat||asleep||!playing)return Promise.resolve();dirty=false;return Account.save(snapshot(),keep).then(r=>{if(r==='stale')gone('stale')})}
 
 /* ---------- 界面回调（和样页 v4 一样，去掉了说明页的部分） ---------- */
 const NEWS=[];
@@ -258,9 +258,23 @@ function tryNotice(){const el=$('reply'),n=cardQ[0];if(!n||!playing||asleep||gam
   el.classList.add('notice');el.innerHTML=`<h5><canvas data-ic="${n.icon}"></canvas>${esc(n.title)}</h5><p>${esc(n.s)}</p>`;icons(el);el.classList.add('show');replyT=12;sfx(n.snd);if(n.at)ui.news('店里的公告：'+n.s)}
 
 /* ---------- 同一只猫开在两个窗口：后开的接着玩 ---------- */
-let chan=null;const TAB=Math.random().toString(36).slice(2);
-function claim(){try{chan=chan||new BroadcastChannel('cat1024');chan.onmessage=e=>{const m=e.data||{};if(cat&&m.id===cat.id&&m.tab!==TAB&&m.t==='here'){flush();sleep(true)}};chan.postMessage({t:'here',id:cat.id,tab:TAB})}catch(e){}}
-function sleep(on){asleep=on;$('elsewhere').style.display=on?'flex':'none';if(on)Net.stop();else{claim();startNet();$('game').focus()}}
+// 让出去的那个（醒着的）先把手里的存好，再回一句 yield。"在这里继续"：等它存好，再从账号里重新读一遍进度——这个窗口里的还是睡下那一刻的，直接接着存会拿旧的盖掉新的
+let chan=null,yielded=null;const TAB=Math.random().toString(36).slice(2);
+function claim(){try{chan=chan||new BroadcastChannel('cat1024');chan.onmessage=e=>{const m=e.data||{};if(!cat||m.id!==cat.id||m.tab===TAB)return;
+    if(m.t==='here'&&playing&&!asleep){const p=flush();sleep(true);p.then(()=>chan.postMessage({t:'yield',id:cat.id,tab:TAB,to:m.tab}))}
+    else if(m.t==='yield'&&m.to===TAB&&yielded)yielded()};
+  chan.postMessage({t:'here',id:cat.id,tab:TAB})}catch(e){}}
+function sleep(on){if(!on)return wake();asleep=true;$('elsewhere').style.display='flex';Net.stop()}
+// 另一个窗口关了、或者在另一台电脑上：等不到 yield，两秒后直接读（那边隔几秒就存一次）
+async function wake(){const b=$('wakeHere');if(b.disabled)return;b.disabled=true;b.textContent='接回来……';
+  await new Promise(r=>{yielded=r;setTimeout(r,2000);claim()});yielded=null;
+  const c=await Account.resume();b.disabled=false;b.textContent='在这里继续';
+  if(!c){if(Account.mode==='server'&&Account.token()){b.textContent='网不好，再点一次';return}$('elsewhere').style.display='none';return gone()}   // 令牌不认了：和联机时被请出店一样
+  if(c.id!==cat.id)return location.reload();   // 睡着的时候这只猫合进了另一只：重新打开就是合好的那只
+  reread(c);asleep=false;$('elsewhere').style.display='none';startNet();$('game').focus()}
+// 换上账号里最新的记录（图鉴、彩蛋、小游戏、集章、抽奖登记、改过的名字）；站的地方不动
+function reread(c){cat=c;const st=c.state||{};SAVE={g:st.g||{},visits:st.visits||SAVE.visits||1};game.me.name=game.me.label=c.name;
+  game.A.guide.load(SAVE.g);Object.assign(game.S.stamps,st.stamps||{});stPrev=null;drawStamps();meKey='';panelKey='';(c.prizes||[]).forEach(queuePrize)}
 
 /* ---------- 开发用 ---------- */
 function devBar(){const b=$('devbar');b.style.display='flex';const n=botsNow();
