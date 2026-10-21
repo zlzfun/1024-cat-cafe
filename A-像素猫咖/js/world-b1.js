@@ -42,8 +42,18 @@ A.T({id:'dancefloor',n:'舞池',hit:[F.x,F.y,F.cols*F.tw,F.rows*F.th],at:c=>onFl
   label:c=>c.me?(G?'正在跳一曲':'跳一曲'):'跳舞',ok:c=>!c.hold&&!(c.me&&G),no:c=>c.hold?'叼着东西，先放下吧':'正在跳',ai:{mood:'play',w:c=>D.crazy>now()?6:1.2},
   go(c){if(c.me){if(!onFloor(c))run(c,[{go:randTile()},{fn:startDance}]);else startDance();return}run(c,[{go:randTile()},{k:'dance',dur:rr(8,20)}])}});
 // 镜面球：拉一下墙上的链子，二十秒"迪斯科时间"
+// 叫来的猫跳到迪斯科时间完了再多跳几秒（到得晚的至少六秒），大家能同时在舞池上；没走到舞池上的（路不通）不跳
+const toDance=(c,sp)=>run(c,[{go:randTile(),sp},{fn:c=>{if(onFloor(c))run(c,[{k:'dance',dur:Math.max(6,D.crazy-now()+rr(3,6))}],true)}}]);
+const CALL=8,B1F=A.FLID.b1,FC={x:F.x+F.cols*F.tw/2,y:F.y+F.rows*F.th/2};
 function discoTime(by){D.crazy=now()+20;D.pull=now()+.6;if(by&&by.me||hear(P.chainAt,380)){sfx('clunk');after(.3,()=>sfx('fanfare'))}news((by&&!by.me?by.name:'你')+'拉下了镜面球：迪斯科时间！');
-  S.cats.filter(c=>awake(c)&&!c.me&&!c.desk&&onB1(c)&&c.z==null&&!c.place&&!c.hold&&(room(c)==='disco'||near(c,{x:556,y:Y+180},220))).slice(0,14).forEach((c,k)=>after(k*.15,()=>run(c,[{go:randTile()},{k:'dance',dur:rr(10,18)}])))}
+  const L=S.cats.filter(c=>awake(c)&&!c.me&&!c.desk&&onB1(c)&&c.z==null&&!c.place&&!c.hold&&(room(c)==='disco'||near(c,{x:556,y:Y+180},220))).slice(0,14);
+  L.forEach((c,k)=>after(k*.15,()=>toDance(c)));
+  // 你在地下一层、附近的不到八只（补位的猫大多在楼上）：按远近再叫几只，先地下一层别的房间，再一楼、二楼、屋顶，楼上的跑下来。走不到的（猫猫星球上的）不叫
+  if(!onB1(me)||L.length>=CALL)return;
+  const far=c=>{const f=A.floorOf(c.y);if(f===B1F)return dist(c,FC);const p=A.nextPortal(f,B1F);return p?Math.abs(f.lv-B1F.lv)*1e4+dist(c,p.at):null};
+  const M=S.cats.filter(c=>awake(c)&&!c.me&&!c.desk&&!L.includes(c)&&c.z==null&&!c.place&&!c.hold&&!c.working&&!c.riding).map(c=>[c,far(c)]).filter(([,d])=>d!=null).sort((a,b)=>a[1]-b[1]).slice(0,CALL-L.length);
+  M.forEach(([c],k)=>after(.3+k*.15,()=>toDance(c,c.sp*1.6)));
+  if(M.some(([c])=>!onB1(c)))news('楼上的猫听见了，也跑下来跳')}
 A.events.disco=()=>{if(D.crazy>now())return'迪斯科时间还没完';discoTime(null)};
 A.T({id:'mball',n:'镜面球',hit:[P.ballX-9,P.ballY-9,18,18],at:P.chainAt,near:[P.chainAt.x-18,P.chainAt.y-14,36,26],label:c=>D.crazy>now()?'迪斯科时间还没完':'拉一下镜面球的链子',
   ok:c=>D.crazy<=now(),no:()=>'迪斯科时间还没完，先跳着',ai:{mood:'play',w:c=>D.crazy>now()?0:.25},
@@ -79,8 +89,9 @@ A.overs.push(vis=>{if(!vis(0,Y,556,252))return;const t=now(),crazy=D.crazy>t,P4=
   for(let i=0;i<10;i++){const x=Math.round(20+((t*(crazy?60:22)*(i%2?1:-1)+i*97)%516+516)%516),y=Math.round(Y+12+((i*13)%30)+Math.sin(t*1.5+i)*4);alpha(.5,()=>{R(x-1,y,3,1,P4[i%4]);P1(x,y-1,P4[i%4]);P1(x,y+1,P4[i%4])})}
   if(!crazy)return;const bx=P.ballX,by=P.ballY+8;for(let i=0;i<8;i++){const a=t*1.4+i*Math.PI/4,dx=Math.cos(a),dy=Math.abs(Math.sin(a))*.6+.25;alpha(.22,()=>{for(let k=10;k<150;k+=2)P1(Math.round(bx+dx*k),Math.round(by+dy*k),P4[i%4])})}});
 // 迪斯科之夜：舞池上同时有六只猫在跳舞 → 镜面球炸开一屋彩纸，舞池全变金色
+// 别的真人的猫（puppet）也算：它的姿态跟着网络来，站在舞池上跳着就是 dance（awake 把它排除在外，是因为别的地方不能给它排动作）
 const confetti=[];let nightT=-99,nightChk=0;
-tick(dt=>{if((nightChk+=dt)<.5)return;nightChk=0;const n=S.cats.filter(c=>awake(c)&&c.k==='dance'&&onFloor(c)).length;
+tick(dt=>{if((nightChk+=dt)<.5)return;nightChk=0;const n=S.cats.filter(c=>!c.hidden&&!c.gone&&!c.leaving&&c.k==='dance'&&onFloor(c)).length;
   if(n>=6&&now()-nightT>40&&onB1(me)&&room(me)==='disco'){nightT=now();D.allGold=now()+5;sfx('boom');after(.2,()=>sfx('fanfare'));for(let i=0;i<70;i++)confetti.push({x:P.ballX+rr(-6,6),y:P.ballY,vx:rr(-90,90),vy:rr(-80,10),c:rnd(['#ff4fa8','#4fd8ff','#ffd84a','#a84fff','#7ee08a','#fff4dc']),t0:now()});
     news('舞池上六只猫一起跳：镜面球炸开了一屋彩纸');A.eggs.found('disco')}});
 tick(dt=>{for(let i=confetti.length-1;i>=0;i--){const p=confetti[i];p.vy+=60*dt;p.vx*=.98;p.x+=p.vx*dt;p.y+=p.vy*dt;if(now()-p.t0>4||p.y>Y+250)confetti.splice(i,1)}});
