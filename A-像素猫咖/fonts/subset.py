@@ -24,7 +24,7 @@ def source():
 
 def chars():
     s = set(chr(i) for i in range(32, 127))
-    files = glob.glob(os.path.join(APP, 'js', '*.js')) + glob.glob(os.path.join(APP, 'server', '*.js')) + [os.path.join(APP, f) for f in ('index.html', 'admin.html', 'config.example.js')]
+    files = glob.glob(os.path.join(APP, 'js', '*.js')) + glob.glob(os.path.join(APP, 'js', 'arcade', '*.js')) + glob.glob(os.path.join(APP, 'server', '*.js')) + [os.path.join(APP, f) for f in ('index.html', 'admin.html', 'config.example.js')]
     for f in files:
         if os.path.exists(f):
             s |= {c for c in open(f, encoding='utf-8').read() if ord(c) >= 32}
@@ -44,7 +44,7 @@ def main():
     subprocess.run([sys.executable, '-m', 'fontTools.subset', src, '--text-file=' + txt, '--flavor=woff2', '--output-file=' + out,
                     '--layout-features=*', '--no-hinting', '--desubroutinize', '--name-IDs=*', '--name-languages=*'], check=True)
     used = set()
-    for f in glob.glob(os.path.join(APP, 'js', '*.js')) + [os.path.join(APP, 'index.html')]:
+    for f in glob.glob(os.path.join(APP, 'js', '*.js')) + glob.glob(os.path.join(APP, 'js', 'arcade', '*.js')) + [os.path.join(APP, 'index.html')]:
         used |= {c for c in open(f, encoding='utf-8').read() if ord(c) > 127}
     miss = ''.join(sorted(c for c in used if ord(c) not in cm and not c.isspace() and c not in '﻿̇'))
     print('写好了', out, os.path.getsize(out) // 1024, 'KB；', len(S), '个字')

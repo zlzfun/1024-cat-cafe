@@ -9,7 +9,7 @@
      接球的那只下线或 20 秒没回应，球退给传球的。
    - 同一只猫从第二个地方连上来，先连的那个收到 {t:'bye', why:'elsewhere'}。 */
 const fs=require('fs'),path=require('path'),vm=require('vm'),WS=require('./ws'),S=require('./store');
-const TICK=100,FAR_EVERY=10,HI_MS=5000,MAX_CONN=600,TREE_N=36,PASS_TTL=20000,WW=960,WH=4940;   // 大图的高：一楼、二楼、屋顶、地下一层、猫猫星球（js/map-*.js）
+const TICK=100,FAR_EVERY=10,HI_MS=5000,MAX_CONN=600,TREE_N=36,PASS_TTL=20000,WW=960,WH=5940;   // 大图的高：一楼、二楼、屋顶、地下一层、猫猫星球、游戏厅（js/map-*.js）
 const KINDS=['scarf','hat','mitten','sock','sweater','flag'],TOYS=['cup','sugar','vase','cake','pot'];   // 咖啡桌上能推下去、叼回来的东西（js/world-cafe.js 的 CTOY）
 // 同一种消息最短间隔（秒）；回球、接球不限（它们受传球事务约束，丢了球就没了）
 const GAP=new Map([['emo',.45],['ph',.9],['rub',.45],['pass',.45],['hang',2.5],['s',.07],['v',.5],['egg',2],['tank',3]]);

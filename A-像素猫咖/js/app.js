@@ -19,7 +19,8 @@ const sfx=(k,a)=>Sound.sfx(k,a);
 let SAVE={},saveT=0,dirty=false;
 window.CAT_SAVE={load:k=>SAVE[k],save:(k,v)=>{SAVE[k]=v;touch()}};
 function touch(){dirty=true}
-function snapshot(){const m=game.me;return{g:SAVE.g||{},stamps:{...game.S.stamps},pos:{x:Math.round(m.x),y:Math.round(m.y)},arrived:1,visits:SAVE.visits||1}}
+// 位置：游戏厅这种只能钻密道去的地方不记，记成回来的那个口子（A.savePos，world-arcade.js）
+function snapshot(){const m=(game.A.savePos&&game.A.savePos())||game.me;return{g:SAVE.g||{},stamps:{...game.S.stamps},pos:{x:Math.round(m.x),y:Math.round(m.y)},arrived:1,visits:SAVE.visits||1}}
 // 存档交不上、因为这只猫刚和另一只合成了一只（这个窗口是合之前打开的）：别再存，请人重新打开（docs/登录与进店.md"两只合成一只"）
 function flush(keep){if(!cat||asleep||!playing)return Promise.resolve();dirty=false;return Account.save(snapshot(),keep).then(r=>{if(r==='stale')gone('stale')})}
 

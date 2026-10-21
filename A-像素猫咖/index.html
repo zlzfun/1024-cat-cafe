@@ -163,7 +163,7 @@ window.CatMove=(()=>{const g=k=>{try{return localStorage.getItem(k)}catch(e){ret
   .sb p{margin:0}.sb canvas{position:static}
   .sb h4{margin:0;display:flex;align-items:center;gap:8px;font-size:var(--fs-m);line-height:var(--lh-m);color:var(--acc);white-space:nowrap}
   .sb h4 i{font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}.sb h4 .r{margin-left:auto;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--sub)}
-  [data-f]{--fc:#9ccc98}[data-f="f2"]{--fc:#a8d0f0}[data-f="roof"]{--fc:#c8b8ff}[data-f="b1"]{--fc:#f0a8d8}[data-f="planet"]{--fc:#ffd84a}   /* 楼层的颜色：左上色块、右上楼层签一样 */
+  [data-f]{--fc:#9ccc98}[data-f="f2"]{--fc:#a8d0f0}[data-f="roof"]{--fc:#c8b8ff}[data-f="b1"]{--fc:#f0a8d8}[data-f="planet"]{--fc:#ffd84a}[data-f="arcade"]{--fc:#ff6ac8}   /* 楼层的颜色：左上色块、右上楼层签一样 */
   .sb-loc{display:flex;align-items:center;gap:8px;pointer-events:none}
   .sb-loc i{flex:none;margin:var(--d2) 0;padding:0 calc(var(--px-s)*4);color:#241a2e;background:var(--fc);box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--fc),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--fc)}
   .sb-loc b{font-size:var(--fs-l);line-height:var(--lh-l);color:var(--acc);white-space:nowrap;text-shadow:var(--px-l) var(--px-l) 0 var(--dk)}
@@ -211,7 +211,7 @@ window.CatMove=(()=>{const g=k=>{try{return localStorage.getItem(k)}catch(e){ret
   .floors{display:flex;gap:4px;margin-bottom:8px;pointer-events:none}
   .floors span{--cc:#2a2036;flex:none;width:48px;margin:var(--d2) 0;text-align:center;font-size:var(--fs-s);line-height:var(--lh-s);color:var(--dim);background:var(--cc);box-shadow:0 calc(var(--d2)*-2) 0 calc(var(--d2)*-1) var(--cc),0 calc(var(--d2)*2) 0 calc(var(--d2)*-1) var(--cc)}
   .floors span.on{--cc:var(--fc);color:#241a2e}
-  .floors span[data-f="planet"]{flex:1;width:auto}
+  .floors span[data-f="planet"],.floors span[data-f="arcade"]{flex:1;width:auto}
   .game .mini{position:static;display:block;width:204px;cursor:pointer;image-rendering:auto}
   /* 下方：提示条（一块窄的窗框：键帽 + 会做什么，左右位置由脚本对齐到整像素）；左下角是店里的新闻（半透明的窗框，一条一行，旧的变淡） */
   .prompt{left:0;bottom:20px;display:none;padding:4px 12px;white-space:nowrap;color:var(--ink)}
@@ -420,8 +420,8 @@ window.CatMove=(()=>{const g=k=>{try{return localStorage.getItem(k)}catch(e){ret
 /* 加载器：并行下载、按顺序执行；进度是真的（脚本到齐 → 建好店 → 认出你），显示上最快也要走一秒，让小猫把线球追完 */
 (()=>{
 const FILES=[['cat-sprites.js','把猫叫醒……'],['pixel-text.js'],['scene-kit.js','搬桌椅……'],['world-kit.js'],['world4-kit.js'],['house-kit.js'],['outdoor-kit.js'],['skyline-art.js'],['props-kit.js'],['b1-kit.js'],['planet-art.js'],['fish-art.js'],['quest-bank.js','把毛线球装进篮子……'],
-  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['map-b1.js','给舞池接上电……'],['map-planet.js'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world-eggs.js'],['world-charms.js'],['world-wings.js'],['world4-desk.js'],
-  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world-games.js','摆好抓娃娃机……'],['claw-art.js'],['world-more.js','给秋千系上绳子……'],['world-social.js'],['world-b1.js','往温泉里放热水……'],['cinema.js'],['world-rocket.js'],['world-crystal.js'],['world-ambient.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
+  ['map-1f.js','铺地板、刷墙……'],['map-2f.js','搭楼梯……'],['map-roof.js','把星星挂上天……'],['map-b1.js','给舞池接上电……'],['map-planet.js'],['map-arcade.js'],['world-play.js','店猫各就各位……'],['world-acts.js'],['world4-things.js','摆好店里的东西……'],['world4-quest.js'],['world4-guide.js'],['world-eggs.js'],['world-charms.js'],['world-wings.js'],['world4-desk.js'],
+  ['map-tree.js','给巨树缠毛线……'],['world-floors.js'],['world-cafe.js','煮咖啡……'],['world-river.js','往河里放鱼……'],['world4-vista-art.js','擦橱窗……'],['world4-vista.js'],['world-roof.js'],['world-games.js','摆好抓娃娃机……'],['claw-art.js'],['world-more.js','给秋千系上绳子……'],['world-social.js'],['world-b1.js','往温泉里放热水……'],['cinema.js'],['world-rocket.js'],['world-crystal.js'],['world-arcade.js'],['world-ambient.js'],['world4-arrive.js'],['world-online.js'],['dialog-ui.js','开门……'],['sound.js'],['account.js'],['net.js'],
   ['entry-art.js'],['entry-clowder.js'],['entry-name.js'],['entry-gacha.js'],['entry-tutorial.js'],['entry.js'],['book-ui.js'],['app.js']];
 const msg=document.getElementById('bootmsg'),cv=document.getElementById('bootcv'),x=cv.getContext('2d');let real=0,shown=0,label='开门……',ready=false,failed=false,t0=performance.now(),doneCb=null;
 const say=s=>{if(s!=null)label=s;if(!failed)msg.textContent=label};

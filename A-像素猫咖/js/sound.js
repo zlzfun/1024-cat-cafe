@@ -137,7 +137,9 @@ function music(level,track){if(!AC)return;const t=AC.currentTime;BUS.mus.gain.se
 document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidden)AC.suspend();else if(on)AC.resume()});
 // 点唱机隔 0.2 秒才被叫一次，排得再勤一点，免得卡顿时断拍
 setInterval(()=>{if(on&&AC&&AC.state==='running'&&M.on)music(LV.music||0,LV.track||0)},150);
-return{sfx,amb,TRACKS:TR.slice(0,3).map(T=>T.n),DISCO:3,get on(){return on},set(v){on=!!v;try{localStorage.setItem('cat1024.sound',on?'1':'0')}catch(e){}if(on)init();else ambStop()},init:()=>{if(on)init()}}})();
+// 游戏厅的街机（js/arcade/core.js）自己配哔哔声：直接借 tone、noise，声音关着就不响
+const raw=f=>(...a)=>{if(!on)return;init();if(AC)try{f(...a)}catch(e){}};
+return{sfx,amb,tone:raw(tone),noise:raw(noise),TRACKS:TR.slice(0,3).map(T=>T.n),DISCO:3,get on(){return on},set(v){on=!!v;try{localStorage.setItem('cat1024.sound',on?'1':'0')}catch(e){}if(on)init();else ambStop()},init:()=>{if(on)init()}}})();
 // 店里（world-ambient.js、world-more.js）用 window.Sound 判断有没有声音：const 声明的全局量不挂在 window 上，要自己挂上去
 // （第四轮起漏了这一句，环境声、点唱机的音乐、脚步声一直没响过，第六轮才发现）
 window.Sound=Sound;

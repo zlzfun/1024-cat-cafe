@@ -103,7 +103,8 @@ A.overs.push(vis=>{if(!(S.fw1024>now()))return;const B=P.backdrop;if(!vis(B.x,B.
 /* ================= 老秘籍：上上下下左右左右 B A，你的猫变成彩虹色一分钟 ================= */
 // 在最前面听按键（capture）：按到第九个 B 的时候把这一下吃掉，不然 B 会打开图鉴
 const KS=['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];let ki=0;
-if(typeof window!=='undefined'&&A.play)window.addEventListener('keydown',e=>{if(e.repeat)return;const k=(e.key||'').toLowerCase();
+// 坐在游戏厅的街机前（A.arcOn，world-arcade.js）按的方向键和 B、A 是在玩游戏，不算
+if(typeof window!=='undefined'&&A.play)window.addEventListener('keydown',e=>{if(e.repeat||A.arcOn)return;const k=(e.key||'').toLowerCase();
   if(k===KS[ki]){if(ki===8){e.preventDefault();e.stopImmediatePropagation()}ki++;if(ki===KS.length){ki=0;me.rainbowUntil=now()+60;A.sfx('fanfare');emote(me,'heart',1.6);say('……你的猫变成了彩虹色（一分钟）');E.found('konami')}}
   else ki=k===KS[0]?1:0},true);
 });
