@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1024 现场抽奖</title>
+<link rel="preload" href="fonts/fusion-pixel-12.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* 抽奖页：上面整块是舞台（stage.js，给围观的人看），下面一条是工作人员的操作条。设计见 README.md */
+  body{background:#0b0710}
+  #page{display:grid;grid-template-rows:1fr auto;height:100%}
+  #stage{display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden;background:#140e1a}
+  /* 叠在舞台上的两样（位置是舞台坐标，见 stage.js 的 Stage.LAYOUT）：左边墙上的奖品榜、揭晓时跳出来的奖品卡。图片是上传的照片或者插画，放在页面上才清楚 */
+  #wrap{position:relative}#ov{position:absolute;inset:0;pointer-events:none}
+  #ov [hidden]{display:none}
+  #ov .win{position:absolute;--wu:3px}
+  #board{display:flex;flex-direction:column;padding:6px 8px;gap:4px;background:#241a2ee6}
+  #board h3{margin:0;font-size:12px;line-height:18px;font-weight:400;color:var(--acc);text-align:center;letter-spacing:4px}
+  #board .row{flex:1;min-height:0;display:flex;align-items:center;gap:8px}
+  #board .pic{height:100%;aspect-ratio:1;flex:none;background:var(--dk);display:grid;place-items:center;overflow:hidden}
+  #board .pic img{width:100%;height:100%;object-fit:contain}
+  #board .pic i{font-style:normal;font-size:12px;line-height:1}
+  #board .txt{min-width:0;font-size:12px;line-height:18px}#board .txt b{display:block;font-weight:400}
+  #board .txt span{display:block;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #reveal{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 14px;gap:4px;text-align:center}
+  #reveal .pic{flex:1;min-height:0;width:100%;position:relative}#reveal .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  #reveal b{font-weight:400;font-size:48px;line-height:56px}#reveal span{font-size:24px;line-height:32px;color:var(--ink);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #reveal.small b{font-size:24px;line-height:32px}#reveal.small span{font-size:12px;line-height:18px}
+  #reveal.won{animation:pop .5s cubic-bezier(.34,1.56,.64,1) both}#reveal.lost{animation:sink .45s ease-out both}
+  @keyframes pop{from{transform:translateY(30%) scale(.2);opacity:0}60%{opacity:1}to{transform:none}}
+  @keyframes sink{from{transform:translateY(-12%);opacity:0}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){#reveal.won,#reveal.lost{animation:none}}
+  #bar{display:flex;align-items:center;gap:24px;padding:14px 28px 18px;background:var(--pan);box-shadow:0 calc(var(--u)*-1) 0 #fff4dc,0 calc(var(--u)*-2) 0 var(--dk);min-height:96px}
+  #bar .say{flex:1;min-width:0}
+  #bar .say b{display:block;font-weight:400;font-size:24px;line-height:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #bar .say>span{display:block;font-size:12px;line-height:18px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #bar .say .warn{color:var(--bad)}#bar .say .ok{color:var(--ok)}
+  #bar .ctl{display:flex;align-items:center;gap:12px;flex:none}
+  #bar form{display:flex;gap:12px;align-items:center}#bar input{width:220px}
+  #bar .meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none;font-size:12px;line-height:18px;color:var(--dim)}
+  #bar .meta a{color:var(--sub)}#bar .meta .warn{color:var(--bad)}
+  .t1{color:#e8b83a}.t2{color:#7ab4e6}.t3{color:#e8946e}.t0{color:var(--sub)}
+  @media (max-width:900px){#bar{flex-wrap:wrap;padding:12px 16px 16px;gap:12px}#bar .ctl{flex-wrap:wrap}#bar input{width:100%}#bar form{flex:1}html,body{overflow:auto}#page{height:auto}}
+</style>
+</head>
+<body>
+<div id="page">
+  <div id="stage"><div id="wrap"><canvas id="cv"></canvas>
+    <div id="ov"><div id="board" class="win"></div><div id="reveal" class="win" hidden></div></div></div></div>
+  <section id="bar"><div class="say" id="say"></div><div class="ctl" id="ctl"></div>
+    <div class="meta"><span id="count"></span><span><button class="lbtn sm" id="snd">声音 开</button> <a href="admin.html" target="_blank" rel="noopener">设置</a></span></div></section>
+</div>
+<script src="js/cat-sprites.js"></script>
+<script src="js/pixel-text.js"></script>
+<script src="js/scene-kit.js"></script>
+<script src="js/world-kit.js"></script>
+<script src="js/world4-kit.js"></script>
+<script src="js/world-play.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/entry-art.js"></script>
+<script src="sfx.js"></script>
+<script src="stage.js"></script>
+<script src="desk.js"></script>
+</body>
+</html>

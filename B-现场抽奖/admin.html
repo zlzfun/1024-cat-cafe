@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1024 现场抽奖 · 设置</title>
+<link rel="preload" href="fonts/fusion-pixel-12.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* 设置页：活动前配奖品和图鉴卡；活动中看记录、补货、暂停、改登记错的工号、作废；活动后导出。设计见 README.md */
+  html,body{height:auto;overflow:auto;font-size:12px;line-height:18px}
+  header{display:flex;align-items:center;gap:24px;padding:16px 32px;color:var(--sub)}
+  header b{font-size:24px;line-height:36px;color:var(--ink);font-weight:400}header .sp{flex:1}header a{color:var(--sub)}
+  main{max-width:1100px;margin:0 auto;padding:8px 24px 60px}
+  .card{padding:20px 24px;margin:16px 12px 36px}
+  .card h2{margin:0 0 16px;font-size:24px;line-height:36px;font-weight:400;display:flex;align-items:baseline;gap:16px}
+  .card h2 small{font-size:12px;color:var(--sub)}
+  .form{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;margin:8px 0}
+  .form label{display:flex;align-items:center;gap:8px;color:var(--sub)}
+  input[type=text],input[type=number],select{background:var(--dk);border:0;box-shadow:0 0 0 var(--d2) var(--line);padding:4px 10px;outline:none;color:var(--ink);font:inherit}
+  input:focus,select:focus{box-shadow:0 0 0 var(--d2) var(--acc)}
+  input[type=number]{width:90px}.pin{display:inline-flex;align-items:center;gap:4px}.pin input[type=number]{width:72px;text-align:right}.wide{flex:1;min-width:240px}
+  .pbtn,.lbtn{padding:var(--d2) 14px var(--u)}
+  .hint{color:var(--dim);margin:8px 0 0}.msg{color:var(--ok)}.msg.bad{color:var(--bad)}
+  table{border-collapse:collapse;width:100%}
+  th{text-align:left;font-weight:400;color:var(--sub);padding:4px 8px;border-bottom:var(--d2) solid var(--line);white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid #3a2d4a;vertical-align:middle;white-space:nowrap}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr.void td{color:var(--dim);text-decoration:line-through}tr.void td:last-child{text-decoration:none}
+  .tbl{overflow-x:auto}.acts{display:flex;gap:4px}
+  .stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin:4px 0 12px;color:var(--sub)}.stats b{color:var(--acc);font-size:24px;line-height:36px;font-weight:400;margin-right:6px}
+  .tag{display:inline-block;padding:0 8px;box-shadow:0 0 0 2px var(--line);color:var(--sub)}.tag.on{box-shadow:0 0 0 2px var(--ok);color:var(--ok)}.tag.off{box-shadow:0 0 0 2px var(--bad);color:var(--bad)}
+  .danger{margin-top:8px}
+  .thumb{width:48px;height:48px;object-fit:contain;background:var(--dk);box-shadow:0 0 0 2px var(--line);display:block}.thumb.none{display:grid;place-items:center;color:var(--dim)}
+  td.im{width:64px}
+</style>
+</head>
+<body>
+<header><b>1024 现场抽奖 · 设置</b><span id="live"></span><span class="sp"></span><a href="./" target="_blank" rel="noopener">打开抽奖页</a></header>
+<main>
+  <section class="card win">
+    <h2>现场<small>改了以后抽奖页几秒内跟着变</small></h2>
+    <div class="stats" id="stats"></div>
+    <div class="form"><span class="tag" id="openTag">—</span><button class="lbtn" id="openBtn">暂停</button><span class="msg" id="openMsg"></span></div>
+    <div class="form"><label>猫猫图鉴卡的图片</label><span id="cardImg"></span><span class="msg" id="cardMsg"></span></div>
+    <div class="form"><label>抽奖页上的一句提示</label><input type="text" id="note" class="wide" maxlength="60" placeholder="比如：先确认 关注内源社区、猫猫观察局 · 加入猫猫群 · 或参加了互动游戏"><button class="lbtn" id="noteBtn">保存</button><span class="msg" id="noteMsg"></span></div>
+</section>
+  <section class="card win">
+    <h2>奖品<small>每次抽都独立：按各档的概率抽，剩下的是谢谢惠顾（发一张猫猫图鉴卡）；某一档发完了，它那份也算谢谢惠顾</small></h2>
+    <div class="tbl"><table><thead><tr><th>图片</th><th>等级</th><th>名称</th><th class="n">概率</th><th class="n">库存</th><th class="n">已发</th><th class="n">还剩</th><th></th></tr></thead><tbody id="prizes"></tbody></table></div>
+    <div class="form" style="margin-top:16px"><select id="pTier"><option value="1">一等奖</option><option value="2">二等奖</option><option value="3">三等奖</option></select>
+      <input type="text" id="pName" maxlength="30" placeholder="名称，比如：定制机械键盘"><label>概率 <input type="number" id="pP" min="0" max="100" step="0.01" placeholder="比如 1"> %</label><label>库存 <input type="number" id="pStock" min="0" placeholder="空=不限"></label>
+      <button class="pbtn" id="pAdd">加一档</button><span class="msg" id="pMsg"></span></div>
+    <p class="hint">概率是百分数，最多两位小数：填 1 就是每 100 次大约中 1 次。各档加起来不能超过 100%。发出去过的那一档不能删，可以把概率改成 0 停掉。</p>
+  </section>
+  <section class="card win">
+    <h2>记录<small id="rCount"></small></h2>
+    <div class="form"><label><input type="checkbox" id="onlyWon"> 只看中奖</label><input type="text" id="q" placeholder="按工号找"><span class="sp" style="flex:1"></span><button class="lbtn" id="exWon">导出中奖名单</button><button class="lbtn" id="exAll">导出全部记录</button></div>
+    <div class="tbl"><table><thead><tr><th class="n">第几次</th><th>时间</th><th>结果</th><th>奖品</th><th>工号</th><th>图鉴卡</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  </section>
+  <section class="card win">
+    <h2>清空重来<small>彩排完用</small></h2>
+    <p class="hint" style="margin:0 0 12px">先把现在的数据存一份到 data/backups/，再清掉所有抽奖记录，库存的"已发"、图鉴卡的"已发"归零；奖品设置留着。正式开始以后别点。</p>
+    <button class="lbtn danger" id="reset">清空重来</button><span class="msg" id="resetMsg"></span>
+  </section>
+</main>
+<input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+<script src="admin.js"></script>
+</body>
+</html>
